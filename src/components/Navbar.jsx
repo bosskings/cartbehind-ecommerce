@@ -10,7 +10,6 @@ import { IoMdClose } from "react-icons/io";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-
 const Navbar = () => {
   const pathname = usePathname();
 
