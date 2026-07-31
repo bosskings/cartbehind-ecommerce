@@ -1,5 +1,7 @@
-import React from "react";
-import { Star } from "lucide-react";
+import React from "react"
+import Image from "next/image"
+import { motion } from "framer-motion"
+import { Star, ShoppingBag } from "lucide-react"
 
 const sampleProduct = {
   id: 1,
@@ -9,61 +11,83 @@ const sampleProduct = {
   price: 14309,
   originalPrice: 15984,
   discountPercent: 10,
-  image:
-    "/cat.jpeg",
-};
-
-function formatNaira(amount) {
-  return `₦${amount.toLocaleString("en-NG")}`;
+  image: "/cat.jpeg",
 }
 
-export default function ProductCard({ product = sampleProduct }) {
+function formatNaira(amount) {
+  return `₦${amount.toLocaleString("en-NG")}`
+}
+
+export default function ProductCard({
+  product = sampleProduct,
+  className = "",
+}) {
   const { brand, title, rating, price, originalPrice, discountPercent, image } =
-    product;
+    product
 
   return (
-    <div className="w-full max-w-[260px] overflow-hidden rounded-2xl bg-gray-50 transition-shadow duration-200 hover:shadow-md">
+    <motion.div
+      whileHover={{ y: -6 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      className={`group relative w-full overflow-hidden rounded-2xl bg-white shadow-sm transition-shadow duration-300 hover:shadow-lg ${className}`}
+    >
       {/* Image area */}
-      <div className="relative flex h-56 items-center justify-center bg-gray-100 p-6">
+      <div className="relative aspect-[5/4] w-full bg-gray-100 overflow-hidden p-2">
         {discountPercent ? (
-          <span className="absolute left-4 top-4 rounded-full bg-[var(--theme)] px-3 py-1 text-xs font-semibold ">
+          <span className="hidden group-hover:block transition-all absolute left-4 top-4 z-10 rounded-full bg-[var(--theme)] px-3 py-1 text-xs font-bold text-gray-900 shadow-sm">
             -{discountPercent}%
           </span>
         ) : null}
-        <img
-          src={image}
-          alt={title}
-          className="h-full w-full object-contain"
-          loading="lazy"
-        />
+
+        <div className="relative h-full w-full">
+          <Image
+            src={image}
+            alt={title}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-110 rounded-xl"
+            loading="lazy"
+          />
+        </div>
       </div>
 
       {/* Details */}
-      <div className="space-y-1.5 px-5 pb-5 pt-4">
-        <p className="text-xs font-medium tracking-wide text-gray-400">
+      <div className="space-y-1.5 px-5 pb-5 pt-4 border-t-2 border-transparent transition-colors duration-300 group-hover:border-[var(--theme)]/30">
+        <p className="text-xs font-medium tracking-wider text-gray-400 uppercase">
           {brand}
         </p>
 
-        <h3 className="truncate text-base font-semibold text-amber-800">
+        <h3 className="truncate text-sm font-medium text-gray-800 group-hover:text-[var(--theme)] transition-colors">
           {title}
         </h3>
 
         <div className="flex items-center gap-1 pt-0.5">
-          <Star size={16} className="fill-amber-400 text-amber-400" />
+          <Star size={16} className="fill-[var(--theme)] text-[var(--theme)]" />
           <span className="text-sm font-medium text-gray-700">{rating}</span>
         </div>
 
-        <div className="flex items-baseline gap-2 pt-1">
-          <span className="text-lg font-bold text-gray-900">
-            {formatNaira(price)}
-          </span>
-          {originalPrice ? (
-            <span className="text-sm text-gray-400 line-through">
-              {formatNaira(originalPrice)}
+        <div className="flex justify-between items-baseline gap-2 pt-1">
+          <div>
+            <span className="text-lg font-bold text-gray-900">
+              {formatNaira(price)}
             </span>
-          ) : null}
+            {/* {originalPrice && (
+              <span className="ml-2 text-sm text-gray-400 line-through">
+                {formatNaira(originalPrice)}
+              </span>
+            )} */}
+          </div>
+
+          <motion.button
+            whileTap={{ scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            aria-label="Add to cart"
+            onClick={() => console.log(`Add ${title} to cart`)}
+            className="rounded-full bg-[var(--theme)] px-4 py-2 text-sm font-semibold text-gray-900 shadow-md transition-colors hover:bg-[var(--theme)] flex items-center gap-2 cursor-pointer"
+          >
+            <ShoppingBag size={16} />
+          </motion.button>
         </div>
       </div>
-    </div>
-  );
+    </motion.div>
+  )
 }

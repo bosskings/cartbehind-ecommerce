@@ -1,8 +1,11 @@
-import { useRef } from "react";
+"use client"
+
+import { useRef, useState } from "react";
+import Image from "next/image";
+import { motion } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation } from "swiper/modules";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-
 // Swiper core styles (required)
 import "swiper/css";
 import "swiper/css/navigation";
@@ -19,74 +22,136 @@ const categories = [
   { name: "Mens Shirts", image: "/cat.jpeg" },
 ];
 
+const headerReveal = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
+};
+
+const trackContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+};
+
+const itemReveal = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
+};
+
 export default function CategoryCarousel() {
   const prevRef = useRef(null);
   const nextRef = useRef(null);
+  const [atStart, setAtStart] = useState(true);
+  const [atEnd, setAtEnd] = useState(false);
 
   return (
     <section className="w-full px-4 py-8 sm:px-8">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
+      <motion.div
+        variants={headerReveal}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, amount: 0.4 }}
+        className="mb-6 flex items-center justify-between gap-4"
+      >
         <h2 className="text-2xl font-extrabold tracking-tight text-gray-900">
           Explore Categories
         </h2>
 
-        <div className="flex items-center gap-3">
-          <button
+        <div className="flex shrink-0 items-center gap-3">
+          <motion.button
             ref={prevRef}
+            type="button"
             aria-label="Previous categories"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-[var(--theme)] cursor-pointer"
+            disabled={atStart}
+            whileHover={!atStart ? { scale: 1.08 } : {}}
+            whileTap={!atStart ? { scale: 0.94 } : {}}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-[var(--theme)] hover:bg-[var(--theme)]/10 hover:text-[var(--theme)] disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:cursor-not-allowed cursor-pointer"
           >
             <ChevronLeft size={18} />
-          </button>
-          <button
+          </motion.button>
+          <motion.button
             ref={nextRef}
+            type="button"
             aria-label="Next categories"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-[var(--theme)] cursor-pointer"
+            disabled={atEnd}
+            whileHover={!atEnd ? { scale: 1.08 } : {}}
+            whileTap={!atEnd ? { scale: 0.94 } : {}}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-[var(--theme)] hover:bg-[var(--theme)]/10 hover:text-[var(--theme)] disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:cursor-not-allowed cursor-pointer"
           >
             <ChevronRight size={18} />
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Carousel */}
-      <Swiper
-        modules={[Navigation]}
-        onBeforeInit={(swiper) => {
-          swiper.params.navigation.prevEl = prevRef.current;
-          swiper.params.navigation.nextEl = nextRef.current;
-        }}
-        navigation={{
-          prevEl: prevRef.current,
-          nextEl: nextRef.current,
-        }}
-        spaceBetween={20}
-        slidesPerView={2.5}
-        breakpoints={{
-          480: { slidesPerView: 3.5 },
-          640: { slidesPerView: 4.5 },
-          768: { slidesPerView: 5.5 },
-          1024: { slidesPerView: 6.5 },
-          1280: { slidesPerView: 8 },
-        }}
+      <motion.div
+        variants={trackContainer}
+        initial="hidden"
+        whileInView="show"
+        viewport={{ once: true, amount: 0.1 }}
+        className="relative [mask-image:linear-gradient(to_right,transparent,black_2%,black_98%,transparent)]"
       >
-        {categories.map((category) => (
-          <SwiperSlide key={category.name}>
-            <button className="group flex w-full flex-col items-center gap-3 focus:outline-none">
-              <span className="h-24 w-24 overflow-hidden rounded-full border border-gray-100 shadow-sm transition group-hover:shadow-md sm:h-28 sm:w-28">
-                <img
-                  src={category.image}
-                  alt={category.name}
-                  className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-                />
-              </span>
-              <span className="text-center text-sm font-medium text-gray-600 group-hover:text-gray-900">
-                {category.name}
-              </span>
-            </button>
-          </SwiperSlide>
-        ))}
-      </Swiper>
+        <Swiper
+          modules={[Navigation]}
+          onBeforeInit={(swiper) => {
+            swiper.params.navigation.prevEl = prevRef.current;
+            swiper.params.navigation.nextEl = nextRef.current;
+          }}
+          navigation={{
+            prevEl: prevRef.current,
+            nextEl: nextRef.current,
+          }}
+          onSlideChange={(swiper) => {
+            setAtStart(swiper.isBeginning);
+            setAtEnd(swiper.isEnd);
+          }}
+          onReachBeginning={() => setAtStart(true)}
+          onReachEnd={() => setAtEnd(true)}
+          onFromEdge={() => {
+            setAtStart(false);
+            setAtEnd(false);
+          }}
+          spaceBetween={20}
+          slidesPerView={2.5}
+          breakpoints={{
+            480: { slidesPerView: 3.5 },
+            640: { slidesPerView: 4.5 },
+            768: { slidesPerView: 5.5 },
+            1024: { slidesPerView: 6.5 },
+            1280: { slidesPerView: 8 },
+          }}
+          className="!py-2"
+        >
+          {categories.map((category) => (
+            <SwiperSlide key={category.name}>
+              <motion.button
+                type="button"
+                variants={itemReveal}
+                whileHover={{ y: -4 }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                aria-label={category.name}
+                className="group flex w-full flex-col items-center gap-3 rounded-2xl py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme)] focus-visible:ring-offset-2"
+              >
+                <span className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-[var(--theme)]/40 sm:h-28 sm:w-28">
+                  <Image
+                    src={category.image}
+                    alt=""
+                    fill
+                    sizes="112px"
+                    className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+                  />
+                  {/* Glowing ring on hover */}
+                  <span className="absolute inset-0 rounded-full ring-2 ring-transparent transition-all duration-300 group-hover:ring-[var(--theme)]/30" />
+                </span>
+                <span className="flex h-10 items-center text-center text-sm font-medium leading-tight text-gray-600 transition-colors group-hover:text-[var(--theme)] line-clamp-2">
+                  {category.name}
+                </span>
+              </motion.button>
+            </SwiperSlide>
+          ))}
+        </Swiper>
+      </motion.div>
     </section>
   );
 }

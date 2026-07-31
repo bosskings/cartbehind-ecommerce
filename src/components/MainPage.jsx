@@ -1,142 +1,222 @@
 "use client"
 
 import Image from 'next/image'
+import { motion } from 'framer-motion'
+import { Swiper, SwiperSlide } from 'swiper/react'
+import { usePathname } from "next/navigation"
+import Link from 'next/link'
+import { Autoplay, Pagination, EffectFade } from 'swiper/modules'
+
+import 'swiper/css'
+import 'swiper/css/effect-fade'
+import 'swiper/css/pagination'
+
 import CategoryCarousel from './Categorycarousel'
 import ProductCard from './ProductCard'
 import DealOfTheDay from './Dealoftheday'
 
-const MainPage = ({ category = 'All' }) => {
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
+}
 
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+}
+
+const heroSlides = [
+  {
+    id: 1,
+    image: '/hero-bg.jpeg',
+    title: 'Discover Something',
+    highlight: 'Extraordinary',
+    subtitle: 'Curated collections from the world’s best brands. Premium quality, unbeatable prices.',
+    cta: 'Shop Now',
+  },
+  {
+    id: 2,
+    image: '/hero-bg.jpeg',
+    title: 'Up to 50% Off',
+    highlight: 'Deal of the Day',
+    subtitle: 'Limited time offers on top‑rated products. Grab yours before they’re gone.',
+    cta: 'View Deals',
+  },
+  {
+    id: 3,
+    image: '/hero-bg.jpeg',
+    title: 'New Arrivals',
+    highlight: 'Fresh Drops',
+    subtitle: 'Explore the latest trends and must‑have items added to our collection.',
+    cta: 'Explore',
+  },
+]
+
+const getCategoryPath = (name) =>
+  name === "All" ? "/" : `/category/${name.toLowerCase().replace(/\s+/g, "-")}`
+
+const categoryFilters = [
+  { id: 1, name: "All" },
+  { id: 2, name: "Beauty" },
+  { id: 3, name: "Fragrances" },
+  { id: 4, name: "Furniture" },
+]
+
+const MainPage = ({ category = 'All' }) => {
+  const pathname = usePathname()
 
   return (
     <>
-      {/* <h1 className='text-2xl font-semibold'>{category}</h1> */}
+      {/* ---- HERO CAROUSEL ---- */}
+      <section className="relative w-full h-[70vh] md:h-[85vh] min-h-[450px]">
+        <Swiper
+          modules={[Autoplay, Pagination, EffectFade]}
+          effect="fade"
+          autoplay={{ delay: 5000, disableOnInteraction: false }}
+          pagination={{ clickable: true, dynamicBullets: true }}
+          loop={true}
+          className="w-full h-full"
+        >
+          {heroSlides.map((slide) => (
+            <SwiperSlide key={slide.id}>
+              <div className="relative w-full h-full flex items-center justify-center">
+                <Image
+                  src={slide.image}
+                  fill
+                  className="object-cover"
+                  alt={slide.title}
+                  priority
+                />
+                <div className="absolute inset-0 bg-black/60" />
 
-      <section className='relative w-full min-h-screen flex items-center justify-center overflow-hidden'>
+                <div className="relative z-10 max-w-4xl mx-auto px-6 text-center text-white">
+                  <motion.div
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.8, delay: 0.2 }}
+                  >
+                    <h1 className="font-extrabold tracking-tight leading-[1.1] text-[clamp(2.5rem,6vw,5.5rem)]">
+                      {slide.title} <br />
+                      <span className="text-[var(--theme)]">{slide.highlight}</span>
+                    </h1>
+                    <p className="mt-4 text-lg md:text-xl text-gray-200 max-w-2xl mx-auto">
+                      {slide.subtitle}
+                    </p>
+                    <button
+                      onClick={() => console.log(`Navigate to: ${slide.cta}`)}
+                      aria-label={slide.cta}
+                      className="mt-8 px-8 py-3 rounded-full bg-[var(--theme)] text-gray-900 font-semibold hover:bg-[var(--theme)]/80 cursor-pointer transition-colors"
+                    >
+                      {slide.cta}
+                    </button>
+                  </motion.div>
+                </div>
+              </div>
+            </SwiperSlide>
+          ))}
+        </Swiper>
 
-
-
-        {/* Hero */}
-        <div className='absolute inset-0 opacity-5  contrast-125'>
-          <Image
-            src={'/hero-bg.jpeg'}
-            fill
-            className='object-cover'
-            alt='Hero background'
-          />
-
-          {/* <div className="absolute inset-0 bg-white-to-b from-background via-background/70 to-background"></div>
-          <div className="absolute inset-0 bg-white-to-r from-background via-transparent to-background/50"></div>
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-white blur-[120px]"></div> */}
-        </div>
-
-        <div className='relative z-10 max-w-5xl mx-auto px-4 text-center pb-32 md:pb-40 flex flex-col gap-8 pt-20'>
-
-          <h1 className="font-extrabold tracking-tight text-foreground leading-[1.06] text-[clamp(2.5rem,6vw,5.5rem)]  transform-none opacity-100">Discover Something <br />
-
-            <span className="text-[var(--theme)] relative">
-              Extraordinary
-
-              <svg className="absolute -bottom-2 left-0 w-full h-3 text-primary/30" viewBox="0 0 200 8" preserveAspectRatio="none"><path d="M0 5 Q50 0 100 5 Q150 10 200 5" stroke="currentColor" strokeWidth="2" fill="none"></path></svg>
-            </span>
-          </h1>
-
-          <p className='text-gray-500 text-lg'>Curated collections from the world&apos;s best brands. Premium quality, <br /> unbeatable prices, delivered to your door.</p>
-
-          <div className='flex justify-center gap-10 pt-18'>
-
-            <div>
-              <h1 className='text-2xl md:text-3xl font-bold text-foreground'>10K+</h1>
-              <p className='text-xs text-gray-500 mt-0.5 tracking-wider'>PRODUCTS</p>
-            </div>
-
-            <div>
-              <h1 className='text-2xl md:text-3xl font-bold text-foreground'>50+</h1>
-              <p className='text-xs text-gray-500 mt-0.5 tracking-wider'>BRANDS</p>
-            </div>
-
-            <div>
-              <h1 className='text-2xl md:text-3xl font-bold text-foreground'>Free</h1>
-              <p className='text-xs text-gray-500 mt-0.5 tracking-wider'>SHIPPING</p>
-            </div>
-
-            <div>
-              <h1 className='text-2xl md:text-3xl font-bold text-foreground'>24/7</h1>
-              <p className='text-xs text-gray-500 mt-0.5 tracking-wider'>SUPPORT</p>
-            </div>
-
-          </div>
-
-        </div>
-
-
-
-
+        {/* Custom pagination style – matches theme */}
+        <style jsx>{`
+          :global(.swiper-pagination-bullet) {
+            background: white;
+            opacity: 0.6;
+          }
+          :global(.swiper-pagination-bullet-active) {
+            background: var(--theme);
+            opacity: 1;
+          }
+        `}</style>
       </section>
 
-      {/* EXPLORE CATEGORIES */}
+      {/* ---- CATEGORY FILTERS ---- */}
+      <nav className="w-[95%]  mx-auto py-5 flex gap-2 overflow-x-auto scrollbar-hide justify-center">
+        {/* 
+          scrollbar-hide requires tailwind-scrollbar-hide plugin or custom CSS.
+          Alternative: add a custom style for webkit-scrollbar to hide it.
+        */}
+        {categoryFilters.map((cat) => (
+          <Link
+            key={cat.id}
+            href={getCategoryPath(cat.name)}
+            className={`${pathname === getCategoryPath(cat.name)
+              ? "bg-[var(--theme)] text-white shadow-md"
+              : "bg-white text-gray-700 hover:bg-gray-100"
+              } font-medium rounded-full sm:px-4 px-5 py-2.5 text-xs transition-colors`}
+          >
+            {cat.name}
+          </Link>
+        ))}
+      </nav>
 
-      <section className='relative w-full'>
-
-        <div className='w-[95%]'>
-
+      {/* ---- EXPLORE CATEGORIES ---- */}
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: '-100px' }}
+        variants={fadeUp}
+        className="relative w-full"
+      >
+        <div className="w-[95%]">
           <CategoryCarousel />
-
         </div>
+      </motion.section>
 
-      </section>
-
-
-      {/* TRENDING CATEGORIY */}
-
-      <section className='relative w-full p-4 mt-30'>
-
-        <h2 className="text-2xl font-extrabold tracking-tight text-gray-900">
+      {/* ---- TRENDING NOW ---- */}
+      <section className="relative md:w-[90%]   mx-auto mt-12">
+        <h2 className="text-2xl mb-4 ml-5 font-extrabold tracking-tight text-gray-900">
           Trending Now
         </h2>
-        <div className='w-[98%] mx-auto grid grid-cols-2 gap-5 md:grid-cols-5'>
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-        </div>
-
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-50px' }}
+          className="w-[95%] mx-auto grid grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5"
+        >
+          {Array.from({ length: 10 }).map((_, i) => (
+            <motion.div key={i} variants={fadeUp}>
+              <ProductCard />
+            </motion.div>
+          ))}
+        </motion.div>
       </section>
 
-      {/* DEAL SECTION */}
-
-      <section className='relative w-full p-4 mt-30'>
-
+      {/* ---- DEAL OF THE DAY ---- */}
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: '-50px' }}
+        variants={fadeUp}
+        className="relative w-[95%] sm:w-[98%] mx-auto mt-12"
+      >
         <DealOfTheDay />
+      </motion.section>
 
-      </section>
-
-      {/* NEW ARRIVAL CATEGORIY */}
-
-      <section className='relative w-full p-4 mt-30'>
-
-        <h2 className="text-2xl font-extrabold tracking-tight text-gray-900">
+      {/* ---- NEW ARRIVALS ---- */}
+      <section className="relative md:w-[90%]   mx-auto mt-12">
+        <h2 className="text-2xl mb-4 ml-5 font-extrabold tracking-tight text-gray-900">
           New Arrivals
         </h2>
-        <div className='w-[98%] mx-auto grid grid-cols-2 gap-5 md:grid-cols-5'>
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-          <ProductCard />
-        </div>
-
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-50px' }}
+          className="w-[95%] mx-auto grid grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5"
+        >
+          {Array.from({ length: 10 }).map((_, i) => (
+            <motion.div key={i} variants={fadeUp}>
+              <ProductCard />
+            </motion.div>
+          ))}
+        </motion.div>
       </section>
 
     </>
@@ -144,5 +224,3 @@ const MainPage = ({ category = 'All' }) => {
 }
 
 export default MainPage
-
-
