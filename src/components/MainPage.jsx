@@ -74,7 +74,7 @@ const MainPage = ({ category = 'All' }) => {
   return (
     <>
       {/* ---- HERO CAROUSEL ---- */}
-      <section className="relative w-full h-[70vh] md:h-[85vh] min-h-[450px]">
+      <section className="relative w-full h-screen">
         <Swiper
           modules={[Autoplay, Pagination, EffectFade]}
           effect="fade"
