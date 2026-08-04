@@ -131,9 +131,9 @@ export default function CategoryCarousel() {
                 whileTap={{ scale: 0.96 }}
                 transition={{ type: "spring", stiffness: 300 }}
                 aria-label={category.name}
-                className="group flex w-full flex-col items-center gap-3 rounded-2xl py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme)] focus-visible:ring-offset-2"
+                className="group flex w-full flex-col items-center gap-3 rounded-2xl py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--theme) focus-visible:ring-offset-2"
               >
-                <span className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-[var(--theme)]/40 sm:h-28 sm:w-28">
+                <span className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-(--theme)/40 sm:h-28 sm:w-28">
                   <Image
                     src={category.image}
                     alt=""
@@ -142,9 +142,9 @@ export default function CategoryCarousel() {
                     className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
                   />
                   {/* Glowing ring on hover */}
-                  <span className="absolute inset-0 rounded-full ring-2 ring-transparent transition-all duration-300 group-hover:ring-[var(--theme)]/30" />
+                  <span className="absolute inset-0 rounded-full ring-2 ring-transparent transition-all duration-300 group-hover:ring-(--theme)/30" />
                 </span>
-                <span className="flex h-10 items-center text-center text-sm font-medium leading-tight text-gray-600 transition-colors group-hover:text-[var(--theme)] line-clamp-2">
+                <span className="flex h-10 items-center text-center text-sm font-medium leading-tight text-gray-600 transition-colors group-hover:text-(--theme) line-clamp-2">
                   {category.name}
                 </span>
               </motion.button>

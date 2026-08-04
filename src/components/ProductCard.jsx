@@ -29,12 +29,12 @@ export default function ProductCard({
     <motion.div
       whileHover={{ y: -6 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className={`group relative w-full overflow-hidden rounded-2xl bg-white shadow-sm transition-shadow duration-300 hover:shadow-lg ${className}`}
+      className={`group relative w-full overflow-hidden rounded-2xl bg-white shadow-sm transition-shadow duration-300 cursor-pointer hover:shadow-lg ${className}`}
     >
       {/* Image area */}
       <div className="relative aspect-[5/4] w-full bg-gray-100 overflow-hidden p-2">
         {discountPercent ? (
-          <span className="hidden group-hover:block transition-all absolute left-4 top-4 z-10 rounded-full bg-[var(--theme)] px-3 py-1 text-xs font-bold text-gray-900 shadow-sm">
+          <span className="hidden group-hover:block transition-all absolute left-4 top-4 z-10 rounded-full bg-(--theme) px-3 py-1 text-xs font-bold text-(--theme-second) shadow-sm">
             -{discountPercent}%
           </span>
         ) : null}
@@ -51,17 +51,17 @@ export default function ProductCard({
       </div>
 
       {/* Details */}
-      <div className="space-y-1.5 px-5 pb-5 pt-4 border-t-2 border-transparent transition-colors duration-300 group-hover:border-[var(--theme)]/30">
+      <div className="space-y-1.5 px-5 pb-5 pt-4 border-t-2 border-transparent transition-colors duration-300 group-hover:border-(--theme)/30">
         <p className="text-xs font-medium tracking-wider text-gray-400 uppercase">
           {brand}
         </p>
 
-        <h3 className="truncate text-sm font-medium text-gray-800 group-hover:text-[var(--theme)] transition-colors">
+        <h3 className="truncate text-sm font-medium text-gray-800 group-hover:text-(--theme) transition-colors">
           {title}
         </h3>
 
         <div className="flex items-center gap-1 pt-0.5">
-          <Star size={16} className="fill-[var(--theme)] text-[var(--theme)]" />
+          <Star size={16} className="fill-(--theme) text-(--theme)" />
           <span className="text-sm font-medium text-gray-700">{rating}</span>
         </div>
 
@@ -82,7 +82,7 @@ export default function ProductCard({
             transition={{ duration: 0.2 }}
             aria-label="Add to cart"
             onClick={() => console.log(`Add ${title} to cart`)}
-            className="rounded-full bg-[var(--theme)] px-4 py-2 text-sm font-semibold text-gray-900 shadow-md transition-colors hover:bg-[var(--theme)] flex items-center gap-2 cursor-pointer"
+            className="rounded-full bg-(--theme) px-4 py-2 text-sm font-semibold text-(--theme-second) shadow-md transition-colors hover:brightness-110 flex items-center gap-2 cursor-pointer"
           >
             <ShoppingBag size={16} />
           </motion.button>

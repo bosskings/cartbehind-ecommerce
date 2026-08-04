@@ -3,7 +3,10 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --theme: #f2a925;
+  --theme: #270e89;
+  --theme-second: #ffff31;
+  --theme-rgb: 39, 14, 137;
+  --theme-second-rgb: 255, 255, 49;
 }
 
 @theme inline {

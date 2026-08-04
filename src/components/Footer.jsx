@@ -49,7 +49,7 @@ export default function Footer() {
               placeholder="your@email.com"
               className="w-full bg-transparent text-sm placeholder-[#6E6E78] focus:outline-none"
             />
-            <button className="flex shrink-0 items-center gap-1.5 bg-[var(--theme)] rounded-lg x-5 px-4 py-2.5 text-sm font-semibold text-[#0B0B0F] transition-opacity hover:opacity-90 cursor-pointer">
+            <button className="flex shrink-0 items-center gap-1.5 bg-(--theme) text-(--theme-second) rounded-lg x-5 px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90 cursor-pointer">
               Subscribe
             </button>
           </div>

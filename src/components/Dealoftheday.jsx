@@ -68,15 +68,15 @@ export default function DealOfTheDay({
     <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-100 via-white to-gray-200 w-[90%] mx-auto p-4">
       <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
         <div>
-          <div className="mb-4 flex items-center gap-2 text-[var(--theme)]">
-            <Zap size={16} className="fill-[var(--theme)]" />
+          <div className="mb-4 flex items-center gap-2 text-(--theme)">
+            <Zap size={16} className="fill-(--theme)" />
             <span className="text-xs font-bold tracking-widest">
               DEAL OF THE DAY
             </span>
           </div>
 
           <h2 className="mb-3 text-4xl font-extrabold text-gray-900 md:text-5xl">
-            Up to <span className="text-[var(--theme)]">{discountPercent}% Off</span>
+            Up to <span className="text-(--theme)">{discountPercent}% Off</span>
           </h2>
 
           <p className="mb-6 text-lg text-gray-500">{productName}</p>
@@ -90,7 +90,7 @@ export default function DealOfTheDay({
           <div className="mb-4 flex flex-wrap items-center gap-4">
             <button
               onClick={handleGrabDeal}
-              className="flex items-center gap-2 rounded-full bg-[var(--theme)] px-6 py-3 font-semibold text-gray-900 transition-colors hover:bg-[var(--theme)]"
+              className="flex items-center gap-2 rounded-full bg-(--theme) px-6 py-3 font-semibold text-(--theme-second) transition-colors hover:brightness-110"
             >
               <ShoppingBag size={18} />
               Grab the Deal

@@ -158,10 +158,8 @@ const MainPage = ({ category = 'All' }) => {
     return () => clearInterval(interval)
   }, [prefersReducedMotion])
 
-  // ——— Render ———
   return (
     <>
-      {/* ───────── Hero with Ken Burns & Glowing CTA ───────── */}
       <section className="relative h-screen w-full overflow-hidden">
         <Swiper
           modules={[Autoplay, Pagination, EffectFade]}
@@ -193,7 +191,7 @@ const MainPage = ({ category = 'All' }) => {
 
                 {/* Overlays */}
                 <div className="absolute inset-0 bg-black/55" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(242,169,37,0.34),transparent_32%),linear-gradient(to_top,rgba(0,0,0,0.8),rgba(0,0,0,0.2))]" />
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(var(--theme-rgb),0.34),transparent_32%),linear-gradient(to_top,rgba(0,0,0,0.8),rgba(0,0,0,0.2))]" />
 
                 <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-6 pt-20 md:px-10">
                   <motion.div
@@ -203,13 +201,13 @@ const MainPage = ({ category = 'All' }) => {
                     className="max-w-3xl text-white"
                   >
                     <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-white/90 backdrop-blur-md">
-                      <Sparkles size={14} className="text-(--theme)" />
+                      <Sparkles size={14} className="text-(--theme-second)" />
                       curated luxury
                     </span>
 
                     <h1 className="mt-6 font-extrabold leading-[1.05] tracking-tight text-[clamp(2.6rem,6vw,5.8rem)]">
                       {slide.title} <br />
-                      <span className="text-(--theme)">{slide.highlight}</span>
+                      <span className="text-(--theme-second)">{slide.highlight}</span>
                     </h1>
 
                     <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-200 md:text-xl">
@@ -217,28 +215,27 @@ const MainPage = ({ category = 'All' }) => {
                     </p>
 
                     <div className="mt-8 flex flex-wrap gap-3">
-                      {/* Glowing primary CTA */}
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         animate={{
                           boxShadow: [
-                            "0 0 20px rgba(var(--theme-rgb),0.4)",
-                            "0 0 35px rgba(var(--theme-rgb),0.1)",
-                            "0 0 20px rgba(var(--theme-rgb),0.4)",
+                            "0 0 20px rgba(var(--theme-rgb),0.45)",
+                            "0 0 35px rgba(var(--theme-rgb),0.18)",
+                            "0 0 20px rgba(var(--theme-rgb),0.45)",
                           ],
                         }}
                         transition={{
                           boxShadow: { repeat: Infinity, duration: 2.5, ease: "easeInOut" },
                         }}
                         aria-label={slide.cta}
-                        className="flex items-center gap-2 rounded-full bg-(--theme) px-7 py-3 font-semibold text-gray-900"
+                        className="flex items-center gap-2 rounded-full bg-(--theme) px-7 py-3 font-semibold text-(--theme-second) cursor-pointer"
                       >
                         {slide.cta}
                         <ArrowRight size={16} />
                       </motion.button>
 
-                      <button className="rounded-full border border-white/35 bg-white/10 px-6 py-3 font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/20">
+                      <button className="rounded-full border border-white/35 bg-white/10 px-6 py-3 font-semibold text-white backdrop-blur-md transition-colors cursor-pointer hover:bg-white/20">
                         Explore drop
                       </button>
                     </div>
@@ -300,7 +297,7 @@ const MainPage = ({ category = 'All' }) => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.45 }}
-              className="group rounded-3xl bg-gradient-to-br from-amber-200/60 to-amber-400/60 p-[1px]"
+              className="group rounded-3xl bg-(--theme) p-px"
             >
               <div className="h-full rounded-3xl bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
                 {/* Animated icon */}
@@ -311,7 +308,7 @@ const MainPage = ({ category = 'All' }) => {
                   }
                   viewport={{ once: true }}
                   transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-                  className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-(--theme)/18 text-(--theme)"
+                  className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-(--theme)/15 text-(--theme)"
                 >
                   <Icon size={20} />
                 </motion.div>
@@ -436,7 +433,7 @@ const MainPage = ({ category = 'All' }) => {
               />
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(242,169,37,0.16),transparent_40%,rgba(255,255,255,0.06))]" />
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(var(--theme-rgb),0.16),transparent_40%,rgba(255,255,255,0.06))]" />
 
             <div className="absolute inset-x-6 bottom-6 rounded-[24px] border border-white/20 bg-black/20 px-5 py-4 backdrop-blur-xl">
               <p className="text-2xl font-semibold text-white md:text-3xl">{editorialLooks[0].title}</p>
@@ -504,7 +501,7 @@ const MainPage = ({ category = 'All' }) => {
                   <Star
                     key={i}
                     size={18}
-                    className={i < testimonials[testimonialIndex].rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}
+                    className={i < testimonials[testimonialIndex].rating ? 'fill-(--theme-second) text-(--theme-second)' : 'text-gray-300'}
                   />
                 ))}
               </div>
@@ -543,23 +540,22 @@ const MainPage = ({ category = 'All' }) => {
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="w-full rounded-full border border-gray-600 bg-white/10 py-3 pl-11 pr-4 text-sm text-white placeholder-gray-400 outline-none backdrop-blur-sm transition focus:border-(--theme) focus:ring-1 focus:ring-(--theme)"
+                className="w-full rounded-full border border-gray-600 bg-white/10 py-3 pl-11 pr-4 text-sm text-white placeholder-gray-400 outline-none backdrop-blur-sm transition "
               />
             </div>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              className="rounded-full bg-(--theme) px-6 py-3 font-semibold text-gray-900 transition-colors hover:bg-amber-400"
+              className="rounded-full bg-(--theme) px-6 py-3 font-semibold text-(--theme-second) transition-colors h"
             >
               Subscribe
             </motion.button>
           </form>
-          <p className="mt-3 text-xs text-gray-500">.Unsubscribe anytime.</p>
+          <p className="mt-3 text-xs text-gray-500">Unsubscribe anytime.</p>
         </div>
       </section>
 
-      {/* ───────── Back to Top Button ───────── */}
       <AnimatePresence>
         {showBackToTop && (
           <motion.button
@@ -567,8 +563,8 @@ const MainPage = ({ category = 'All' }) => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             onClick={scrollToTop}
-            className="fixed bottom-8 right-8 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-(--theme) text-white shadow-lg hover:bg-amber-500"
-            aria-label="Back to top"
+            className="fixed bottom-8 right-8 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-(--theme) text-(--theme-second) shadow-lg hover:brightness-110 cursor-pointer transition-colors"
+            aria-label="Back to top "
           >
             <ArrowUp size={20} />
           </motion.button>
