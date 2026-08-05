@@ -8,12 +8,14 @@ import { LuMenu } from "react-icons/lu"
 import { motion } from "framer-motion"
 import { IoMdClose } from "react-icons/io"
 import Link from "next/link"
+import { useCart } from "@/components/CartContext"
 
 const Navbar = () => {
   const [searchTerm, setSearchTerm] = useState("")
   const [showSearch, setShowSearch] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
+  const { cartCount } = useCart()
 
   useEffect(() => {
     const handleScroll = () => {
@@ -46,9 +48,9 @@ const Navbar = () => {
 
   return (
     <div
-      className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${isScrolled
-          ? "bg-white/90 shadow-[0_10px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl"
-          : "bg-transparent backdrop-blur-sm"
+      className={`fixed left-0 right-0 top shadow-lg-0 z-50 transition-all duration-300 ${isScrolled
+        ? "bg-white/90 shadow-[0_10px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl"
+        : "bg-transparent backdrop-blur-sm"
         }`}
     >
       <div className="relative mx-auto w-full max-w-7xl px-4 lg:px-8">
@@ -58,7 +60,7 @@ const Navbar = () => {
           </a>
 
           <div
-            className={`hidden md:flex w-[45%] items-center justify-between gap-4 rounded-full border pr-1 transition-all duration-200 ${searchInputClasses} focus-within:border-[var(--theme)] focus-within:shadow-[0_0_8px_rgba(242,169,37,0.35)]`}
+            className={`hidden md:flex w-[45%] items-center justify-between gap-4 rounded-full border pr-1 transition-all duration-200 ${searchInputClasses} focus-within:border-(--theme) focus-within:shadow-[0_0_8px_rgba(40,14,137,0.35)]`}
           >
             <input
               type="text"
@@ -67,7 +69,7 @@ const Navbar = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <button className="rounded-full bg-[var(--theme)] p-2 text-black">
+            <button className="rounded-full bg-(--theme) p-2 text-[var(--theme-second)]">
               <IoSearch />
             </button>
           </div>
@@ -84,9 +86,18 @@ const Navbar = () => {
               <FaRegMoon size={20} />
             </button>
 
-            <button className={`rounded-full p-2 ${iconButtonClass}`}>
+            <Link
+              href="/cart"
+              className={`relative rounded-full p-2 ${iconButtonClass}`}
+              aria-label="Shopping cart"
+            >
               <FiShoppingBag size={20} />
-            </button>
+              {cartCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-(--theme-second) px-1 text-[10px] font-black text-(--theme)">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
 
             <button
               onClick={() => setShowMenu(!showMenu)}
@@ -111,7 +122,7 @@ const Navbar = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <button className="rounded-full bg-[var(--theme)] p-2 text-black">
+            <button className="rounded-full bg-(--theme) p-2 text-[var(--theme-second)]">
               <IoSearch />
             </button>
           </motion.div>

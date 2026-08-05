@@ -2,6 +2,7 @@ import React from "react"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { Star, ShoppingBag } from "lucide-react"
+import { useCart } from "@/components/CartContext"
 
 const sampleProduct = {
   id: 1,
@@ -24,6 +25,9 @@ export default function ProductCard({
 }) {
   const { brand, title, rating, price, originalPrice, discountPercent, image } =
     product
+  const { addToCart } = useCart()
+
+  const handleAddToCart = () => addToCart(product)
 
   return (
     <motion.div
@@ -34,7 +38,7 @@ export default function ProductCard({
       {/* Image area */}
       <div className="relative aspect-[5/4] w-full bg-gray-100 overflow-hidden p-2">
         {discountPercent ? (
-          <span className="hidden group-hover:block transition-all absolute left-4 top-4 z-10 rounded-full bg-[var(--theme)] px-3 py-1 text-xs font-bold text-gray-900 shadow-sm">
+          <span className="hidden group-hover:block transition-all absolute left-4 top-4 z-10 rounded-full bg-[var(--theme)] px-3 py-1 text-xs font-bold text-[var(--theme-second)] shadow-sm">
             -{discountPercent}%
           </span>
         ) : null}
@@ -81,8 +85,8 @@ export default function ProductCard({
             whileTap={{ scale: 0.9 }}
             transition={{ duration: 0.2 }}
             aria-label="Add to cart"
-            onClick={() => console.log(`Add ${title} to cart`)}
-            className="rounded-full bg-[var(--theme)] px-4 py-2 text-sm font-semibold text-gray-900 shadow-md transition-colors hover:bg-[var(--theme)] flex items-center gap-2 cursor-pointer"
+            onClick={handleAddToCart}
+            className="rounded-full bg-[var(--theme)] px-2 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-[var(--theme)] flex items-center gap-2 cursor-pointer"
           >
             <ShoppingBag size={16} />
           </motion.button>

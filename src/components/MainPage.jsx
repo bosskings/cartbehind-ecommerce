@@ -209,7 +209,7 @@ const MainPage = ({ category = 'All' }) => {
 
                     <h1 className="mt-6 font-extrabold leading-[1.05] tracking-tight text-[clamp(2.6rem,6vw,5.8rem)]">
                       {slide.title} <br />
-                      <span className="text-(--theme)">{slide.highlight}</span>
+                      <span className="text-(--theme-second)">{slide.highlight}</span>
                     </h1>
 
                     <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-200 md:text-xl">
@@ -232,7 +232,7 @@ const MainPage = ({ category = 'All' }) => {
                           boxShadow: { repeat: Infinity, duration: 2.5, ease: "easeInOut" },
                         }}
                         aria-label={slide.cta}
-                        className="flex items-center gap-2 rounded-full bg-(--theme) px-7 py-3 font-semibold text-gray-900"
+                        className="flex items-center gap-2 rounded-full bg-(--theme) px-7 py-3 font-semibold text-[var(--theme-second)]"
                       >
                         {slide.cta}
                         <ArrowRight size={16} />
@@ -300,7 +300,7 @@ const MainPage = ({ category = 'All' }) => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.45 }}
-              className="group rounded-3xl bg-gradient-to-br from-amber-200/60 to-amber-400/60 p-[1px]"
+              className="group rounded-3xl shadow-lg p-[1px]"
             >
               <div className="h-full rounded-3xl bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
                 {/* Animated icon */}
@@ -543,19 +543,19 @@ const MainPage = ({ category = 'All' }) => {
               <input
                 type="email"
                 placeholder="Enter your email"
-                className="w-full rounded-full border border-gray-600 bg-white/10 py-3 pl-11 pr-4 text-sm text-white placeholder-gray-400 outline-none backdrop-blur-sm transition focus:border-(--theme) focus:ring-1 focus:ring-(--theme)"
+                className="w-full rounded-full border border-gray-600 bg-white/10 py-3 pl-11 pr-4 text-sm text-white placeholder-gray-400 outline-none backdrop-blur-sm transition focus:border-(--theme) "
               />
             </div>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              className="rounded-full bg-(--theme) px-6 py-3 font-semibold text-gray-900 transition-colors hover:bg-amber-400"
+              className="rounded-full bg-(--theme) px-6 py-3 font-semibold text-[var(--theme-second)] transition-colors hover:bg-[var(--theme)]"
             >
               Subscribe
             </motion.button>
           </form>
-          <p className="mt-3 text-xs text-gray-500">.Unsubscribe anytime.</p>
+          <p className="mt-3 text-xs text-gray-500">Unsubscribe anytime.</p>
         </div>
       </section>
 
@@ -567,7 +567,7 @@ const MainPage = ({ category = 'All' }) => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             onClick={scrollToTop}
-            className="fixed bottom-8 right-8 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-(--theme) text-white shadow-lg hover:bg-amber-500"
+            className="fixed bottom-8 right-8 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-(--theme) text-white shadow-lg hover:text-[var(--theme-second)] cursor-pointer transition-colors"
             aria-label="Back to top"
           >
             <ArrowUp size={20} />
