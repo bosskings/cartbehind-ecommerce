@@ -44,7 +44,9 @@ export default function ProductCard({
         {/* Image area */}
         <div className="relative aspect-[5/5] w-full bg-gray-100 overflow-hidden p-4">
 
-          <button
+          <motion.button
+            whileTap={{ scale: 0.6 }}
+            transition={{ type: "spring", stiffness: 500, damping: 25 }}
             type="button"
             aria-label="Add to cart"
             className="absolute right-3 bottom-3 z-20 flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--theme)] px-3 text-[var(--theme-second)] shadow-lg transition-all duration-300 md:inset-x-0 md:mx-auto md:bottom-2 md:w-[90%] md:rounded-xl md:px-5 md:translate-y-full md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100"
@@ -52,7 +54,7 @@ export default function ProductCard({
           >
             <ShoppingBag size={16} />
             <span className="hidden md:inline">Add to cart</span>
-          </button>
+          </motion.button>
 
           {discountPercent ? (
             <span className="hidden group-hover:block transition-all absolute left-4 top-4 z-10 rounded-full bg-(--theme) px-3 py-1 text-xs font-bold text-(--theme-second) shadow-sm">
