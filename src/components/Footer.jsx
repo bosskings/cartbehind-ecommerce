@@ -2,6 +2,7 @@ import React from "react";
 import { FaInstagram, FaTwitter, FaYoutube } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 import { CiMail } from "react-icons/ci";
+import Image from "next/image";
 
 
 
@@ -30,7 +31,7 @@ const socialLinks = [
 
 export default function Footer() {
   return (
-    <footer className="">
+    <footer className="bg-black/80 mt-20 rounded-t-4xl">
       {/* Newsletter */}
       <div className="border-b border-white/10 px-8 py-14 md:px-16">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-8 md:flex-row md:items-center">
@@ -61,7 +62,7 @@ export default function Footer() {
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-8 gap-y-12 md:grid-cols-4">
           {footerColumns.map((col) => (
             <div key={col.title}>
-              <p className="mb-5 text-xs font-bold tracking-[0.15em] text-[#7A7A85]">
+              <p className="mb-5 text-xs font-bold tracking-[0.15em] text-black">
                 {col.title.toUpperCase()}
               </p>
               <ul className="space-y-3.5">
@@ -69,7 +70,7 @@ export default function Footer() {
                   <li key={link}>
                     <a
                       href="#"
-                      className="text-[15px] text-[#B4B4BE] transition-colors "
+                      className="text-[15px] text-[#B4B4BE] hover:text-black transition-colors "
                     >
                       {link}
                     </a>
@@ -110,7 +111,12 @@ export default function Footer() {
           <div className="flex items-center gap-2.5">
 
             <span className="text-base font-extrabold tracking-tight text-white">
-              RAVE
+              <Image
+                src="/icon.svg"
+                alt="Cart Behind Logo"
+                width={100}
+                height={40}
+              />
             </span>
           </div>
 

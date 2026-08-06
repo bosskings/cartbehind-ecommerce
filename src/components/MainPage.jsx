@@ -30,6 +30,7 @@ import CategoryCarousel from './Categorycarousel'
 import ProductCard from './ProductCard'
 import DealOfTheDay from './Dealoftheday'
 import { products } from '@/data/products'
+import Hero from './Hero'
 
 // ——— Motion variants ———
 const fadeUp = {
@@ -49,7 +50,7 @@ const staggerContainer = {
 const heroSlides = [
   {
     id: 1,
-    image: '/hero-bg1.jpg',
+    image: '/hero.jpg',
     title: 'Discover Something',
     highlight: 'Extraordinary',
     subtitle: 'Curated collections from the world’s best brands. Premium quality, unbeatable prices.',
@@ -57,7 +58,7 @@ const heroSlides = [
   },
   {
     id: 2,
-    image: '/hero-bg2.jpg',
+    image: '/hero-bg1.jpg',
     title: 'Up to 50% Off',
     highlight: 'Deal of the Day',
     subtitle: 'Limited time offers on top-rated products. Grab yours before they’re gone.',
@@ -159,11 +160,9 @@ const MainPage = ({ category = 'All' }) => {
     return () => clearInterval(interval)
   }, [prefersReducedMotion])
 
-  // ——— Render ———
   return (
     <>
-      {/* ───────── Hero with Ken Burns & Glowing CTA ───────── */}
-      <section className="relative h-screen w-full overflow-hidden">
+      {/* <section className="relative h-screen w-full overflow-hidden">
         <Swiper
           modules={[Autoplay, Pagination, EffectFade]}
           effect="fade"
@@ -175,7 +174,6 @@ const MainPage = ({ category = 'All' }) => {
           {heroSlides.map((slide) => (
             <SwiperSlide key={slide.id}>
               <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
-                {/* Ken Burns slow zoom */}
                 <motion.div
                   className="absolute inset-0"
                   initial={{ scale: 1 }}
@@ -186,13 +184,12 @@ const MainPage = ({ category = 'All' }) => {
                   <Image
                     src={slide.image}
                     fill
-                    className="object-cover"
+                    className="object-cover object-top"
                     alt={slide.title}
                     priority
                   />
                 </motion.div>
 
-                {/* Overlays */}
                 <div className="absolute inset-0 bg-black/55" />
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(242,169,37,0.34),transparent_32%),linear-gradient(to_top,rgba(0,0,0,0.8),rgba(0,0,0,0.2))]" />
 
@@ -218,7 +215,6 @@ const MainPage = ({ category = 'All' }) => {
                     </p>
 
                     <div className="mt-8 flex flex-wrap gap-3">
-                      {/* Glowing primary CTA */}
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -250,9 +246,10 @@ const MainPage = ({ category = 'All' }) => {
           ))}
         </Swiper>
 
-      </section>
+      </section> */}
 
-      {/* ───────── Animated Category Navigation ───────── */}
+      <Hero />
+
       <nav className="mx-auto flex w-[95%] gap-2 overflow-x-auto py-5 scrollbar-hide md:w-[88%] md:justify-center">
         {categoryFilters.map((cat) => {
           const isActive = pathname === getCategoryPath(cat.name)
@@ -263,7 +260,6 @@ const MainPage = ({ category = 'All' }) => {
               className={`relative rounded-full px-5 py-2.5 text-xs font-medium transition-colors ${isActive ? "text-white" : "bg-white text-gray-700 hover:bg-gray-100"
                 }`}
             >
-              {/* Sliding pill indicator */}
               {isActive && (
                 <motion.span
                   layoutId="activeCategoryPill"
@@ -278,7 +274,6 @@ const MainPage = ({ category = 'All' }) => {
         })}
       </nav>
 
-      {/* ───────── Category Carousel ───────── */}
       <motion.section
         initial="hidden"
         whileInView="visible"
@@ -410,8 +405,7 @@ const MainPage = ({ category = 'All' }) => {
         </motion.div>
       </section>
 
-      {/* ───────── Editorial “Shop the Look” ───────── */}
-      <section className="mx-auto mt-16 w-[95%] md:w-[90%]">
+      {/* <section className="mx-auto mt-16 w-[95%] md:w-[90%]">
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-gray-400">Style stories</p>
@@ -485,7 +479,7 @@ const MainPage = ({ category = 'All' }) => {
             </motion.div>
           ))}
         </div>
-      </section>
+      </section> */}
 
       {/* ───────── Testimonials Carousel ───────── */}
       <section className="mx-auto mt-16 w-[95%] md:w-[90%]">

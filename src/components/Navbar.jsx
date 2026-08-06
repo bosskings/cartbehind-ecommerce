@@ -8,6 +8,7 @@ import { LuMenu } from "react-icons/lu"
 import { motion } from "framer-motion"
 import { IoMdClose } from "react-icons/io"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import { useCart } from "@/components/CartContext"
 
@@ -49,7 +50,10 @@ const Navbar = () => {
   const searchInputClasses = isNavActive
     ? "border-gray-200 text-gray-700 placeholder:text-gray-400"
     : "border-white/40 text-white placeholder:text-white/70"
-
+  const searchTextClasses = isNavActive
+    ? "text-gray-700 placeholder:text-gray-400"
+    : "text-white placeholder:text-white/70"
+  const inputBaseClass = "h-10 w-full rounded-full bg-transparent pl-4 pr-12 text-sm outline-none"
   const navTextClass = isNavActive ? "text-gray-900" : "text-white"
   const iconButtonClass = isNavActive
     ? "hover:bg-gray-100 text-gray-900"
@@ -59,14 +63,19 @@ const Navbar = () => {
     <div
       className={`fixed left-0 right-0 top shadow-lg-0 z-50 transition-all duration-300 ${isNavActive
         ? "bg-white/90 shadow-[0_10px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl"
-        : "bg-transparent backdrop-blur-sm"
+        : "bg-transparent "
         }`}
     >
       <div className="relative mx-auto w-full max-w-7xl px-4 lg:px-8">
         <div className="flex h-16 w-full items-center justify-between gap-4 md:h-20">
-          <a href="/" className={`text-lg font-black tracking-[0.35em] ${navTextClass}`}>
-            RAVE
-          </a>
+          <Link href="/" className={`text-lg font-black tracking-[0.35em] ${navTextClass}`}>
+            <Image
+              src="/cart1.png"
+              alt="CartBehind Logo"
+              width={120}
+              height={40}
+            />
+          </Link>
 
           <div
             className={`hidden md:flex w-[45%] items-center justify-between gap-4 rounded-full border pr-1 transition-all duration-200 ${searchInputClasses} focus-within:border-(--theme) focus-within:shadow-[0_0_8px_rgba(40,14,137,0.35)]`}
@@ -74,11 +83,11 @@ const Navbar = () => {
             <input
               type="text"
               placeholder="Search for products, brands..."
-              className="h-10 w-full rounded-full bg-transparent pl-4 pr-12 text-sm outline-none"
+              className={`${inputBaseClass} ${searchTextClasses}`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <button className="rounded-full bg-(--theme) p-2 text-[var(--theme-second)]">
+            <button className="cursor-pointer rounded-full bg-(--theme) p-2 text-(--theme-second)">
               <IoSearch />
             </button>
           </div>
@@ -86,7 +95,7 @@ const Navbar = () => {
           <div className="flex items-center gap-2 md:gap-6">
             <button
               onClick={() => setShowSearch(!showSearch)}
-              className={`rounded-full p-2 md:hidden ${iconButtonClass}`}
+              className={`rounded-full cursor-pointer p-2 md:hidden ${iconButtonClass}`}
             >
               <IoSearch size={20} />
             </button>
@@ -127,11 +136,11 @@ const Navbar = () => {
             <input
               type="text"
               placeholder="Search for products, brands..."
-              className="h-10 w-full rounded-full bg-transparent pl-4 pr-12 text-sm outline-none"
+              className={`${inputBaseClass} ${searchTextClasses}`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <button className="rounded-full bg-(--theme) p-2 text-[var(--theme-second)]">
+            <button className="rounded-full cursor-pointer bg-(--theme) p-2 text-(--theme-second)">
               <IoSearch />
             </button>
           </motion.div>

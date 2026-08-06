@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -42,6 +42,11 @@ export default function CategoryCarousel() {
   const nextRef = useRef(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
+  const [navReady, setNavReady] = useState(false);
+
+  useEffect(() => {
+    setNavReady(true);
+  }, []);
 
   return (
     <section className="w-full px-4 py-8 sm:px-8">
@@ -57,7 +62,7 @@ export default function CategoryCarousel() {
           Explore Categories
         </h2>
 
-        <div className="flex shrink-0 items-center gap-3">
+        <div className="flex shrink-0 items-center ">
           <motion.button
             ref={prevRef}
             type="button"
@@ -65,7 +70,7 @@ export default function CategoryCarousel() {
             disabled={atStart}
             whileHover={!atStart ? { scale: 1.08 } : {}}
             whileTap={!atStart ? { scale: 0.94 } : {}}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-[var(--theme)] hover:bg-[var(--theme)]/10 hover:text-[var(--theme)] disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:cursor-not-allowed cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-(--theme) hover:bg-(--theme)/10 hover:text-(--theme) disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:cursor-not-allowed cursor-pointer"
           >
             <ChevronLeft size={18} />
           </motion.button>
@@ -76,7 +81,7 @@ export default function CategoryCarousel() {
             disabled={atEnd}
             whileHover={!atEnd ? { scale: 1.08 } : {}}
             whileTap={!atEnd ? { scale: 0.94 } : {}}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-[var(--theme)] hover:bg-[var(--theme)]/10 hover:text-[var(--theme)] disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:cursor-not-allowed cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-(--theme) hover:bg-(--theme)/10 hover:text-(--theme) disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:cursor-not-allowed cursor-pointer"
           >
             <ChevronRight size={18} />
           </motion.button>
@@ -89,18 +94,19 @@ export default function CategoryCarousel() {
         initial="hidden"
         whileInView="show"
         viewport={{ once: true, amount: 0.1 }}
-        className="relative [mask-image:linear-gradient(to_right,transparent,black_2%,black_98%,transparent)]"
+        className="relative mask-[linear-gradient(to_right,transparent,black_2%,black_98%,transparent)]"
       >
         <Swiper
           modules={[Navigation]}
+
           onBeforeInit={(swiper) => {
             swiper.params.navigation.prevEl = prevRef.current;
             swiper.params.navigation.nextEl = nextRef.current;
           }}
-          navigation={{
+          navigation={navReady ? {
             prevEl: prevRef.current,
             nextEl: nextRef.current,
-          }}
+          } : false}
           onSlideChange={(swiper) => {
             setAtStart(swiper.isBeginning);
             setAtEnd(swiper.isEnd);
@@ -111,8 +117,8 @@ export default function CategoryCarousel() {
             setAtStart(false);
             setAtEnd(false);
           }}
-          spaceBetween={20}
-          slidesPerView={2.5}
+          spaceBetween={12}
+          slidesPerView={5}
           breakpoints={{
             480: { slidesPerView: 3.5 },
             640: { slidesPerView: 4.5 },
@@ -120,20 +126,20 @@ export default function CategoryCarousel() {
             1024: { slidesPerView: 6.5 },
             1280: { slidesPerView: 8 },
           }}
-          className="!py-2"
+          className="py-2!"
         >
           {categories.map((category) => (
-            <SwiperSlide key={category.name}>
+            <SwiperSlide
+              key={category.name}
+            >
               <motion.button
                 type="button"
                 variants={itemReveal}
                 whileHover={{ y: -4 }}
-                whileTap={{ scale: 0.96 }}
-                transition={{ type: "spring", stiffness: 300 }}
                 aria-label={category.name}
-                className="group flex w-full flex-col items-center gap-3 rounded-2xl py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme)] focus-visible:ring-offset-2"
+                className="group flex w-full flex-col items-center gap-2 rounded-2xl py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--theme) focus-visible:ring-offset-2"
               >
-                <span className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-[var(--theme)]/40 sm:h-28 sm:w-28">
+                <span className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-(--theme)/40 sm:h-28 sm:w-28 md:h-30 md:w-30">
                   <Image
                     src={category.image}
                     alt=""
@@ -142,9 +148,9 @@ export default function CategoryCarousel() {
                     className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
                   />
                   {/* Glowing ring on hover */}
-                  <span className="absolute inset-0 rounded-full ring-2 ring-transparent transition-all duration-300 group-hover:ring-[var(--theme)]/30" />
+                  <span className="absolute inset-0 rounded-full ring-2 ring-transparent transition-all duration-300 group-hover:ring-(--theme)/30" />
                 </span>
-                <span className="flex h-10 items-center text-center text-sm font-medium leading-tight text-gray-600 transition-colors group-hover:text-[var(--theme)] line-clamp-2">
+                <span className="flex h-10 items-center text-center text-sm font-medium leading-tight text-gray-600 transition-colors group-hover:text-(--theme) line-clamp-2">
                   {category.name}
                 </span>
               </motion.button>
