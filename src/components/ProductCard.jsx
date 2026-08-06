@@ -12,7 +12,7 @@ const sampleProduct = {
   price: 14309,
   originalPrice: 15984,
   discountPercent: 10,
-  image: "/cat.jpeg",
+  image: "/thumbnail.webp",
 }
 
 function formatNaira(amount) {
@@ -27,18 +27,31 @@ export default function ProductCard({
     product
   const { addToCart } = useCart()
 
-  const handleAddToCart = () => addToCart(product)
+  const handleAddToCart = (event) => {
+    event?.stopPropagation?.()
+    addToCart(product)
+  }
 
   return (
     <motion.div
-      whileHover={{ y: -6 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className={`group relative w-full overflow-hidden rounded-2xl bg-white shadow-sm transition-shadow duration-300 hover:shadow-lg ${className}`}
+      className={`group relative w-full overflow-hidden rounded-2xl bg-white shadow-sm transition-shadow duration-300 cursor-pointer hover:shadow-lg ${className}`}
     >
+
       {/* Image area */}
-      <div className="relative aspect-[5/4] w-full bg-gray-100 overflow-hidden p-2">
+      <div className="relative aspect-[5/5] w-full bg-gray-100 overflow-hidden p-4">
+
+        <button
+          type="button"
+          className="pointer-events-none absolute inset-x-0 bottom-2 z-2 mx-auto flex w-[80%] translate-y-full items-center justify-center gap-2 rounded-xl bg-(--theme) px-3 py-3 text-sm font-semibold text-(--theme-second) opacity-0 transition-all duration-300 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100"
+          onClick={handleAddToCart}
+        >
+          <ShoppingBag size={16} />
+          Add to cart
+        </button>
+
         {discountPercent ? (
-          <span className="hidden group-hover:block transition-all absolute left-4 top-4 z-10 rounded-full bg-[var(--theme)] px-3 py-1 text-xs font-bold text-[var(--theme-second)] shadow-sm">
+          <span className="hidden group-hover:block transition-all absolute left-4 top-4 z-10 rounded-full bg-(--theme) px-3 py-1 text-xs font-bold text-(--theme-second) shadow-sm">
             -{discountPercent}%
           </span>
         ) : null}
@@ -55,17 +68,17 @@ export default function ProductCard({
       </div>
 
       {/* Details */}
-      <div className="space-y-1.5 px-5 pb-5 pt-4 border-t-2 border-transparent transition-colors duration-300 group-hover:border-[var(--theme)]/30">
+      <div className="space-y-1.5 px-5 pb-5 pt-4 border-t-2 border-transparent transition-colors duration-300 ">
         <p className="text-xs font-medium tracking-wider text-gray-400 uppercase">
           {brand}
         </p>
 
-        <h3 className="truncate text-sm font-medium text-gray-800 group-hover:text-[var(--theme)] transition-colors">
+        <h3 className="truncate text-sm font-medium text-gray-800 group-hover:text-(--theme) transition-colors">
           {title}
         </h3>
 
         <div className="flex items-center gap-1 pt-0.5">
-          <Star size={16} className="fill-[var(--theme)] text-[var(--theme)]" />
+          <Star size={16} stroke="none" className="fill-orange-400" />
           <span className="text-sm font-medium text-gray-700">{rating}</span>
         </div>
 
@@ -74,22 +87,14 @@ export default function ProductCard({
             <span className="text-lg font-bold text-gray-900">
               {formatNaira(price)}
             </span>
-            {/* {originalPrice && (
+            {originalPrice && (
               <span className="ml-2 text-sm text-gray-400 line-through">
                 {formatNaira(originalPrice)}
               </span>
-            )} */}
+            )}
           </div>
 
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            transition={{ duration: 0.2 }}
-            aria-label="Add to cart"
-            onClick={handleAddToCart}
-            className="rounded-full bg-[var(--theme)] px-2 py-2 text-sm font-semibold text-white shadow-md transition-colors hover:bg-[var(--theme)] flex items-center gap-2 cursor-pointer"
-          >
-            <ShoppingBag size={16} />
-          </motion.button>
+
         </div>
       </div>
     </motion.div>
