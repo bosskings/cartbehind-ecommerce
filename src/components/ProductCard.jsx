@@ -46,11 +46,12 @@ export default function ProductCard({
 
           <button
             type="button"
-            className="absolute inset-x-0 bottom-2 z-20 mx-auto flex w-[90%] items-center justify-center gap-2 rounded-xl bg-[var(--theme)] px-3 py-3 text-sm font-semibold text-[var(--theme-second)] transition-all duration-300 md:translate-y-full md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100"
+            aria-label="Add to cart"
+            className="absolute right-3 bottom-3 z-20 flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--theme)] px-3 text-[var(--theme-second)] shadow-lg transition-all duration-300 md:inset-x-0 md:mx-auto md:bottom-2 md:w-[90%] md:rounded-xl md:px-5 md:translate-y-full md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100"
             onClick={handleAddToCart}
           >
             <ShoppingBag size={16} />
-            Add to cart
+            <span className="hidden md:inline">Add to cart</span>
           </button>
 
           {discountPercent ? (
