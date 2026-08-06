@@ -29,6 +29,7 @@ import 'swiper/css/pagination'
 import CategoryCarousel from './Categorycarousel'
 import ProductCard from './ProductCard'
 import DealOfTheDay from './Dealoftheday'
+import { products } from '@/data/products'
 
 // ——— Motion variants ———
 const fadeUp = {
@@ -360,14 +361,14 @@ const MainPage = ({ category = 'All' }) => {
           viewport={{ once: true, margin: '-50px' }}
           className="mx-auto grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5"
         >
-          {Array.from({ length: 8 }).map((_, i) => (
+          {products.slice(0, 8).map((product) => (
             <motion.div
-              key={i}
+              key={product.id}
               variants={fadeUp}
               whileHover={prefersReducedMotion ? {} : { scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)' }}
               className="rounded-2xl transition-shadow duration-300"
             >
-              <ProductCard />
+              <ProductCard product={product} />
             </motion.div>
           ))}
         </motion.div>
@@ -385,7 +386,7 @@ const MainPage = ({ category = 'All' }) => {
       </motion.section>
 
       {/* ───────── New Arrivals (Hover‑lift) ───────── */}
-      <section className="relative mx-auto mt-12 md:w-[90%]">
+      <section className="relative mx-auto mt-12 w-[95%] md:w-[90%]">
         <h2 className="mb-4 ml-5 text-2xl font-extrabold tracking-tight text-gray-900">
           New Arrivals
         </h2>
@@ -396,14 +397,14 @@ const MainPage = ({ category = 'All' }) => {
           viewport={{ once: true, margin: '-50px' }}
           className="mx-auto grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5"
         >
-          {Array.from({ length: 8 }).map((_, i) => (
+          {products.slice(0, 8).map((product) => (
             <motion.div
-              key={i}
+              key={product.id}
               variants={fadeUp}
               whileHover={prefersReducedMotion ? {} : { scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)' }}
               className="rounded-2xl transition-shadow duration-300"
             >
-              <ProductCard />
+              <ProductCard product={product} />
             </motion.div>
           ))}
         </motion.div>
