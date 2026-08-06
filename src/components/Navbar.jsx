@@ -8,6 +8,7 @@ import { LuMenu } from "react-icons/lu"
 import { motion } from "framer-motion"
 import { IoMdClose } from "react-icons/io"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useCart } from "@/components/CartContext"
 
 const Navbar = () => {
@@ -16,8 +17,16 @@ const Navbar = () => {
   const [showMenu, setShowMenu] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const { cartCount } = useCart()
+  const pathname = usePathname()
+  const isHomePage = pathname === "/"
+  const isNavActive = isHomePage ? isScrolled : true
 
   useEffect(() => {
+    if (!isHomePage) {
+      setIsScrolled(true)
+      return
+    }
+
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 12)
     }
@@ -25,7 +34,7 @@ const Navbar = () => {
     handleScroll()
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+  }, [isHomePage])
 
   const menuOptions = [
     { id: 1, label: "Beauty, Fragrances" },
@@ -37,25 +46,25 @@ const Navbar = () => {
     { id: 7, label: "Home Accessories" },
   ]
 
-  const searchInputClasses = isScrolled
+  const searchInputClasses = isNavActive
     ? "border-gray-200 text-gray-700 placeholder:text-gray-400"
     : "border-white/40 text-white placeholder:text-white/70"
 
-  const navTextClass = isScrolled ? "text-gray-900" : "text-white"
-  const iconButtonClass = isScrolled
+  const navTextClass = isNavActive ? "text-gray-900" : "text-white"
+  const iconButtonClass = isNavActive
     ? "hover:bg-gray-100 text-gray-900"
     : "hover:bg-white/15 text-white"
 
   return (
     <div
-      className={`fixed left-0 right-0 top shadow-lg-0 z-50 transition-all duration-300 ${isScrolled
+      className={`fixed left-0 right-0 top shadow-lg-0 z-50 transition-all duration-300 ${isNavActive
         ? "bg-white/90 shadow-[0_10px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl"
         : "bg-transparent backdrop-blur-sm"
         }`}
     >
       <div className="relative mx-auto w-full max-w-7xl px-4 lg:px-8">
         <div className="flex h-16 w-full items-center justify-between gap-4 md:h-20">
-          <a href="#" className={`text-lg font-black tracking-[0.35em] ${navTextClass}`}>
+          <a href="/" className={`text-lg font-black tracking-[0.35em] ${navTextClass}`}>
             RAVE
           </a>
 

@@ -331,8 +331,14 @@ const MainPage = ({ category = 'All' }) => {
             { icon: RotateCcw, label: '30 Days Easy Return' },
             { icon: Lock, label: 'End‑to‑End Encryption' },
             { icon: Truck, label: 'Free Shipping Over $150' },
-            { icon: ShieldCheck, label: '100% Secure Checkout' },
-            { icon: RotateCcw, label: '30 Days Easy Return' },
+            { icon: ShieldCheck, label: '24/7 Customer Support' },
+            { icon: RotateCcw, label: 'Easy Order Tracking' },
+            { icon: Lock, label: 'Verified Returns Policy' },
+            { icon: Truck, label: 'Secure Payment Guarantee' },
+            { icon: ShieldCheck, label: 'Premium Packaging' },
+            { icon: RotateCcw, label: 'Lifetime Product Support' },
+            { icon: Lock, label: 'Instant Fraud Protection' },
+            { icon: Truck, label: 'Fast Local Delivery' },
           ].map(({ icon: Icon, label }, idx) => (
             <div key={idx} className="flex items-center gap-2 text-sm text-gray-500">
               <Icon size={16} className="text-(--theme)" />
