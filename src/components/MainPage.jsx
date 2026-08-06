@@ -29,6 +29,7 @@ import 'swiper/css/pagination'
 import CategoryCarousel from './Categorycarousel'
 import ProductCard from './ProductCard'
 import DealOfTheDay from './Dealoftheday'
+import { products } from '@/data/products'
 
 // ——— Motion variants ———
 const fadeUp = {
@@ -331,8 +332,14 @@ const MainPage = ({ category = 'All' }) => {
             { icon: RotateCcw, label: '30 Days Easy Return' },
             { icon: Lock, label: 'End‑to‑End Encryption' },
             { icon: Truck, label: 'Free Shipping Over $150' },
-            { icon: ShieldCheck, label: '100% Secure Checkout' },
-            { icon: RotateCcw, label: '30 Days Easy Return' },
+            { icon: ShieldCheck, label: '24/7 Customer Support' },
+            { icon: RotateCcw, label: 'Easy Order Tracking' },
+            { icon: Lock, label: 'Verified Returns Policy' },
+            { icon: Truck, label: 'Secure Payment Guarantee' },
+            { icon: ShieldCheck, label: 'Premium Packaging' },
+            { icon: RotateCcw, label: 'Lifetime Product Support' },
+            { icon: Lock, label: 'Instant Fraud Protection' },
+            { icon: Truck, label: 'Fast Local Delivery' },
           ].map(({ icon: Icon, label }, idx) => (
             <div key={idx} className="flex items-center gap-2 text-sm text-gray-500">
               <Icon size={16} className="text-(--theme)" />
@@ -354,14 +361,14 @@ const MainPage = ({ category = 'All' }) => {
           viewport={{ once: true, margin: '-50px' }}
           className="mx-auto grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5"
         >
-          {Array.from({ length: 8 }).map((_, i) => (
+          {products.slice(0, 8).map((product) => (
             <motion.div
-              key={i}
+              key={product.id}
               variants={fadeUp}
               whileHover={prefersReducedMotion ? {} : { scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)' }}
               className="rounded-2xl transition-shadow duration-300"
             >
-              <ProductCard />
+              <ProductCard product={product} />
             </motion.div>
           ))}
         </motion.div>
@@ -379,7 +386,7 @@ const MainPage = ({ category = 'All' }) => {
       </motion.section>
 
       {/* ───────── New Arrivals (Hover‑lift) ───────── */}
-      <section className="relative mx-auto mt-12 md:w-[90%]">
+      <section className="relative mx-auto mt-12 w-[95%] md:w-[90%]">
         <h2 className="mb-4 ml-5 text-2xl font-extrabold tracking-tight text-gray-900">
           New Arrivals
         </h2>
@@ -390,14 +397,14 @@ const MainPage = ({ category = 'All' }) => {
           viewport={{ once: true, margin: '-50px' }}
           className="mx-auto grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5"
         >
-          {Array.from({ length: 8 }).map((_, i) => (
+          {products.slice(0, 8).map((product) => (
             <motion.div
-              key={i}
+              key={product.id}
               variants={fadeUp}
               whileHover={prefersReducedMotion ? {} : { scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)' }}
               className="rounded-2xl transition-shadow duration-300"
             >
-              <ProductCard />
+              <ProductCard product={product} />
             </motion.div>
           ))}
         </motion.div>
