@@ -50,7 +50,7 @@ export default function Footer() {
               placeholder="your@email.com"
               className="w-full bg-transparent text-sm placeholder-[#6E6E78] focus:outline-none"
             />
-            <button className="flex shrink-0 items-center gap-1.5 bg-[var(--theme)] rounded-lg x-5 px-4 py-2.5 text-sm font-semibold text-[var(--theme-second)] transition-opacity hover:opacity-90 cursor-pointer">
+            <button className="flex shrink-0 items-center gap-1.5 bg-[var(--theme)] rounded-lg px-4 py-2.5 text-sm font-semibold text-[var(--theme-second)] transition-all duration-300 hover:scale-105 hover:bg-[#280E89] cursor-pointer">
               Subscribe
             </button>
           </div>
@@ -70,7 +70,7 @@ export default function Footer() {
                   <li key={link}>
                     <a
                       href="#"
-                      className="text-[15px] text-[#B4B4BE] hover:text-black transition-colors "
+                      className="text-[15px] text-[#B4B4BE] hover:text-white transition-colors "
                     >
                       {link}
                     </a>

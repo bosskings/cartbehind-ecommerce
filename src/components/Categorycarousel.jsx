@@ -58,7 +58,7 @@ export default function CategoryCarousel() {
         viewport={{ once: true, amount: 0.4 }}
         className="mb-6 flex items-center justify-between gap-4"
       >
-        <h2 className="text-2xl font-extrabold tracking-tight text-gray-900">
+        <h2 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
           Explore Categories
         </h2>
 
@@ -70,7 +70,7 @@ export default function CategoryCarousel() {
             disabled={atStart}
             whileHover={!atStart ? { scale: 1.08 } : {}}
             whileTap={!atStart ? { scale: 0.94 } : {}}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-(--theme) hover:bg-(--theme)/10 hover:text-(--theme) disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:cursor-not-allowed cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-(--theme) hover:bg-(--theme)/10 hover:text-(--theme) disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:cursor-not-allowed cursor-pointer dark:border-white/15 dark:text-gray-400 dark:disabled:hover:border-white/15"
           >
             <ChevronLeft size={18} />
           </motion.button>
@@ -81,7 +81,7 @@ export default function CategoryCarousel() {
             disabled={atEnd}
             whileHover={!atEnd ? { scale: 1.08 } : {}}
             whileTap={!atEnd ? { scale: 0.94 } : {}}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-(--theme) hover:bg-(--theme)/10 hover:text-(--theme) disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:cursor-not-allowed cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition-all duration-200 hover:border-(--theme) hover:bg-(--theme)/10 hover:text-(--theme) disabled:opacity-30 disabled:hover:border-gray-200 disabled:hover:bg-transparent disabled:hover:text-gray-500 disabled:cursor-not-allowed cursor-pointer dark:border-white/15 dark:text-gray-400 dark:disabled:hover:border-white/15"
           >
             <ChevronRight size={18} />
           </motion.button>
@@ -117,14 +117,15 @@ export default function CategoryCarousel() {
             setAtStart(false);
             setAtEnd(false);
           }}
-          spaceBetween={12}
-          slidesPerView={5}
+          spaceBetween={16}
+          slidesPerView={2.4}
           breakpoints={{
-            480: { slidesPerView: 3.5 },
-            640: { slidesPerView: 4.5 },
-            768: { slidesPerView: 5.5 },
-            1024: { slidesPerView: 6.5 },
-            1280: { slidesPerView: 8 },
+            360: { slidesPerView: 2.2, spaceBetween: 14 },
+            480: { slidesPerView: 4.5, spaceBetween: 14 },
+            640: { slidesPerView: 4.5, spaceBetween: 12 },
+            768: { slidesPerView: 5.5, spaceBetween: 12 },
+            1024: { slidesPerView: 6.5, spaceBetween: 12 },
+            1280: { slidesPerView: 8, spaceBetween: 12 },
           }}
           className="py-2!"
         >
@@ -139,7 +140,7 @@ export default function CategoryCarousel() {
                 aria-label={category.name}
                 className="group flex w-full flex-col items-center gap-2 rounded-2xl py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--theme) focus-visible:ring-offset-2"
               >
-                <span className="relative h-24 w-24 shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-(--theme)/40 sm:h-28 sm:w-28 md:h-30 md:w-30">
+                <span className="relative h-32 w-32 shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-(--theme)/40 sm:h-28 sm:w-28 md:h-30 md:w-30">
                   <Image
                     src={category.image}
                     alt=""
@@ -150,7 +151,7 @@ export default function CategoryCarousel() {
                   {/* Glowing ring on hover */}
                   <span className="absolute inset-0 rounded-full ring-2 ring-transparent transition-all duration-300 group-hover:ring-(--theme)/30" />
                 </span>
-                <span className="flex h-10 items-center text-center text-sm font-medium leading-tight text-gray-600 transition-colors group-hover:text-(--theme) line-clamp-2">
+                <span className="flex h-10 items-center text-center text-sm font-medium leading-tight text-gray-600 transition-colors group-hover:text-(--theme) line-clamp-2 dark:text-gray-300">
                   {category.name}
                 </span>
               </motion.button>

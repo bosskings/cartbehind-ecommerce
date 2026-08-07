@@ -19,7 +19,7 @@ export default function CartPage() {
     return (
       <>
         <Navbar />
-        <main className="relative min-h-screen overflow-hidden bg-[#f7f5fb]">
+        <main className="relative min-h-screen overflow-hidden bg-[#f7f5fb] dark:bg-background">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(40,14,137,0.08),transparent_55%)]" />
           <div className="pointer-events-none absolute -right-24 top-40 h-72 w-72 rounded-full bg-(--accent)/30 blur-3xl" />
 
@@ -42,7 +42,7 @@ export default function CartPage() {
               </p>
               <Link
                 href="/"
-                className="mt-8 inline-flex items-center gap-2 rounded-full bg-(--theme) px-7 py-3.5 text-sm font-bold text-(--theme-second) transition-transform hover:-translate-y-0.5"
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-(--theme) px-7 py-3.5 text-sm font-bold text-(--theme-second) transition-all duration-300 hover:scale-105 hover:bg-[#280E89]"
               >
                 Continue Shopping
                 <ArrowRight size={16} />
@@ -58,7 +58,7 @@ export default function CartPage() {
   return (
     <>
       <Navbar />
-      <main className="relative min-h-screen overflow-hidden bg-[#f7f5fb]">
+      <main className="relative min-h-screen overflow-hidden bg-[#f7f5fb] dark:bg-background">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(40,14,137,0.07),transparent_50%)]" />
         <div className="pointer-events-none absolute -left-20 top-48 h-64 w-64 rounded-full bg-(--accent)/25 blur-3xl" />
 
@@ -73,7 +73,7 @@ export default function CartPage() {
                 Keep shopping
               </Link>
               <p className="text-xs font-bold uppercase tracking-[0.35em] text-(--theme)">Cart</p>
-              <h1 className="mt-2 text-3xl font-black tracking-tight text-gray-950 md:text-4xl">
+              <h1 className="mt-2 text-3xl font-black tracking-tight text-gray-950 md:text-4xl dark:text-white">
                 Review your items
               </h1>
               <p className="mt-2 text-sm text-gray-500">
@@ -203,7 +203,7 @@ export default function CartPage() {
 
                 <button
                   onClick={() => setShowCheckoutModal(true)}
-                  className="mt-7 flex w-full items-center justify-center gap-2 rounded-full bg-(--theme) px-5 py-3.5 text-sm font-bold text-(--theme-second) transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(40,14,137,0.28)]"
+                  className="mt-7 flex w-full items-center justify-center gap-2 rounded-full bg-(--theme) px-5 py-3.5 text-sm font-bold text-(--theme-second) transition-all duration-300 hover:scale-105 hover:bg-[#280E89]"
                 >
                   Proceed to Checkout
                   <ArrowRight size={16} />
