@@ -65,7 +65,7 @@ export default function DealOfTheDay({
   }, [onGrabDeal]);
 
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-100 via-white to-gray-200 w-[90%] mx-auto p-4">
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-100 via-white to-gray-200 w-[90%] mx-auto p-8">
       <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
         <div>
           <div className="mb-4 flex items-center gap-2 text-[var(--theme)]">
