@@ -18,19 +18,6 @@ export const metadata = {
   description: "CartBEhind Ecommerce Store",
 };
 
-const themeInitScript = `
-(() => {
-  try {
-    const stored = localStorage.getItem("cartbehind-theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const theme = stored === "dark" || stored === "light"
-      ? stored
-      : prefersDark ? "dark" : "light";
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  } catch (_) {}
-})();
-`;
-
 export default function RootLayout({ children }) {
   return (
     <html
@@ -38,9 +25,6 @@ export default function RootLayout({ children }) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-      </head>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <ThemeProvider>
           <CartProvider>{children}</CartProvider>

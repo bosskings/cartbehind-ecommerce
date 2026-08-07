@@ -250,6 +250,8 @@ const MainPage = ({ category = 'All' }) => {
 
       <Hero />
 
+      <div className='w-full md:w-[90%] mx-auto'>
+
       <nav className="mx-auto flex w-[95%] gap-2 overflow-x-auto py-5 scrollbar-hide md:w-[88%] md:justify-center">
         {categoryFilters.map((cat) => {
           const isActive = pathname === getCategoryPath(cat.name)
@@ -273,7 +275,7 @@ const MainPage = ({ category = 'All' }) => {
           )
         })}
       </nav>
-
+        
       <motion.section
         initial="hidden"
         whileInView="visible"
@@ -281,14 +283,13 @@ const MainPage = ({ category = 'All' }) => {
         variants={fadeUp}
         className="relative w-full"
       >
-        <div className="mx-auto w-[95%] md:w-[90%]">
+        <div className="mx-auto w-full">
           <CategoryCarousel />
         </div>
       </motion.section>
 
-      {/* ───────── Premium Pillars with Gradient Borders & Icon Reveal ───────── */}
       <section className="mx-auto mt-10 w-[95%] md:w-[90%]">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-3">
           {premiumPillars.map(({ icon: Icon, title, text }) => (
             <motion.div
               key={title}
@@ -555,6 +556,7 @@ const MainPage = ({ category = 'All' }) => {
           <p className="mt-3 text-xs text-gray-500">Unsubscribe anytime.</p>
         </div>
       </section>
+      </div>
 
       {/* ───────── Back to Top Button ───────── */}
       <AnimatePresence>

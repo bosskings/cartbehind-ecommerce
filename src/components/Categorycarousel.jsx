@@ -10,16 +10,24 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import "swiper/css";
 import "swiper/css/navigation";
 
-// ---- Data: swap image URLs for your own assets ----
+// ---- Category thumbnails (ct-1 … ct-16) ----
 const categories = [
-  { name: "Beauty", image: "/cat.jpeg" },
-  { name: "Fragrances", image: "/cat.jpeg" },
-  { name: "Furniture", image: "/cat.jpeg" },
-  { name: "Groceries", image: "/cat.jpeg" },
-  { name: "Home Decoration", image: "/cat.jpeg" },
-  { name: "Kitchen Accessories", image: "/cat.jpeg" },
-  { name: "Laptops", image: "/cat.jpeg" },
-  { name: "Mens Shirts", image: "/cat.jpeg" },
+  { name: "Electronics", image: "/ct-1.jpg" },
+  { name: "Motorcycles", image: "/ct-2.jpg" },
+  { name: "Beauty", image: "/ct-3.jpg" },
+  { name: "Smartphones", image: "/ct-4.jpg" },
+  { name: "Sports", image: "/ct-5.jpg" },
+  { name: "Sunglasses", image: "/ct-6.jpg" },
+  { name: "Tablets", image: "/ct-7.jpg" },
+  { name: "Home Decorations", image: "/ct-8.jpg" },
+  { name: "Groceries", image: "/ct-9.jpg" },
+  { name: "Furniture", image: "/ct-10.jpg" },
+  { name: "Fragrances", image: "/ct-11.jpg" },
+  { name: "Kitchen Accessories", image: "/ct-12.jpg" },
+  { name: "Laptops", image: "/ct-13.jpg" },
+  { name: "Mens Shirts", image: "/ct-14.jpg" },
+  { name: "Sneakers", image: "/ct-15.jpg" },
+  { name: "Watches", image: "/ct-16.jpg" },
 ];
 
 const headerReveal = {
@@ -49,7 +57,7 @@ export default function CategoryCarousel() {
   }, []);
 
   return (
-    <section className="w-full px-4 py-8 sm:px-8">
+    <section className="w-full py-8 sm:px-8">
       {/* Header */}
       <motion.div
         variants={headerReveal}
