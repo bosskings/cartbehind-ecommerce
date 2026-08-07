@@ -97,7 +97,7 @@ export default function Hero() {
         <div className="mt-12 flex flex-col gap-4 sm:flex-row">
           <a
             href="#trending"
-            className="group inline-flex items-center justify-center gap-2 rounded-full bg-[var(--theme)] px-10 py-5 text-xs font-bold uppercase tracking-[0.2em] text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_0_36px_color-mix(in_oklab,var(--accent)_40%,transparent)]"
+            className="group inline-flex items-center justify-center gap-2 rounded-full bg-[var(--theme)] px-10 py-5 text-xs font-bold uppercase tracking-[0.2em] text-white transition-all duration-300 hover:scale-105 hover:bg-[#280E89]"
           >
             {slide.cta}
             <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />

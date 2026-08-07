@@ -90,7 +90,7 @@ export default function DealOfTheDay({
           <div className="mb-4 flex flex-wrap items-center gap-4">
             <button
               onClick={handleGrabDeal}
-              className="flex items-center gap-2 rounded-full bg-[var(--theme)] px-6 py-3 font-semibold text-[var(--theme-second)] transition-colors hover:bg-[var(--theme)]"
+              className="flex items-center gap-2 rounded-full bg-[var(--theme)] px-6 py-3 font-semibold text-[var(--theme-second)] transition-all duration-300 hover:scale-105 hover:bg-[#280E89] cursor-pointer"
             >
               <ShoppingBag size={18} />
               Grab the Deal

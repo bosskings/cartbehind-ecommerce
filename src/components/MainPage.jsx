@@ -216,7 +216,7 @@ const MainPage = ({ category = 'All' }) => {
 
                     <div className="mt-8 flex flex-wrap gap-3">
                       <motion.button
-                        whileHover={{ scale: 1.02 }}
+                        whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.98 }}
                         animate={{
                           boxShadow: [
@@ -229,7 +229,7 @@ const MainPage = ({ category = 'All' }) => {
                           boxShadow: { repeat: Infinity, duration: 2.5, ease: "easeInOut" },
                         }}
                         aria-label={slide.cta}
-                        className="flex items-center gap-2 rounded-full bg-(--theme) px-7 py-3 font-semibold text-[var(--theme-second)]"
+                        className="flex items-center gap-2 rounded-full bg-(--theme) px-7 py-3 font-semibold text-[var(--theme-second)] transition-colors duration-300 hover:bg-[#280E89] cursor-pointer"
                       >
                         {slide.cta}
                         <ArrowRight size={16} />
@@ -319,7 +319,6 @@ const MainPage = ({ category = 'All' }) => {
         </div>
       </section>
 
-      {/* ───────── Trust Marquees ───────── */}
       <div className="mt-10 overflow-hidden border-y border-gray-100 py-4">
         <div className="flex animate-marquee space-x-10 whitespace-nowrap px-4">
           {[
@@ -344,9 +343,8 @@ const MainPage = ({ category = 'All' }) => {
         </div>
       </div>
 
-      {/* ───────── Trending Now (Hover‑lift cards) ───────── */}
       <section className="relative mx-auto mt-12 md:w-[90%]">
-        <h2 className="mb-4 ml-5 text-2xl font-extrabold tracking-tight text-gray-900">
+        <h2 className="mb-4 ml-5 text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
           Trending Now
         </h2>
         <motion.div
@@ -369,7 +367,6 @@ const MainPage = ({ category = 'All' }) => {
         </motion.div>
       </section>
 
-      {/* ───────── Deal of the Day ───────── */}
       <motion.section
         initial="hidden"
         whileInView="visible"
@@ -380,9 +377,8 @@ const MainPage = ({ category = 'All' }) => {
         <DealOfTheDay />
       </motion.section>
 
-      {/* ───────── New Arrivals (Hover‑lift) ───────── */}
       <section className="relative mx-auto mt-12 w-[95%] md:w-[90%]">
-        <h2 className="mb-4 ml-5 text-2xl font-extrabold tracking-tight text-gray-900">
+        <h2 className="mb-4 ml-5 text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
           New Arrivals
         </h2>
         <motion.div
@@ -548,10 +544,10 @@ const MainPage = ({ category = 'All' }) => {
               />
             </div>
             <motion.button
-              whileHover={{ scale: 1.02 }}
+              whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              className="rounded-full bg-(--theme) px-6 py-3 font-semibold text-[var(--theme-second)] transition-colors hover:bg-[var(--theme)]"
+              className="rounded-full bg-(--theme) px-6 py-3 font-semibold text-[var(--theme-second)] transition-colors duration-300 hover:bg-[#280E89] cursor-pointer"
             >
               Subscribe
             </motion.button>
@@ -568,7 +564,7 @@ const MainPage = ({ category = 'All' }) => {
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             onClick={scrollToTop}
-            className="fixed bottom-8 right-8 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-(--theme) text-white shadow-lg hover:text-[var(--theme-second)] cursor-pointer transition-colors"
+            className="fixed bottom-8 right-8 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-(--theme) text-white shadow-lg transition-all duration-300 hover:scale-110 hover:bg-[#280E89] hover:text-[var(--theme-second)] cursor-pointer"
             aria-label="Back to top"
           >
             <ArrowUp size={20} />

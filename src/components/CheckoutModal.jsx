@@ -1,6 +1,10 @@
 "use client"
 
 import { X } from "lucide-react"
+import { IoBagCheckOutline } from "react-icons/io5";
+import { CiDeliveryTruck } from "react-icons/ci";
+
+
 
 const fieldClass =
   "h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none transition focus:border-(--theme) focus:bg-white"
@@ -14,10 +18,10 @@ export default function CheckoutModal({ isOpen, onClose }) {
         <div className="flex items-center justify-between border-b border-black/5 bg-[#f4f4f4] px-6 py-5">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--theme)/10 text-(--theme)">
-              <span className="text-lg">📦</span>
+              <span className="text-lg"><IoBagCheckOutline /></span>
             </div>
             <div>
-              <h2 className="text-[28px] font-black text-gray-900">Checkout Simulation</h2>
+              <h2 className="text-[28px] font-black text-gray-900">Checkout </h2>
               <p className="text-sm text-gray-600">Step 1 of 2: Shipping &amp; Details</p>
             </div>
           </div>
@@ -63,7 +67,7 @@ export default function CheckoutModal({ isOpen, onClose }) {
 
           <div className="rounded-2xl border border-[#f0d7a7] bg-[#fff8eb] px-4 py-4 text-sm text-gray-700">
             <div className="flex items-center gap-3 text-[15px] font-semibold text-(--theme)">
-              <span>🚚</span>
+              <span><CiDeliveryTruck /></span>
               <span>Free Express Shipping</span>
             </div>
             <p className="mt-1 pl-7 text-gray-600">Estimated delivery within 2–3 business days.</p>
@@ -72,7 +76,7 @@ export default function CheckoutModal({ isOpen, onClose }) {
           <div className="flex justify-center pt-2">
             <button
               onClick={onClose}
-              className="flex items-center gap-2 rounded-full bg-(--theme) px-10 py-3 text-base font-bold text-(--theme-second) shadow-[0_10px_30px_rgba(39,14,137,0.25)]"
+              className="flex items-center gap-2 rounded-full bg-(--theme) px-10 py-3 text-base font-bold text-(--theme-second) shadow-[0_10px_30px_rgba(39,14,137,0.25)] transition-all duration-300 hover:scale-105 hover:bg-[#280E89] cursor-pointer"
             >
               Continue to Payment
               <span aria-hidden="true">→</span>
