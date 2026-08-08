@@ -288,7 +288,7 @@ const MainPage = ({ category = 'All' }) => {
         </div>
       </motion.section>
 
-      <section className="mx-auto mt-10 w-[95%] md:w-[90%]">
+      <section className="mx-auto mt-10 w-full">
         <div className="grid gap-8 md:grid-cols-3">
           {premiumPillars.map(({ icon: Icon, title, text }) => (
             <motion.div
