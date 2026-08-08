@@ -128,8 +128,8 @@ export default function CategoryCarousel() {
           spaceBetween={16}
           slidesPerView={2.4}
           breakpoints={{
-            360: { slidesPerView: 2.5, spaceBetween: 14 },
-            480: { slidesPerView: 3.5, spaceBetween: 14 },
+            360: { slidesPerView: 2.8, spaceBetween: 14 },
+            480: { slidesPerView: 3, spaceBetween: 14 },
             640: { slidesPerView: 4.5, spaceBetween: 12 },
             768: { slidesPerView: 6, spaceBetween: 5 },
             1024: { slidesPerView: 7.5, spaceBetween: 12 },
