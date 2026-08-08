@@ -250,7 +250,7 @@ const MainPage = ({ category = 'All' }) => {
 
       <Hero />
 
-      <div className='w-full sm:w-[95%] md:w-[90%] mx-auto'>
+      <div className='w-full sm:w-[95%] md:w-[85%] mx-auto'>
 
       <nav className="mx-auto flex w-[95%] gap-2 overflow-x-auto py-5 scrollbar-hide md:w-[88%] md:justify-center">
         {categoryFilters.map((cat) => {
@@ -344,7 +344,7 @@ const MainPage = ({ category = 'All' }) => {
         </div>
       </div>
 
-      <section className="relative mx-auto mt-12 md:w-[90%]">
+      <section className="relative mx-auto mt-12 w-full">
         <h2 className="mb-4 ml-5 text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
           Trending Now
         </h2>
@@ -378,7 +378,7 @@ const MainPage = ({ category = 'All' }) => {
         <DealOfTheDay />
       </motion.section>
 
-      <section className="relative mx-auto mt-12 w-[95%] md:w-[90%]">
+      <section className="relative mx-auto mt-12 w-full ">
         <h2 className="mb-4 ml-5 text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
           New Arrivals
         </h2>
@@ -479,7 +479,7 @@ const MainPage = ({ category = 'All' }) => {
       </section> */}
 
       {/* ───────── Testimonials Carousel ───────── */}
-      <section className="mx-auto mt-16 w-[95%] md:w-[90%]">
+      <section className="mx-auto mt-16 w-full">
         <h2 className="mb-6 text-2xl font-extrabold tracking-tight text-gray-900">
           What Our Community Says
         </h2>
@@ -528,7 +528,7 @@ const MainPage = ({ category = 'All' }) => {
       </section>
 
       {/* ───────── Newsletter Sign‑Up ───────── */}
-      <section className="mx-auto mt-16 w-[95%] md:w-[90%]">
+      <section className="mx-auto mt-16 w-full">
         <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 px-8 py-10 text-center text-white md:px-16">
           <h2 className="text-3xl font-bold tracking-tight">Unlock 10% Off Your First Order</h2>
           <p className="mt-3 text-gray-300">Be the first to know about new drops, exclusive offers, and style inspiration.</p>
