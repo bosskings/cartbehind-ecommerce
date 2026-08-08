@@ -250,7 +250,7 @@ const MainPage = ({ category = 'All' }) => {
 
       <Hero />
 
-      <div className='w-full md:w-[90%] mx-auto'>
+      <div className='w-full sm:w-[95%] md:w-[90%] mx-auto'>
 
       <nav className="mx-auto flex w-[95%] gap-2 overflow-x-auto py-5 scrollbar-hide md:w-[88%] md:justify-center">
         {categoryFilters.map((cat) => {

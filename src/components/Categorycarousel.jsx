@@ -57,7 +57,7 @@ export default function CategoryCarousel() {
   }, []);
 
   return (
-    <section className="w-full py-8 sm:px-8">
+    <section className="w-[95%] md:w-full mx-auto py-8">
       {/* Header */}
       <motion.div
         variants={headerReveal}
@@ -128,12 +128,14 @@ export default function CategoryCarousel() {
           spaceBetween={16}
           slidesPerView={2.4}
           breakpoints={{
-            360: { slidesPerView: 2.2, spaceBetween: 14 },
-            480: { slidesPerView: 4.5, spaceBetween: 14 },
+            360: { slidesPerView: 2.5, spaceBetween: 14 },
+            480: { slidesPerView: 3.5, spaceBetween: 14 },
             640: { slidesPerView: 4.5, spaceBetween: 12 },
-            768: { slidesPerView: 5.5, spaceBetween: 12 },
-            1024: { slidesPerView: 6.5, spaceBetween: 12 },
-            1280: { slidesPerView: 8, spaceBetween: 12 },
+            768: { slidesPerView: 6, spaceBetween: 5 },
+            1024: { slidesPerView: 7.5, spaceBetween: 12 },
+            1280: { slidesPerView: 9.3, spaceBetween: 14 },
+            1500: { slidesPerView: 10.2, spaceBetween: 5 },
+            1750: { slidesPerView: 10.5, spaceBetween: 5 },
           }}
           className="py-2!"
         >
