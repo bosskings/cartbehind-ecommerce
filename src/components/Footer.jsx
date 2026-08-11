@@ -10,15 +10,29 @@ import Image from "next/image";
 const footerColumns = [
   {
     title: "Company",
-    links: ["About Us", "Careers", "Press", "Blog"],
+    links: [
+      { label: "About Us", href: "#" },
+      { label: "Careers", href: "#" },
+      { label: "Press", href: "#" },
+      { label: "Blog", href: "#" },
+    ],
   },
   {
     title: "Help",
-    links: ["Help Center", "Shipping Info", "Returns & Refunds", "Size Guide"],
+    links: [
+      { label: "Help Center", href: "#" },
+      { label: "Track Parcel", href: "/track" },
+      { label: "Shipping Info", href: "#" },
+      { label: "Returns & Refunds", href: "#" },
+    ],
   },
   {
     title: "Legal",
-    links: ["Privacy Policy", "Terms of Service", "Cookie Policy"],
+    links: [
+      { label: "Privacy Policy", href: "#" },
+      { label: "Terms of Service", href: "#" },
+      { label: "Cookie Policy", href: "#" },
+    ],
   },
 ];
 
@@ -67,12 +81,12 @@ export default function Footer() {
               </p>
               <ul className="space-y-3.5">
                 {col.links.map((link) => (
-                  <li key={link}>
+                  <li key={link.label}>
                     <a
-                      href="#"
+                      href={link.href}
                       className="text-[15px] text-[#B4B4BE] hover:text-white transition-colors "
                     >
-                      {link}
+                      {link.label}
                     </a>
                   </li>
                 ))}

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { FaRegMoon, FaRegSun } from "react-icons/fa"
 import { IoSearch } from "react-icons/io5"
 import { FiShoppingBag } from "react-icons/fi"
-import { LuMenu } from "react-icons/lu"
+import { LuMenu, LuPackage } from "react-icons/lu"
 import { motion } from "framer-motion"
 import { IoMdClose } from "react-icons/io"
 import Link from "next/link"
@@ -44,7 +44,7 @@ const Navbar = () => {
     { id: 1, label: "Beauty, Fragrances" },
     { id: 2, label: "Furniture" },
     { id: 3, label: "Groceries" },
-    { id: 4, label: "Home Decrations" },
+    { id: 4, label: "Home Decorations" },
     { id: 5, label: "Mens Shoes" },
     { id: 6, label: "Home Watches" },
     { id: 7, label: "Home Accessories" },
@@ -95,7 +95,7 @@ const Navbar = () => {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 md:gap-6">
+          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4">
             <button
               onClick={() => setShowSearch(!showSearch)}
               className={`rounded-full cursor-pointer p-2 md:hidden ${iconButtonClass}`}
@@ -103,6 +103,15 @@ const Navbar = () => {
             >
               <IoSearch size={20} />
             </button>
+
+            <Link
+              href="/track"
+              className={`hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition ${iconButtonClass}`}
+              aria-label="Track parcel"
+            >
+              <LuPackage size={18} />
+              <span className="hidden lg:inline">Track parcel</span>
+            </Link>
 
             <button
               type="button"
@@ -164,6 +173,14 @@ const Navbar = () => {
           transition={{ duration: 0.35 }}
           className="mx-auto w-full max-w-7xl border-t border-black/5 bg-white/95 px-4 py-3 md:hidden dark:border-white/10 dark:bg-[#0c0a14]/95"
         >
+          <Link
+            href="/track"
+            onClick={() => setShowMenu(false)}
+            className="mb-1 flex h-10 w-full items-center gap-2 rounded-lg px-2 text-sm font-semibold text-(--theme) hover:bg-(--theme)/10"
+          >
+            <LuPackage size={16} />
+            Track parcel
+          </Link>
           {menuOptions.map((option) => (
             <Link
               href="#"
