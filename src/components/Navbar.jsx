@@ -1,15 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 import { FaRegMoon, FaRegSun } from "react-icons/fa"
 import { IoSearch } from "react-icons/io5"
 import { FiShoppingBag } from "react-icons/fi"
-import { LuMenu, LuPackage } from "react-icons/lu"
+import { LuLogOut, LuMenu, LuPackage } from "react-icons/lu"
 import { motion } from "framer-motion"
 import { IoMdClose } from "react-icons/io"
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
+import toast from "react-hot-toast"
+import { useAuth } from "@/components/AuthContext"
 import { useCart } from "@/components/CartContext"
 import { useTheme } from "@/components/ThemeContext"
 
@@ -17,25 +19,24 @@ const Navbar = () => {
   const [searchTerm, setSearchTerm] = useState("")
   const [showSearch, setShowSearch] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(() => typeof window !== "undefined" && window.scrollY > 12)
   const { cartCount } = useCart()
+  const { logoutUser } = useAuth()
   const { theme, toggleTheme, mounted } = useTheme()
   const pathname = usePathname()
+  const router = useRouter()
   const isHomePage = pathname === "/"
-  const isNavActive = isHomePage ? isScrolled : true
+  const isNavActive = !isHomePage || isScrolled
   const isDark = mounted && theme === "dark"
 
   useEffect(() => {
-    if (!isHomePage) {
-      setIsScrolled(true)
-      return
-    }
+    if (!isHomePage) return
 
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 12)
     }
 
-    handleScroll()
+    window.setTimeout(handleScroll, 0)
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [isHomePage])
@@ -61,6 +62,13 @@ const Navbar = () => {
   const iconButtonClass = isNavActive
     ? "hover:bg-gray-100 text-gray-900 dark:hover:bg-white/10 dark:text-white"
     : "hover:bg-white/15 text-white"
+
+  const handleLogout = () => {
+    logoutUser()
+    toast.success("Logged out successfully.")
+    setShowMenu(false)
+    router.replace("/login")
+  }
 
   return (
     <div
@@ -122,6 +130,16 @@ const Navbar = () => {
               {isDark ? <FaRegSun size={20} /> : <FaRegMoon size={20} />}
             </button>
 
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={`rounded-full cursor-pointer p-2 ${iconButtonClass}`}
+              aria-label="Logout"
+              title="Logout"
+            >
+              <LuLogOut size={20} />
+            </button>
+
             <Link
               href="/cart"
               className={`relative rounded-full p-2 ${iconButtonClass}`}
@@ -181,6 +199,14 @@ const Navbar = () => {
             <LuPackage size={16} />
             Track parcel
           </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="mb-1 flex h-10 w-full items-center gap-2 rounded-lg px-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10"
+          >
+            <LuLogOut size={16} />
+            Logout
+          </button>
           {menuOptions.map((option) => (
             <Link
               href="#"
@@ -197,3 +223,5 @@ const Navbar = () => {
 }
 
 export default Navbar
+
+
