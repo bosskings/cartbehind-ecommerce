@@ -28,19 +28,19 @@ import {
 import { products as seededProducts } from "@/data/products"
 import { useTheme } from "@/components/ThemeContext"
 import { useAuth } from "@/components/AuthContext"
-
-const STORAGE_KEY = "cartbehind-admin-products"
+import { getAdminToken, uploadToCloudinary } from "@/lib/cloudinary"
 
 const emptyForm = {
-  title: "",
-  brand: "",
-  category: "",
-  price: "",
-  originalPrice: "",
-  stock: "",
-  discountPercent: "",
-  image: "",
+  name: "",
   description: "",
+  price: "",
+  category: "",
+  stock: "",
+  imageFile: null,
+  imagePreview: "",
+  url: "",
+  publicId: "",
+  fileType: "",
 }
 
 const sections = [
@@ -100,17 +100,8 @@ function inputClass(extra = "") {
   return `h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 outline-none transition focus:border-(--theme) focus:shadow-[0_0_0_3px_rgba(var(--theme-rgb),0.12)] dark:border-white/10 dark:bg-[#12101a] dark:text-gray-100 ${extra}`
 }
 
-function readImageFile(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = () => reject(new Error("Unable to read image file."))
-    reader.readAsDataURL(file)
-  })
-}
-
-function ImageUploadField({ label, image, onImageChange }) {
-  const handleImageChange = async (event) => {
+function ImageUploadField({ label, preview, onFileSelect }) {
+  const handleImageChange = (event) => {
     const file = event.target.files?.[0]
     if (!file) return
 
@@ -126,15 +117,9 @@ function ImageUploadField({ label, image, onImageChange }) {
       return
     }
 
-    try {
-      const imageDataUrl = await readImageFile(file)
-      onImageChange(imageDataUrl)
-      toast.success("Product image added.")
-    } catch {
-      toast.error("Image upload failed. Please try again.")
-    } finally {
-      event.target.value = ""
-    }
+    const previewUrl = URL.createObjectURL(file)
+    onFileSelect(file, previewUrl)
+    event.target.value = ""
   }
 
   return (
@@ -146,15 +131,14 @@ function ImageUploadField({ label, image, onImageChange }) {
         <input type="file" accept="image/*" onChange={handleImageChange} className="sr-only" />
         <span
           className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-[#f7f5fb] bg-cover bg-center text-(--theme) dark:border-white/10 dark:bg-[#16131f]"
-          style={image ? { backgroundImage: `url("${image}")` } : undefined}
+          style={preview ? { backgroundImage: `url("${preview}")` } : undefined}
         >
-          {!image && <ImagePlus size={24} />}
+          {!preview && <ImagePlus size={24} />}
         </span>
         <span className="min-w-0">
           <span className="block text-sm font-black text-gray-800 dark:text-gray-100">
-            {image ? "Change product image" : "Upload product image"}
+            {preview ? "Change product image" : "Choose product image"}
           </span>
-
         </span>
       </label>
     </div>
@@ -163,33 +147,23 @@ function ImageUploadField({ label, image, onImageChange }) {
 
 export default function AdminPage() {
   const [activeSection, setActiveSection] = useState("overview")
-  const [products, setProducts] = useState(() => {
-    if (typeof window === "undefined") {
-      return seededProducts.map(normalizeProduct)
-    }
-
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY)
-      const parsed = stored ? JSON.parse(stored) : null
-      const initialProducts = Array.isArray(parsed) && parsed.length > 0 ? parsed : seededProducts
-      return initialProducts.map(normalizeProduct)
-    } catch {
-      return seededProducts.map(normalizeProduct)
-    }
-  })
+  const [products, setProducts] = useState(() => seededProducts.map(normalizeProduct))
   const [form, setForm] = useState(emptyForm)
   const [editingProduct, setEditingProduct] = useState(null)
+  const [editingImageFile, setEditingImageFile] = useState(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [isUploadingProduct, setIsUploadingProduct] = useState(false)
   const [query, setQuery] = useState("")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { theme, toggleTheme, mounted } = useTheme()
   const { logoutAdmin } = useAuth()
   const router = useRouter()
 
-
   useEffect(() => {
-    if (products.length === 0) return
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(products))
-  }, [products])
+    window.localStorage.removeItem("cartbehind-admin-products")
+  }, [])
+
+  const hasUploadedImage = Boolean(form.url && form.publicId && form.fileType)
 
   const stats = useMemo(
     () => [
@@ -244,52 +218,155 @@ export default function AdminPage() {
     setEditingProduct((current) => ({ ...current, [field]: value }))
   }
 
-  const validateProduct = (data) => {
-    if (!data.title.trim() || !data.brand.trim() || !data.category.trim()) {
-      toast.error("Please fill in product name, brand, and category.")
-      return false
+  const handleUploadImage = async () => {
+    if (!form.imageFile) {
+      toast.error("Please choose a product image first.")
+      return
     }
-    if (!data.image) {
-      toast.error("Please upload a product image.")
-      return false
+
+    setIsUploadingImage(true)
+
+    try {
+      const data = await uploadToCloudinary(form.imageFile)
+
+      setForm((current) => ({
+        ...current,
+        url: data.secure_url || data.url || "",
+        publicId: data.public_id || "",
+        fileType: data.format || "",
+        imagePreview: data.secure_url || data.url || current.imagePreview,
+      }))
+
+      toast.success("Product image uploaded successfully.")
+    } catch (error) {
+      toast.error(error.message || "Image upload failed. Please try again.")
+    } finally {
+      setIsUploadingImage(false)
     }
-    if (!Number(data.price) || Number(data.price) <= 0) {
+  }
+
+  const handleUploadProduct = async (event) => {
+    event.preventDefault()
+
+    if (!form.name.trim() || !form.description.trim() || !form.category.trim()) {
+      toast.error("Please fill in name, description, and category.")
+      return
+    }
+
+    if (!Number(form.price) || Number(form.price) <= 0) {
       toast.error("Please enter a valid product price.")
-      return false
+      return
     }
-    return true
+
+    if (form.stock === "" || Number(form.stock) < 0) {
+      toast.error("Please enter a valid stock amount.")
+      return
+    }
+
+    if (!hasUploadedImage) {
+      toast.error("Please upload the product image first.")
+      return
+    }
+
+    const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL
+    const token = getAdminToken()
+
+    if (!API_URL) {
+      toast.error("NEXT_PUBLIC_BACKEND_URL is missing.")
+      return
+    }
+
+    if (!token) {
+      toast.error("Admin token is missing. Please log in again.")
+      return
+    }
+
+    setIsUploadingProduct(true)
+
+    try {
+      const response = await fetch(`${API_URL}/api/v1/admin/upload-item`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          description: form.description.trim(),
+          price: Number(form.price),
+          category: form.category.trim(),
+          stock: Number(form.stock),
+          url: form.url,
+          publicId: form.publicId,
+          fileType: form.fileType,
+        }),
+      })
+
+      const data = await response.json()
+      console.log(data)
+
+      if (!response.ok) {
+        throw new Error(data?.message || "Product upload failed.")
+      }
+
+      setForm(emptyForm)
+      toast.success(data?.message || "Product uploaded successfully.")
+    } catch (error) {
+      toast.error(error.message || "Product upload failed. Please try again.")
+    } finally {
+      setIsUploadingProduct(false)
+    }
   }
 
-  const handleUpload = (event) => {
-    event.preventDefault()
-    if (!validateProduct(form)) return
-
-    const product = normalizeProduct({
-      ...form,
-      id: Date.now(),
-      rating: 4.6,
-      tags: [form.category],
-    })
-
-    setProducts((current) => [product, ...current])
-    setForm(emptyForm)
-    setActiveSection("products")
-    toast.success("Product uploaded successfully.")
+  const openEditProduct = (product) => {
+    setEditingImageFile(null)
+    setEditingProduct(product)
   }
 
-  const handleSaveEdit = (event) => {
+  const handleSaveEdit = async (event) => {
     event.preventDefault()
-    if (!editingProduct || !validateProduct(editingProduct)) return
+    if (!editingProduct) return
 
-    const updatedProduct = normalizeProduct(editingProduct)
-    setProducts((current) =>
-      current.map((product) => (product.id === updatedProduct.id ? updatedProduct : product)),
-    )
-    setEditingProduct(null)
-    toast.success("Product updated successfully.")
+    if (!editingProduct.title.trim()) {
+      toast.error("Please enter a product name.")
+      return
+    }
+
+    if (!Number(editingProduct.price) || Number(editingProduct.price) <= 0) {
+      toast.error("Please enter a valid product price.")
+      return
+    }
+
+    setIsUploadingProduct(true)
+
+    try {
+      let imageUrl = editingProduct.image
+
+      if (editingImageFile) {
+        const data = await uploadToCloudinary(editingImageFile)
+        imageUrl = data.secure_url || data.url
+      }
+
+      const updatedProduct = normalizeProduct({
+        ...editingProduct,
+        image: imageUrl,
+      })
+
+      setProducts((current) =>
+        current.map((product) => (product.id === updatedProduct.id ? updatedProduct : product)),
+      )
+      setEditingProduct(null)
+      setEditingImageFile(null)
+      toast.success("Product updated successfully.")
+    } catch (error) {
+      toast.error(error.message || "Image upload failed. Please try again.")
+    } finally {
+      setIsUploadingProduct(false)
+    }
   }
 
   const isDark = mounted && theme === "dark"
+  const isBusy = isUploadingImage || isUploadingProduct
 
   const handleAdminLogout = () => {
     logoutAdmin()
@@ -492,46 +569,102 @@ export default function AdminPage() {
                 </span>
                 <div>
                   <h2 className="text-xl font-black">Upload Product</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Create a local mock product for the admin catalog.</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Upload the image first, then submit the product details to the backend.
+                  </p>
                 </div>
               </div>
 
-              <form onSubmit={handleUpload} className="grid gap-4 lg:grid-cols-2">
-                <Field label="Product name">
-                  <input className={inputClass()} value={form.title} onChange={(event) => updateForm("title", event.target.value)} placeholder="Essence Mascara Lash Princess" />
-                </Field>
-                <Field label="Brand">
-                  <input className={inputClass()} value={form.brand} onChange={(event) => updateForm("brand", event.target.value)} placeholder="ESSENCE" />
+              <form onSubmit={handleUploadProduct} className="grid gap-4 lg:grid-cols-2">
+                <Field label="Name">
+                  <input
+                    className={inputClass()}
+                    value={form.name}
+                    onChange={(event) => updateForm("name", event.target.value)}
+                    placeholder="Rose flower"
+                  />
                 </Field>
                 <Field label="Category">
-                  <input className={inputClass()} value={form.category} onChange={(event) => updateForm("category", event.target.value)} placeholder="Beauty" />
+                  <input
+                    className={inputClass()}
+                    value={form.category}
+                    onChange={(event) => updateForm("category", event.target.value)}
+                    placeholder="decoration"
+                  />
                 </Field>
-                <ImageUploadField
-                  label="Product image"
-                  image={form.image}
-                  onImageChange={(image) => updateForm("image", image)}
-                />
                 <Field label="Price">
-                  <input type="number" min="0" className={inputClass()} value={form.price} onChange={(event) => updateForm("price", event.target.value)} placeholder="14309" />
-                </Field>
-                <Field label="Original price">
-                  <input type="number" min="0" className={inputClass()} value={form.originalPrice} onChange={(event) => updateForm("originalPrice", event.target.value)} placeholder="15984" />
+                  <input
+                    type="number"
+                    min="0"
+                    className={inputClass()}
+                    value={form.price}
+                    onChange={(event) => updateForm("price", event.target.value)}
+                    placeholder="2500"
+                  />
                 </Field>
                 <Field label="Stock">
-                  <input type="number" min="0" className={inputClass()} value={form.stock} onChange={(event) => updateForm("stock", event.target.value)} placeholder="99" />
+                  <input
+                    type="number"
+                    min="0"
+                    className={inputClass()}
+                    value={form.stock}
+                    onChange={(event) => updateForm("stock", event.target.value)}
+                    placeholder="200"
+                  />
                 </Field>
-                <Field label="Discount percent">
-                  <input type="number" min="0" max="100" className={inputClass()} value={form.discountPercent} onChange={(event) => updateForm("discountPercent", event.target.value)} placeholder="10" />
-                </Field>
-                <Field label="Description">
-                  <textarea className={inputClass("min-h-32 resize-none py-4 lg:col-span-2")} value={form.description} onChange={(event) => updateForm("description", event.target.value)} placeholder="Describe the product..." />
-                </Field>
+                <div className="lg:col-span-2">
+                  <Field label="Description">
+                    <textarea
+                      className={inputClass("min-h-28 resize-none py-4")}
+                      value={form.description}
+                      onChange={(event) => updateForm("description", event.target.value)}
+                      placeholder="1 strand of rose flower"
+                    />
+                  </Field>
+                </div>
+                <div className="lg:col-span-2">
+                  <ImageUploadField
+                    label="Product image"
+                    preview={form.imagePreview || form.url}
+                    onFileSelect={(file, previewUrl) => {
+                      setForm((current) => ({
+                        ...current,
+                        imageFile: file,
+                        imagePreview: previewUrl,
+                        url: "",
+                        publicId: "",
+                        fileType: "",
+                      }))
+                    }}
+                  />
+                  {hasUploadedImage && (
+                    <p className="mt-2 text-xs font-semibold text-emerald-600">Image ready for product upload.</p>
+                  )}
+                </div>
                 <div className="flex flex-col gap-3 pt-2 sm:flex-row lg:col-span-2">
-                  <button type="submit" className="inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl bg-(--theme) px-6 text-sm font-black text-(--theme-second) transition hover:opacity-90">
-                    <PackagePlus size={18} />
-                    Upload Product
+                  <button
+                    type="button"
+                    disabled={isBusy || !form.imageFile}
+                    onClick={handleUploadImage}
+                    className="inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 px-6 text-sm font-black text-gray-700 transition hover:border-(--theme) hover:text-(--theme) disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-gray-200"
+                  >
+                    <UploadCloud size={18} />
+                    {isUploadingImage ? "Uploading image..." : "Upload product image"}
                   </button>
-                  <button type="button" onClick={() => setForm(emptyForm)} className="h-12 cursor-pointer rounded-xl border border-gray-200 px-6 text-sm font-bold text-gray-600 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-300">
+                  <button
+                    type="submit"
+                    disabled={isBusy || !hasUploadedImage}
+                    className="inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl bg-(--theme) px-6 text-sm font-black text-(--theme-second) transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <PackagePlus size={18} />
+                    {isUploadingProduct ? "Uploading product..." : "Upload Product"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isBusy}
+                    onClick={() => setForm(emptyForm)}
+                    className="h-12 cursor-pointer rounded-xl border border-gray-200 px-6 text-sm font-bold text-gray-600 transition hover:border-(--theme) hover:text-(--theme) disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-gray-300"
+                  >
                     Clear Form
                   </button>
                 </div>
@@ -586,7 +719,7 @@ export default function AdminPage() {
                         <td className="px-4 py-4 text-right">
                           <button
                             type="button"
-                            onClick={() => setEditingProduct(product)}
+                            onClick={() => openEditProduct(product)}
                             className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-4 text-sm font-bold text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200"
                           >
                             <Edit3 size={16} />
@@ -609,7 +742,7 @@ export default function AdminPage() {
                         <p className="text-xs text-gray-500 dark:text-gray-400">{product.brand} / {product.category}</p>
                         <p className="mt-2 text-sm font-black">{formatNaira(product.price)}</p>
                       </div>
-                      <button type="button" onClick={() => setEditingProduct(product)} className="cursor-pointer rounded-full bg-white p-2 text-(--theme) shadow-sm dark:bg-[#16131f]">
+                      <button type="button" onClick={() => openEditProduct(product)} className="cursor-pointer rounded-full bg-white p-2 text-(--theme) shadow-sm dark:bg-[#16131f]">
                         <Edit3 size={16} />
                       </button>
                     </div>
@@ -629,7 +762,14 @@ export default function AdminPage() {
                 <h2 className="text-xl font-black">Edit Product</h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Update the local product details.</p>
               </div>
-              <button type="button" onClick={() => setEditingProduct(null)} className="cursor-pointer rounded-full p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingProduct(null)
+                  setEditingImageFile(null)
+                }}
+                className="cursor-pointer rounded-full p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10"
+              >
                 <X size={20} />
               </button>
             </div>
@@ -638,41 +778,40 @@ export default function AdminPage() {
               <Field label="Product name">
                 <input className={inputClass()} value={editingProduct.title} onChange={(event) => updateEditingProduct("title", event.target.value)} />
               </Field>
-              <Field label="Brand">
-                <input className={inputClass()} value={editingProduct.brand} onChange={(event) => updateEditingProduct("brand", event.target.value)} />
-              </Field>
-              <Field label="Category">
-                <input className={inputClass()} value={editingProduct.category} onChange={(event) => updateEditingProduct("category", event.target.value)} />
-              </Field>
-              <ImageUploadField
-                label="Product image"
-                image={editingProduct.image}
-                onImageChange={(image) => updateEditingProduct("image", image)}
-              />
               <Field label="Price">
                 <input type="number" min="0" className={inputClass()} value={editingProduct.price} onChange={(event) => updateEditingProduct("price", event.target.value)} />
               </Field>
-              <Field label="Original price">
-                <input type="number" min="0" className={inputClass()} value={editingProduct.originalPrice} onChange={(event) => updateEditingProduct("originalPrice", event.target.value)} />
-              </Field>
-              <Field label="Stock">
-                <input type="number" min="0" className={inputClass()} value={editingProduct.stock} onChange={(event) => updateEditingProduct("stock", event.target.value)} />
-              </Field>
-              <Field label="Discount percent">
-                <input type="number" min="0" max="100" className={inputClass()} value={editingProduct.discountPercent} onChange={(event) => updateEditingProduct("discountPercent", event.target.value)} />
-              </Field>
-              <Field label="Description">
-                <textarea className={inputClass("min-h-28 resize-none py-4 sm:col-span-2")} value={editingProduct.description} onChange={(event) => updateEditingProduct("description", event.target.value)} />
-              </Field>
+              <div className="sm:col-span-2">
+                <ImageUploadField
+                  label="Product image"
+                  preview={editingProduct.image}
+                  onFileSelect={(file, previewUrl) => {
+                    setEditingImageFile(file)
+                    updateEditingProduct("image", previewUrl)
+                  }}
+                />
+              </div>
             </div>
 
             <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setEditingProduct(null)} className="h-11 cursor-pointer rounded-xl border border-gray-200 px-5 text-sm font-bold text-gray-600 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-300">
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={() => {
+                  setEditingProduct(null)
+                  setEditingImageFile(null)
+                }}
+                className="h-11 cursor-pointer rounded-xl border border-gray-200 px-5 text-sm font-bold text-gray-600 transition hover:border-(--theme) hover:text-(--theme) disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-gray-300"
+              >
                 Cancel
               </button>
-              <button type="submit" className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-(--theme) px-5 text-sm font-black text-(--theme-second) transition hover:opacity-90">
+              <button
+                type="submit"
+                disabled={isBusy}
+                className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-(--theme) px-5 text-sm font-black text-(--theme-second) transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              >
                 <CheckCircle2 size={17} />
-                Save Changes
+                {isUploadingProduct ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </form>
