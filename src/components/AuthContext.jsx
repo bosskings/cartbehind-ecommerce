@@ -3,17 +3,31 @@
 import { createContext, useContext, useMemo, useState } from "react"
 import axios from "axios"
 import { Toaster } from "react-hot-toast"
-import {
-  getAdminSession,
-  getUserSession,
-  logoutAdmin as logoutAdminHelper,
-  logoutUser as logoutUserHelper,
-} from "@/lib/mockAuth"
 
 const AuthContext = createContext(null)
 
 const USER_SESSION_KEY = "cartbehind-user-session"
 const ADMIN_SESSION_KEY = "cartbehind-admin-session"
+
+function readSession(key) {
+  if (typeof window === "undefined") return null
+
+  try {
+    const stored = window.localStorage.getItem(key)
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    window.localStorage.removeItem(key)
+    return null
+  }
+}
+
+function readUserSession() {
+  return readSession(USER_SESSION_KEY)
+}
+
+function readAdminSession() {
+  return readSession(ADMIN_SESSION_KEY)
+}
 
 function writeAdminSession(session) {
   window.localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session))
@@ -21,6 +35,14 @@ function writeAdminSession(session) {
 
 function writeUserSession(session) {
   window.localStorage.setItem(USER_SESSION_KEY, JSON.stringify(session))
+}
+
+function clearUserSession() {
+  window.localStorage.removeItem(USER_SESSION_KEY)
+}
+
+function clearAdminSession() {
+  window.localStorage.removeItem(ADMIN_SESSION_KEY)
 }
 
 function getBackendUrl() {
@@ -32,8 +54,8 @@ function getApiErrorMessage(error, fallback) {
 }
 
 export function AuthProvider({ children }) {
-  const [userSession, setUserSession] = useState(getUserSession)
-  const [adminSession, setAdminSession] = useState(getAdminSession)
+  const [userSession, setUserSession] = useState(readUserSession)
+  const [adminSession, setAdminSession] = useState(readAdminSession)
   const [authReady] = useState(() => typeof window !== "undefined")
 
   const signupUser = async (email, password) => {
@@ -180,12 +202,12 @@ export function AuthProvider({ children }) {
   }
 
   const logoutUser = () => {
-    logoutUserHelper()
+    clearUserSession()
     setUserSession(null)
   }
 
   const logoutAdmin = () => {
-    logoutAdminHelper()
+    clearAdminSession()
     setAdminSession(null)
   }
 
