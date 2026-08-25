@@ -6,8 +6,6 @@ import { Loader2 } from "lucide-react"
 import { useAuth } from "@/components/AuthContext"
 import { ADMIN_BASE_PATH, ADMIN_LOGIN_PATH, isAdminPath } from "@/lib/adminRoutes"
 
-const OPEN_ROUTES = new Set(["/login", "/signup", "/verify-email", ADMIN_LOGIN_PATH])
-
 function LoadingScreen() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f7f5fb] px-4 text-gray-950 dark:bg-background dark:text-white">
@@ -18,17 +16,21 @@ function LoadingScreen() {
   )
 }
 
+function getSafeNextPath(next) {
+  if (typeof next !== "string") return "/"
+  if (!next.startsWith("/") || next.startsWith("//")) return "/"
+  return next
+}
+
 export default function AuthRouteGuard({ children }) {
   const pathname = usePathname()
   const router = useRouter()
   const { authReady, isUserAuthenticated, isAdminAuthenticated } = useAuth()
 
-  const isOpenRoute = OPEN_ROUTES.has(pathname)
   const isAdminRoute = isAdminPath(pathname)
   const isAdminLogin = pathname === ADMIN_LOGIN_PATH
   const isUserAuthRoute = pathname === "/login" || pathname === "/signup" || pathname === "/verify-email"
-  const shouldBlockAdmin = !isOpenRoute && isAdminRoute && !isAdminAuthenticated
-  const shouldBlockUser = !isOpenRoute && !isAdminRoute && !isUserAuthenticated
+  const shouldBlockAdmin = isAdminRoute && !isAdminLogin && !isAdminAuthenticated
   const shouldLeaveAdminLogin = isAdminLogin && isAdminAuthenticated
   const shouldLeaveUserAuth = isUserAuthRoute && isUserAuthenticated
 
@@ -41,21 +43,17 @@ export default function AuthRouteGuard({ children }) {
     }
 
     if (shouldLeaveUserAuth) {
-      router.replace("/")
+      const params = new URLSearchParams(window.location.search)
+      router.replace(getSafeNextPath(params.get("next")))
       return
     }
 
     if (shouldBlockAdmin) {
       router.replace(ADMIN_LOGIN_PATH)
-      return
     }
+  }, [authReady, router, shouldBlockAdmin, shouldLeaveAdminLogin, shouldLeaveUserAuth])
 
-    if (shouldBlockUser) {
-      router.replace("/login")
-    }
-  }, [authReady, router, shouldBlockAdmin, shouldBlockUser, shouldLeaveAdminLogin, shouldLeaveUserAuth])
-
-  if (!authReady || shouldLeaveAdminLogin || shouldLeaveUserAuth || shouldBlockAdmin || shouldBlockUser) {
+  if (!authReady || shouldLeaveAdminLogin || shouldLeaveUserAuth || shouldBlockAdmin) {
     return <LoadingScreen />
   }
 

@@ -14,6 +14,7 @@ import {
 } from "lucide-react"
 import { useCart } from "@/components/CartContext"
 import { useOrders } from "@/components/OrderContext"
+import { useAuth } from "@/components/AuthContext"
 import { useRouter } from "next/navigation"
 
 const fieldClass =
@@ -40,6 +41,7 @@ function formatExpiry(value) {
 export default function CheckoutModal({ isOpen, onClose }) {
   const { items, subtotal, clearCart } = useCart()
   const { createOrder } = useOrders()
+  const { isUserAuthenticated } = useAuth()
   const router = useRouter()
 
   const [step, setStep] = useState("payment") // payment | processing | success | shipping | done
@@ -61,6 +63,12 @@ export default function CheckoutModal({ isOpen, onClose }) {
   })
 
   useEffect(() => {
+    if (!isOpen || isUserAuthenticated) return
+    onClose()
+    router.push("/login?next=/cart")
+  }, [isOpen, isUserAuthenticated, onClose, router])
+
+  useEffect(() => {
     if (!isOpen) return
     setStep("payment")
     setError("")
@@ -70,7 +78,7 @@ export default function CheckoutModal({ isOpen, onClose }) {
     setShipping({ address: "", country: "", state: "" })
   }, [isOpen])
 
-  if (!isOpen) return null
+  if (!isOpen || !isUserAuthenticated) return null
 
   const stepLabel = {
     payment: "Step 1 of 2: Payment",

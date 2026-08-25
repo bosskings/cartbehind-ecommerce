@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import toast from "react-hot-toast"
 import { LockKeyhole, LogIn, Mail, ShieldCheck, ShoppingBag, User, UserPlus } from "lucide-react"
 import { useAuth } from "@/components/AuthContext"
@@ -24,12 +24,21 @@ function Field({ label, icon: Icon, children }) {
   )
 }
 
+function getSafeNextPath(next) {
+  if (typeof next !== "string") return null
+  if (!next.startsWith("/") || next.startsWith("//")) return null
+  return next
+}
+
 export default function AuthPage({ mode }) {
   const [email, setEmail] = useState("")
   const [accessId, setAccessId] = useState("")
   const [password, setPassword] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextPath = getSafeNextPath(searchParams.get("next"))
+  const nextQuery = nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""
   const { signupUser, loginUser, loginAdmin } = useAuth()
   const { theme, toggleTheme, mounted } = useTheme()
   const isSignup = mode === "signup"
@@ -88,11 +97,11 @@ export default function AuthPage({ mode }) {
     }
 
     if (isSignup) {
-      router.replace("/verify-email")
+      router.replace(`/verify-email${nextQuery}`)
       return
     }
 
-    router.replace("/")
+    router.replace(nextPath || "/")
   }
 
   return (
@@ -101,7 +110,7 @@ export default function AuthPage({ mode }) {
       <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-[#16131f] lg:grid-cols-[0.95fr_1.05fr]">
         <section className="flex min-h-[320px] flex-col justify-between bg-(--theme) p-7 text-white sm:p-9">
           <div className="flex items-center justify-between gap-4">
-            <Link href={isAdmin ? ADMIN_LOGIN_PATH : "/login"} className="inline-flex items-center gap-3">
+            <Link href={isAdmin ? ADMIN_LOGIN_PATH : `/login${nextQuery}`} className="inline-flex items-center gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-(--theme-second) text-[#280E89]">
                 <ShoppingBag size={21} />
               </span>
@@ -170,7 +179,10 @@ export default function AuthPage({ mode }) {
             {!isAdmin && (
               <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                 {isSignup ? "Already have an account?" : "Need an account?"}{" "}
-                <Link href={isSignup ? "/login" : "/signup"} className="font-bold text-(--theme) transition hover:opacity-70">
+                <Link
+                  href={isSignup ? `/login${nextQuery}` : `/signup${nextQuery}`}
+                  className="font-bold text-(--theme) transition hover:opacity-70"
+                >
                   {isSignup ? "Login" : "Sign up"}
                 </Link>
               </p>

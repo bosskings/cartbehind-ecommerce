@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { FaRegMoon, FaRegSun } from "react-icons/fa"
 import { IoSearch } from "react-icons/io5"
 import { FiShoppingBag } from "react-icons/fi"
-import { LuLogOut, LuMenu, LuPackage } from "react-icons/lu"
+import { LuLogIn, LuLogOut, LuMenu, LuPackage } from "react-icons/lu"
 import { motion } from "framer-motion"
 import { IoMdClose } from "react-icons/io"
 import Link from "next/link"
@@ -21,7 +21,7 @@ const Navbar = () => {
   const [showMenu, setShowMenu] = useState(false)
   const [isScrolled, setIsScrolled] = useState(() => typeof window !== "undefined" && window.scrollY > 12)
   const { cartCount } = useCart()
-  const { logoutUser } = useAuth()
+  const { logoutUser, isUserAuthenticated } = useAuth()
   const { theme, toggleTheme, mounted } = useTheme()
   const pathname = usePathname()
   const router = useRouter()
@@ -67,7 +67,7 @@ const Navbar = () => {
     logoutUser()
     toast.success("Logged out successfully.")
     setShowMenu(false)
-    router.replace("/login")
+    router.replace("/")
   }
 
   return (
@@ -130,15 +130,26 @@ const Navbar = () => {
               {isDark ? <FaRegSun size={20} /> : <FaRegMoon size={20} />}
             </button>
 
-            <button
-              type="button"
-              onClick={handleLogout}
-              className={`rounded-full cursor-pointer p-2 ${iconButtonClass}`}
-              aria-label="Logout"
-              title="Logout"
-            >
-              <LuLogOut size={20} />
-            </button>
+            {isUserAuthenticated ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className={`rounded-full cursor-pointer p-2 ${iconButtonClass}`}
+                aria-label="Logout"
+                title="Logout"
+              >
+                <LuLogOut size={20} />
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className={`rounded-full p-2 ${iconButtonClass}`}
+                aria-label="Login"
+                title="Login"
+              >
+                <LuLogIn size={20} />
+              </Link>
+            )}
 
             <Link
               href="/cart"
@@ -199,14 +210,25 @@ const Navbar = () => {
             <LuPackage size={16} />
             Track parcel
           </Link>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="mb-1 flex h-10 w-full items-center gap-2 rounded-lg px-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10"
-          >
-            <LuLogOut size={16} />
-            Logout
-          </button>
+          {isUserAuthenticated ? (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="mb-1 flex h-10 w-full items-center gap-2 rounded-lg px-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10"
+            >
+              <LuLogOut size={16} />
+              Logout
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              onClick={() => setShowMenu(false)}
+              className="mb-1 flex h-10 w-full items-center gap-2 rounded-lg px-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10"
+            >
+              <LuLogIn size={16} />
+              Login
+            </Link>
+          )}
           {menuOptions.map((option) => (
             <Link
               href="#"
