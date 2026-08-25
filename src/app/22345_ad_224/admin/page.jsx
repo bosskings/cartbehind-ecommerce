@@ -55,7 +55,6 @@ function normalizeProduct(product, index = 0) {
     id: product.id ?? Date.now() + index,
     brand: product.brand || "CartBehind",
     title: product.title || "Untitled product",
-    rating: product.rating ?? 4.5,
     price: Number(product.price) || 0,
     originalPrice: Number(product.originalPrice) || 0,
     discountPercent: Number(product.discountPercent) || 0,

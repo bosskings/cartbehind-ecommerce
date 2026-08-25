@@ -2,14 +2,13 @@ import React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Star, ShoppingBag } from "lucide-react"
+import { ShoppingBag } from "lucide-react"
 import { useCart } from "@/components/CartContext"
 
 const sampleProduct = {
   id: 1,
   brand: "ESSENCE",
   title: "Essence Mascara Lash Princess",
-  rating: 2.6,
   price: 14309,
   originalPrice: 15984,
   discountPercent: 10,
@@ -20,11 +19,38 @@ function formatNaira(amount) {
   return `₦${amount.toLocaleString("en-NG")}`
 }
 
+function isRemoteImage(src) {
+  return typeof src === "string" && /^https?:\/\//.test(src)
+}
+
+function ProductImage({ src, alt, className }) {
+  if (isRemoteImage(src)) {
+    return (
+      <img
+        src={src}
+        alt={alt}
+        className={className}
+        loading="lazy"
+      />
+    )
+  }
+
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      className={className}
+      loading="lazy"
+    />
+  )
+}
+
 export default function ProductCard({
   product = sampleProduct,
   className = "",
 }) {
-  const { brand, title, rating, price, originalPrice, discountPercent, image, id } =
+  const { brand, title, price, originalPrice, discountPercent, image, id } =
     product
   const { addToCart } = useCart()
 
@@ -63,12 +89,10 @@ export default function ProductCard({
           ) : null}
 
           <div className="relative h-full w-full">
-            <Image
+            <ProductImage
               src={image}
               alt={title}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-110 rounded-xl"
-              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110 rounded-xl"
             />
           </div>
         </div>
@@ -79,14 +103,9 @@ export default function ProductCard({
             {brand}
           </p>
 
-          <h3 className="truncate text-sm font-medium text-gray-800 group-hover:text-(--theme) transition-colors">
+          <h3 className="truncate text-sm font-medium text-gray-800 group-hover:text-(--theme) transition-colors dark:text-gray-100">
             {title}
           </h3>
-
-          <div className="flex items-center gap-1 pt-0.5">
-            <Star size={16} stroke="none" className="fill-orange-400" />
-            <span className="text-sm font-medium text-gray-700">{rating}</span>
-          </div>
 
           <div className="flex justify-between items-baseline gap-2 pt-1">
             <div>
