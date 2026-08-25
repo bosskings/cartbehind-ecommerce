@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import { motion, useReducedMotion, AnimatePresence } from 'framer-motion'
 import { Swiper, SwiperSlide } from 'swiper/react'
@@ -29,8 +29,9 @@ import 'swiper/css/pagination'
 import CategoryCarousel from './Categorycarousel'
 import ProductCard from './ProductCard'
 import DealOfTheDay from './Dealoftheday'
-import { products } from '@/data/products'
 import Hero from './Hero'
+import { useProducts } from '@/hooks/useProducts'
+import { groupProductsByCategory } from '@/lib/products'
 
 // ——— Motion variants ———
 const fadeUp = {
@@ -116,20 +117,8 @@ const testimonials = [
   },
 ]
 
-const categoryFilters = [
-  { id: 1, name: "All" },
-  { id: 2, name: "Beauty" },
-  { id: 3, name: "Fragrances" },
-  { id: 4, name: "Furniture" },
-]
 
-const editorialLooks = [
-  { id: 1, image: '/cat.jpeg', title: 'Modern Minimalist', cta: 'Shop the style' },
-  { id: 2, image: '/cat.jpeg', title: 'Artisan Luxe', cta: 'Explore collection' },
-  { id: 3, image: '/cat.jpeg', title: 'Summer Edit', cta: 'See the edit' },
-]
-
-// ——— Helper ———
+const PRODUCTS_PER_CATEGORY = 5
 const getCategoryPath = (name) =>
   name === "All" ? "/" : `/category/${name.toLowerCase().replace(/\s+/g, "-")}`
 
@@ -137,8 +126,31 @@ const getCategoryPath = (name) =>
 const MainPage = ({ category = 'All' }) => {
   const pathname = usePathname()
   const prefersReducedMotion = useReducedMotion()
+  const { products, loading, error } = useProducts()
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [testimonialIndex, setTestimonialIndex] = useState(0)
+
+  const filteredProducts =
+    category === 'All'
+      ? products
+      : products.filter(
+          (product) => product.category?.toLowerCase() === category.toLowerCase(),
+        )
+
+  const categoryGroups = useMemo(
+    () => groupProductsByCategory(filteredProducts),
+    [filteredProducts],
+  )
+
+  const navCategories = useMemo(() => {
+    const unique = [...new Set(products.map((product) => product.category).filter(Boolean))]
+    return [
+      { id: 1, name: "All" },
+      ...unique.map((name, index) => ({ id: index + 2, name })),
+    ]
+  }, [products])
+
+  const dealProduct = filteredProducts[0]
 
   // Back-to-top visibility
   useEffect(() => {
@@ -253,7 +265,7 @@ const MainPage = ({ category = 'All' }) => {
       <div className='w-full sm:w-[95%] md:w-[85%] mx-auto'>
 
       <nav className="mx-auto flex w-[95%] gap-2 overflow-x-auto py-5 scrollbar-hide md:w-[88%] md:justify-center">
-        {categoryFilters.map((cat) => {
+        {navCategories.map((cat) => {
           const isActive = pathname === getCategoryPath(cat.name)
           return (
             <Link
@@ -344,29 +356,52 @@ const MainPage = ({ category = 'All' }) => {
         </div>
       </div>
 
-      <section className="relative mx-auto mt-12 w-full">
-        <h2 className="mb-4 ml-5 text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-          Trending Now
-        </h2>
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-50px' }}
-          className="mx-auto grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5"
-        >
-          {products.slice(0, 8).map((product) => (
+      {loading ? (
+        <p className="mx-auto mt-12 w-[95%] text-sm text-gray-500 dark:text-gray-400">
+          Loading products...
+        </p>
+      ) : error ? (
+        <p className="mx-auto mt-12 w-[95%] text-sm text-red-500">{error}</p>
+      ) : categoryGroups.length === 0 ? (
+        <p className="mx-auto mt-12 w-[95%] text-sm text-gray-500 dark:text-gray-400">
+          No products available yet.
+        </p>
+      ) : (
+        categoryGroups.map(({ category: categoryName, products: categoryProducts }) => (
+          <section key={categoryName} className="relative mx-auto mt-12 w-full">
+            <div className="mb-4 ml-5 flex items-end justify-between gap-4 pr-5">
+              <h2 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                {categoryName}
+              </h2>
+              <Link
+                href={getCategoryPath(categoryName)}
+                className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.24em] text-gray-500 transition-colors hover:text-(--theme) dark:text-gray-400"
+              >
+                View all
+                <ChevronRight size={14} />
+              </Link>
+            </div>
             <motion.div
-              key={product.id}
-              variants={fadeUp}
-              whileHover={prefersReducedMotion ? {} : { scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)' }}
-              className="rounded-2xl transition-shadow duration-300"
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, margin: '-50px' }}
+              className="mx-auto grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5"
             >
-              <ProductCard product={product} />
+              {categoryProducts.slice(0, PRODUCTS_PER_CATEGORY).map((product) => (
+                <motion.div
+                  key={product.id}
+                  variants={fadeUp}
+                  whileHover={prefersReducedMotion ? {} : { scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)' }}
+                  className="rounded-2xl transition-shadow duration-300"
+                >
+                  <ProductCard product={product} />
+                </motion.div>
+              ))}
             </motion.div>
-          ))}
-        </motion.div>
-      </section>
+          </section>
+        ))
+      )}
 
       <motion.section
         initial="hidden"
@@ -375,108 +410,16 @@ const MainPage = ({ category = 'All' }) => {
         variants={fadeUp}
         className="relative mx-auto mt-12 w-[95%] sm:w-[98%]"
       >
-        <DealOfTheDay />
+        {dealProduct ? (
+          <DealOfTheDay
+            productName={dealProduct.title}
+            price={dealProduct.price}
+            image={dealProduct.image}
+          />
+        ) : (
+          <DealOfTheDay />
+        )}
       </motion.section>
-
-      <section className="relative mx-auto mt-12 w-full ">
-        <h2 className="mb-4 ml-5 text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-          New Arrivals
-        </h2>
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-50px' }}
-          className="mx-auto grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5"
-        >
-          {products.slice(0, 8).map((product) => (
-            <motion.div
-              key={product.id}
-              variants={fadeUp}
-              whileHover={prefersReducedMotion ? {} : { scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)' }}
-              className="rounded-2xl transition-shadow duration-300"
-            >
-              <ProductCard product={product} />
-            </motion.div>
-          ))}
-        </motion.div>
-      </section>
-
-      {/* <section className="mx-auto mt-16 w-[95%] md:w-[90%]">
-        <div className="mb-6 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.34em] text-gray-400">Style stories</p>
-            <h2 className="mt-2 text-[clamp(2rem,4vw,3.2rem)] font-black tracking-[-0.06em] text-gray-950">
-              Curated Looks
-            </h2>
-          </div>
-          <Link
-            href="/category/all"
-            className="hidden items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.34em] text-gray-500 transition-colors hover:text-gray-900 md:inline-flex"
-          >
-            View all styles <ChevronRight size={14} />
-          </Link>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-[1.25fr_0.85fr] md:grid-rows-[1fr_1fr]">
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-40px' }}
-            className="group relative row-span-2 min-h-[420px] overflow-hidden rounded-[30px] border border-black/5 bg-[#f5f1e8]"
-          >
-            <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-[1.04]">
-              <Image
-                src={editorialLooks[0].image}
-                alt={editorialLooks[0].title}
-                fill
-                className="object-cover"
-              />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent" />
-            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(242,169,37,0.16),transparent_40%,rgba(255,255,255,0.06))]" />
-
-            <div className="absolute inset-x-6 bottom-6 rounded-[24px] border border-white/20 bg-black/20 px-5 py-4 backdrop-blur-xl">
-              <p className="text-2xl font-semibold text-white md:text-3xl">{editorialLooks[0].title}</p>
-              <Link
-                href="/category/modern"
-                className="mt-2 inline-flex items-center gap-1 text-sm text-white/90 underline-offset-4 transition-all hover:underline"
-              >
-                {editorialLooks[0].cta} <ChevronRight size={16} />
-              </Link>
-            </div>
-          </motion.div>
-
-          {editorialLooks.slice(1).map((look) => (
-            <motion.div
-              key={look.id}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-30px' }}
-              className="group relative min-h-[200px] overflow-hidden rounded-[28px] border border-black/5 bg-[#f5f1e8]"
-            >
-              <div className="absolute inset-0 transition-transform duration-700 group-hover:scale-[1.04]">
-                <Image
-                  src={look.image}
-                  alt={look.title}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/82 via-black/20 to-transparent" />
-              <div className="absolute inset-x-4 bottom-4 rounded-2xl border border-white/15 bg-black/15 px-4 py-3 backdrop-blur-md">
-                <p className="text-lg font-semibold text-white">{look.title}</p>
-                <Link
-                  href="/category/curated"
-                  className="mt-1 inline-flex items-center gap-1 text-xs text-white/85 underline-offset-2 transition-all hover:underline"
-                >
-                  {look.cta} <ChevronRight size={14} />
-                </Link>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section> */}
 
       {/* ───────── Testimonials Carousel ───────── */}
       <section className="mx-auto mt-16 w-full">

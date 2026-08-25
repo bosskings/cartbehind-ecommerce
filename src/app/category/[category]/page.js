@@ -13,7 +13,7 @@ export default async function CategoryPage({ params }) {
   return (
     <>
       <Navbar />
-      {/* <MainPage category={formatCategoryName(category)} /> */}
+      <MainPage category={formatCategoryName(category)} />
     </>
   );
 }
