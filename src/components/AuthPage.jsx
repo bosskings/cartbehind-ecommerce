@@ -8,6 +8,7 @@ import { LockKeyhole, LogIn, Mail, ShieldCheck, ShoppingBag, User, UserPlus } fr
 import { useAuth } from "@/components/AuthContext"
 import { useTheme } from "@/components/ThemeContext"
 import { FaRegMoon, FaRegSun } from "react-icons/fa"
+import { ADMIN_BASE_PATH, ADMIN_LOGIN_PATH } from "@/lib/adminRoutes"
 
 function Field({ label, icon: Icon, children }) {
   return (
@@ -82,7 +83,7 @@ export default function AuthPage({ mode }) {
     toast.success(result.message)
 
     if (isAdmin) {
-      router.replace("/admin")
+      router.replace(ADMIN_BASE_PATH)
       return
     }
 
@@ -100,7 +101,7 @@ export default function AuthPage({ mode }) {
       <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.14)] dark:border-white/10 dark:bg-[#16131f] lg:grid-cols-[0.95fr_1.05fr]">
         <section className="flex min-h-[320px] flex-col justify-between bg-(--theme) p-7 text-white sm:p-9">
           <div className="flex items-center justify-between gap-4">
-            <Link href={isAdmin ? "/admin/login" : "/login"} className="inline-flex items-center gap-3">
+            <Link href={isAdmin ? ADMIN_LOGIN_PATH : "/login"} className="inline-flex items-center gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-(--theme-second) text-[#280E89]">
                 <ShoppingBag size={21} />
               </span>

@@ -4,8 +4,9 @@ import { useEffect } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { useAuth } from "@/components/AuthContext"
+import { ADMIN_BASE_PATH, ADMIN_LOGIN_PATH, isAdminPath } from "@/lib/adminRoutes"
 
-const OPEN_ROUTES = new Set(["/login", "/signup", "/verify-email", "/admin/login"])
+const OPEN_ROUTES = new Set(["/login", "/signup", "/verify-email", ADMIN_LOGIN_PATH])
 
 function LoadingScreen() {
   return (
@@ -23,8 +24,8 @@ export default function AuthRouteGuard({ children }) {
   const { authReady, isUserAuthenticated, isAdminAuthenticated } = useAuth()
 
   const isOpenRoute = OPEN_ROUTES.has(pathname)
-  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/")
-  const isAdminLogin = pathname === "/admin/login"
+  const isAdminRoute = isAdminPath(pathname)
+  const isAdminLogin = pathname === ADMIN_LOGIN_PATH
   const isUserAuthRoute = pathname === "/login" || pathname === "/signup" || pathname === "/verify-email"
   const shouldBlockAdmin = !isOpenRoute && isAdminRoute && !isAdminAuthenticated
   const shouldBlockUser = !isOpenRoute && !isAdminRoute && !isUserAuthenticated
@@ -35,7 +36,7 @@ export default function AuthRouteGuard({ children }) {
     if (!authReady) return
 
     if (shouldLeaveAdminLogin) {
-      router.replace("/admin")
+      router.replace(ADMIN_BASE_PATH)
       return
     }
 
@@ -45,7 +46,7 @@ export default function AuthRouteGuard({ children }) {
     }
 
     if (shouldBlockAdmin) {
-      router.replace("/admin/login")
+      router.replace(ADMIN_LOGIN_PATH)
       return
     }
 
