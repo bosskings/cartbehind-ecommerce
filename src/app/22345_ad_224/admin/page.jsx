@@ -29,6 +29,7 @@ import { products as seededProducts } from "@/data/products"
 import { useTheme } from "@/components/ThemeContext"
 import { useAuth } from "@/components/AuthContext"
 import { getAdminToken, uploadToCloudinary } from "@/lib/cloudinary"
+import { ADMIN_LOGIN_PATH } from "@/lib/adminRoutes"
 
 const emptyForm = {
   name: "",
@@ -371,7 +372,7 @@ export default function AdminPage() {
   const handleAdminLogout = () => {
     logoutAdmin()
     toast.success("Admin logged out successfully.")
-    router.replace("/admin/login")
+    router.replace(ADMIN_LOGIN_PATH)
   }
 
   return (
