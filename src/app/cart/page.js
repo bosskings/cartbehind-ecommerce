@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/components/AuthContext"
 import { useCart } from "@/components/CartContext"
 import CheckoutModal from "@/components/CheckoutModal"
 import Navbar from "@/components/Navbar"
@@ -13,7 +15,18 @@ const formatNaira = (amount) => `₦${amount.toLocaleString("en-NG")}`
 
 export default function CartPage() {
   const { items, updateQuantity, removeFromCart, subtotal, cartCount } = useCart()
+  const { isUserAuthenticated } = useAuth()
+  const router = useRouter()
   const [showCheckoutModal, setShowCheckoutModal] = useState(false)
+
+  const handleProceedToCheckout = () => {
+    if (!isUserAuthenticated) {
+      router.push("/login?next=/cart")
+      return
+    }
+
+    setShowCheckoutModal(true)
+  }
 
   if (!items.length) {
     return (
@@ -202,7 +215,7 @@ export default function CartPage() {
                 </div>
 
                 <button
-                  onClick={() => setShowCheckoutModal(true)}
+                  onClick={handleProceedToCheckout}
                   className="mt-7 flex w-full items-center justify-center gap-2 rounded-full bg-(--theme) px-5 py-3.5 text-sm font-bold text-(--theme-second) transition-all duration-300 hover:scale-105 hover:bg-[#280E89]"
                 >
                   Proceed to Checkout
