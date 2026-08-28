@@ -7,6 +7,8 @@ import Image from "next/image";
 
 
 
+const TERMS_PDF_PATH = "/Cart_Behind_Terms_and_Conditions.pdf"
+
 const footerColumns = [
   {
     title: "Company",
@@ -30,7 +32,11 @@ const footerColumns = [
     title: "Legal",
     links: [
       { label: "Privacy Policy", href: "#" },
-      { label: "Terms of Service", href: "#" },
+      {
+        label: "Terms & Conditions",
+        href: TERMS_PDF_PATH,
+        external: true,
+      },
       { label: "Cookie Policy", href: "#" },
     ],
   },
@@ -84,6 +90,9 @@ export default function Footer() {
                   <li key={link.label}>
                     <a
                       href={link.href}
+                      {...(link.external
+                        ? { target: "_blank", rel: "noopener noreferrer" }
+                        : {})}
                       className="text-[15px] text-[#B4B4BE] hover:text-white transition-colors "
                     >
                       {link.label}
@@ -135,7 +144,15 @@ export default function Footer() {
           </div>
 
           <p className="text-sm text-[#7A7A85]">
-            © 2026 Rave. All rights reserved.
+            © 2026 Rave. All rights reserved.{" "}
+            <a
+              href={TERMS_PDF_PATH}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#B4B4BE] underline-offset-2 transition-colors hover:text-white hover:underline"
+            >
+              Terms & Conditions
+            </a>
           </p>
         </div>
       </div>

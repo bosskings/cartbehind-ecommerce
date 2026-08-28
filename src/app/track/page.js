@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useMemo, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import {
@@ -15,7 +15,9 @@ import {
 import Link from "next/link"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
+import CheckoutModal from "@/components/CheckoutModal"
 import { useOrders } from "@/components/OrderContext"
+import { isSuccessfulPayment } from "@/lib/payments"
 
 function formatStamp(iso) {
   const d = new Date(iso)
@@ -53,15 +55,42 @@ function TimelineIcon({ type, active }) {
 }
 
 function TrackParcelContent() {
-  const { orders,  getOrderByTrackingCode } = useOrders()
+  const { orders, getOrderByTrackingCode } = useOrders()
   const searchParams = useSearchParams()
   const router = useRouter()
   const codeFromUrl = (searchParams.get("code") || "").toUpperCase()
+  const paymentStatus = searchParams.get("status")
+  const paymentTxRef = searchParams.get("tx_ref")
+  const paymentTransactionId = searchParams.get("transaction_id")
 
   const [query, setQuery] = useState(codeFromUrl)
   const [activeCode, setActiveCode] = useState(codeFromUrl)
   const [copied, setCopied] = useState(false)
   const [notFound, setNotFound] = useState(false)
+  const [paymentInfo, setPaymentInfo] = useState(null)
+  const [paymentError, setPaymentError] = useState("")
+
+  useEffect(() => {
+    if (!paymentStatus || !paymentTxRef) return
+
+    if (isSuccessfulPayment(paymentStatus)) {
+      setPaymentInfo({
+        tx_ref: paymentTxRef,
+        transaction_id: paymentTransactionId ? Number(paymentTransactionId) : null,
+        status: paymentStatus,
+      })
+      setPaymentError("")
+      return
+    }
+
+    setPaymentInfo(null)
+    setPaymentError("Payment was not completed. You can return to your cart and try again.")
+  }, [paymentStatus, paymentTxRef, paymentTransactionId])
+
+  const handleCloseCheckout = useCallback(() => {
+    setPaymentInfo(null)
+    router.replace("/track")
+  }, [router])
 
   useEffect(() => {
     if (!codeFromUrl) return
@@ -149,6 +178,15 @@ function TrackParcelContent() {
         </div>
 
         <div className="space-y-5 rounded-[28px] border border-white/80 bg-white p-5 shadow-[0_8px_40px_rgba(15,23,42,0.08)] sm:p-7 dark:border-white/10 dark:bg-[#16131f]">
+          {paymentError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400">
+              <p>{paymentError}</p>
+              <Link href="/cart" className="mt-2 inline-block font-semibold underline">
+                Back to cart
+              </Link>
+            </div>
+          )}
+
           <form onSubmit={handleLookup} className="flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
               <Search
@@ -352,6 +390,12 @@ function TrackParcelContent() {
           )}
         </div>
       </div>
+
+      <CheckoutModal
+        isOpen={Boolean(paymentInfo)}
+        onClose={handleCloseCheckout}
+        paymentInfo={paymentInfo}
+      />
     </main>
   )
 }

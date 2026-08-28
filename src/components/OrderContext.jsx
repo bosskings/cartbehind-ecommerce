@@ -132,10 +132,17 @@ export function OrderProvider({ children }) {
         country: shipping.country,
         state: shipping.state,
       },
-      payment: {
-        last4: payment.last4,
-        brand: payment.brand || "Card",
-      },
+      payment: payment.provider
+        ? {
+            provider: payment.provider,
+            txRef: payment.txRef,
+            transactionId: payment.transactionId,
+            status: payment.status,
+          }
+        : {
+            last4: payment.last4,
+            brand: payment.brand || "Card",
+          },
       items: items.map((item) => ({
         id: item.id,
         title: item.title,

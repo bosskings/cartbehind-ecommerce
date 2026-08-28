@@ -174,7 +174,7 @@ export function CartProvider({ children }) {
           headers: getHeaders(),
         })
       } catch (error) {
-        console.error("Failed to sync cart delete.", error)
+        console.warn("Failed to sync cart delete.", error?.response?.data || error.message)
       }
     },
     [canSyncCart, getHeaders],
@@ -351,8 +351,4 @@ export function useCart() {
 
   return context
 }
-
-
-
-
 
