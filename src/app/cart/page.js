@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/AuthContext"
 import { useCart } from "@/components/CartContext"
-import CheckoutModal from "@/components/CheckoutModal"
+import PayCustomerModal from "@/components/PayCustomerModal"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import { motion, AnimatePresence } from "framer-motion"
@@ -17,7 +17,12 @@ export default function CartPage() {
   const { items, updateQuantity, removeFromCart, subtotal, cartCount } = useCart()
   const { isUserAuthenticated } = useAuth()
   const router = useRouter()
-  const [showCheckoutModal, setShowCheckoutModal] = useState(false)
+  const [showPayModal, setShowPayModal] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const handleProceedToCheckout = () => {
     if (!isUserAuthenticated) {
@@ -25,7 +30,17 @@ export default function CartPage() {
       return
     }
 
-    setShowCheckoutModal(true)
+    setShowPayModal(true)
+  }
+
+  if (!mounted) {
+    return (
+      <>
+        <Navbar />
+        <main className="relative min-h-screen overflow-hidden bg-[#f7f5fb] dark:bg-background" />
+        <Footer />
+      </>
+    )
   }
 
   if (!items.length) {
@@ -232,7 +247,12 @@ export default function CartPage() {
       </main>
 
       <Footer />
-      <CheckoutModal isOpen={showCheckoutModal} onClose={() => setShowCheckoutModal(false)} />
+      <PayCustomerModal
+        isOpen={showPayModal}
+        onClose={() => setShowPayModal(false)}
+        amount={subtotal}
+        itemCount={cartCount}
+      />
     </>
   )
 }

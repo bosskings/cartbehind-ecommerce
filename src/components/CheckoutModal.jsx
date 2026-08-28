@@ -2,59 +2,29 @@
 
 import { useEffect, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import {
-  X,
-  CreditCard,
-  Lock,
-  CheckCircle2,
-  Package,
-  MapPin,
-  Copy,
-  Check,
-} from "lucide-react"
+import { X, CheckCircle2, Package, MapPin, Copy, Check } from "lucide-react"
 import { useCart } from "@/components/CartContext"
 import { useOrders } from "@/components/OrderContext"
 import { useAuth } from "@/components/AuthContext"
 import { useRouter } from "next/navigation"
+import { clearPendingCheckout, readPendingCheckout } from "@/lib/payments"
 
 const fieldClass =
   "h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none transition focus:border-(--theme) focus:bg-white dark:border-white/10 dark:bg-[#16131f] dark:text-gray-200 dark:focus:bg-[#1a1625]"
 
 const formatNaira = (amount) => `₦${amount.toLocaleString("en-NG")}`
 
-function onlyDigits(value) {
-  return value.replace(/\D/g, "")
-}
-
-function formatCardNumber(value) {
-  return onlyDigits(value)
-    .slice(0, 16)
-    .replace(/(\d{4})(?=\d)/g, "$1 ")
-}
-
-function formatExpiry(value) {
-  const digits = onlyDigits(value).slice(0, 4)
-  if (digits.length <= 2) return digits
-  return `${digits.slice(0, 2)}/${digits.slice(2)}`
-}
-
-export default function CheckoutModal({ isOpen, onClose }) {
+export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
   const { items, subtotal, clearCart } = useCart()
   const { createOrder } = useOrders()
   const { isUserAuthenticated } = useAuth()
   const router = useRouter()
 
-  const [step, setStep] = useState("payment") // payment | processing | success | shipping | done
+  const [step, setStep] = useState("shipping")
   const [error, setError] = useState("")
   const [copied, setCopied] = useState(false)
   const [order, setOrder] = useState(null)
-
-  const [card, setCard] = useState({
-    name: "",
-    number: "",
-    expiry: "",
-    cvc: "",
-  })
+  const [checkout, setCheckout] = useState(null)
 
   const [shipping, setShipping] = useState({
     address: "",
@@ -70,51 +40,35 @@ export default function CheckoutModal({ isOpen, onClose }) {
 
   useEffect(() => {
     if (!isOpen) return
-    setStep("payment")
+
+    if (!paymentInfo) {
+      onClose()
+      return
+    }
+
+    setStep("shipping")
     setError("")
     setCopied(false)
     setOrder(null)
-    setCard({ name: "", number: "", expiry: "", cvc: "" })
+    const pendingCheckout = readPendingCheckout()
+    setCheckout({
+      items: pendingCheckout?.items?.length ? pendingCheckout.items : items,
+      total: Number(pendingCheckout?.total ?? subtotal) || 0,
+      itemCount: Number(pendingCheckout?.itemCount ?? items.length) || 0,
+    })
     setShipping({ address: "", country: "", state: "" })
-  }, [isOpen])
+  }, [isOpen, paymentInfo, onClose])
 
-  if (!isOpen || !isUserAuthenticated) return null
+  if (!isOpen || !isUserAuthenticated || !paymentInfo) return null
+
+  const checkoutItems = checkout?.items ?? items
+  const checkoutTotal = checkout?.total ?? subtotal
+  const checkoutItemCount = checkout?.itemCount ?? items.length
 
   const stepLabel = {
-    payment: "Step 1 of 2: Payment",
-    processing: "Processing payment…",
-    success: "Payment successful",
-    shipping: "Step 2 of 2: Delivery location",
+    shipping: "Delivery location",
     done: "Order confirmed",
   }[step]
-
-  const handlePay = (event) => {
-    event.preventDefault()
-    setError("")
-
-    const digits = onlyDigits(card.number)
-    if (!card.name.trim()) {
-      setError("Enter the name on your card.")
-      return
-    }
-    if (digits.length < 16) {
-      setError("Enter a valid 16-digit card number.")
-      return
-    }
-    if (onlyDigits(card.expiry).length < 4) {
-      setError("Enter a valid expiry date (MM/YY).")
-      return
-    }
-    if (onlyDigits(card.cvc).length < 3) {
-      setError("Enter a valid CVC.")
-      return
-    }
-
-    setStep("processing")
-    window.setTimeout(() => {
-      setStep("success")
-    }, 2200)
-  }
 
   const handleShippingSubmit = (event) => {
     event.preventDefault()
@@ -125,12 +79,19 @@ export default function CheckoutModal({ isOpen, onClose }) {
       return
     }
 
+    if (!checkoutItems.length || checkoutTotal <= 0) {
+      setError("We could not find the paid cart details. Please contact support with your payment reference.")
+      return
+    }
+
     const created = createOrder({
-      items,
-      total: subtotal,
+      items: checkoutItems,
+      total: checkoutTotal,
       payment: {
-        last4: onlyDigits(card.number).slice(-4),
-        brand: "Card",
+        provider: "flutterwave",
+        txRef: paymentInfo.tx_ref,
+        transactionId: paymentInfo.transaction_id,
+        status: "successful",
       },
       shipping: {
         address: shipping.address.trim(),
@@ -140,6 +101,7 @@ export default function CheckoutModal({ isOpen, onClose }) {
     })
 
     setOrder(created)
+    clearPendingCheckout()
     clearCart()
     setStep("done")
   }
@@ -165,12 +127,10 @@ export default function CheckoutModal({ isOpen, onClose }) {
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-black/5 bg-[#f4f4f4]/95 px-6 py-5 backdrop-blur dark:border-white/10 dark:bg-[#16131f]/95">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--theme)/10 text-(--theme)">
-              {step === "done" || step === "success" ? (
+              {step === "done" ? (
                 <CheckCircle2 size={20} />
-              ) : step === "shipping" ? (
-                <MapPin size={20} />
               ) : (
-                <CreditCard size={20} />
+                <MapPin size={20} />
               )}
             </div>
             <div>
@@ -190,174 +150,6 @@ export default function CheckoutModal({ isOpen, onClose }) {
 
         <div className="space-y-5 p-6 md:p-8">
           <AnimatePresence mode="wait">
-            {step === "payment" && (
-              <motion.form
-                key="payment"
-                initial={{ opacity: 0, x: 12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -12 }}
-                onSubmit={handlePay}
-                className="space-y-5"
-              >
-                <div className="rounded-2xl border border-(--theme)/15 bg-white p-4 dark:border-white/10 dark:bg-[#16131f]">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Amount due</span>
-                    <span className="text-xl font-black text-gray-950 dark:text-white">
-                      {formatNaira(subtotal)}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs text-gray-400">
-                    {items.length} {items.length === 1 ? "item" : "items"} · Simulated payment
-                  </p>
-                </div>
-
-                <label className="block space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                  <span className="font-semibold">Name on card</span>
-                  <input
-                    className={fieldClass}
-                    value={card.name}
-                    onChange={(e) => setCard((c) => ({ ...c, name: e.target.value }))}
-                    placeholder="Alex Johnson"
-                    autoComplete="cc-name"
-                  />
-                </label>
-
-                <label className="block space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                  <span className="font-semibold">Card number</span>
-                  <input
-                    className={fieldClass}
-                    value={card.number}
-                    onChange={(e) =>
-                      setCard((c) => ({ ...c, number: formatCardNumber(e.target.value) }))
-                    }
-                    placeholder="4242 4242 4242 4242"
-                    inputMode="numeric"
-                    autoComplete="cc-number"
-                  />
-                </label>
-
-                <div className="grid gap-4 grid-cols-2">
-                  <label className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                    <span className="font-semibold">Expiry</span>
-                    <input
-                      className={fieldClass}
-                      value={card.expiry}
-                      onChange={(e) =>
-                        setCard((c) => ({ ...c, expiry: formatExpiry(e.target.value) }))
-                      }
-                      placeholder="MM/YY"
-                      inputMode="numeric"
-                      autoComplete="cc-exp"
-                    />
-                  </label>
-                  <label className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                    <span className="font-semibold">CVC</span>
-                    <input
-                      className={fieldClass}
-                      value={card.cvc}
-                      onChange={(e) =>
-                        setCard((c) => ({
-                          ...c,
-                          cvc: onlyDigits(e.target.value).slice(0, 4),
-                        }))
-                      }
-                      placeholder="123"
-                      inputMode="numeric"
-                      autoComplete="cc-csc"
-                    />
-                  </label>
-                </div>
-
-                {error && <p className="text-sm font-medium text-red-500">{error}</p>}
-
-                <button
-                  type="submit"
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-(--theme) px-8 py-3.5 text-base font-bold text-(--theme-second) transition-all duration-300 hover:scale-105 hover:bg-[#280E89] cursor-pointer"
-                >
-                  <Lock size={16} />
-                  Pay {formatNaira(subtotal)}
-                </button>
-
-                <p className="text-center text-xs text-gray-400">
-                  Demo checkout — no real charge. Stripe can be wired later.
-                </p>
-              </motion.form>
-            )}
-
-            {step === "processing" && (
-              <motion.div
-                key="processing"
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                className="flex flex-col items-center py-10 text-center"
-              >
-                <div className="relative mb-6 flex h-24 w-24 items-center justify-center">
-                  <motion.span
-                    className="absolute inset-0 rounded-full border-4 border-(--theme)/20 border-t-(--theme)"
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                  />
-                  <CreditCard className="text-(--theme)" size={28} />
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Processing payment
-                </h3>
-                <p className="mt-2 max-w-xs text-sm text-gray-500">
-                  Securing your card details and confirming the charge…
-                </p>
-                <div className="mt-6 flex gap-1.5">
-                  {[0, 1, 2].map((i) => (
-                    <motion.span
-                      key={i}
-                      className="h-2 w-2 rounded-full bg-(--theme)"
-                      animate={{ opacity: [0.3, 1, 0.3], y: [0, -4, 0] }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 0.9,
-                        delay: i * 0.15,
-                      }}
-                    />
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {step === "success" && (
-              <motion.div
-                key="success"
-                initial={{ opacity: 0, scale: 0.94 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, x: -12 }}
-                className="flex flex-col items-center py-6 text-center"
-              >
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 260, damping: 16 }}
-                  className="mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"
-                >
-                  <CheckCircle2 size={40} />
-                </motion.div>
-                <h3 className="text-2xl font-black text-gray-900 dark:text-white">
-                  Payment successful
-                </h3>
-                <p className="mt-2 max-w-sm text-sm text-gray-500">
-                  Your order is paid. Set a delivery location so we can create a tracking
-                  code for your parcel.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => setStep("shipping")}
-                  className="mt-8 flex w-full items-center justify-center gap-2 rounded-full bg-(--theme) px-8 py-3.5 text-base font-bold text-(--theme-second) transition-all duration-300 hover:scale-105 hover:bg-[#280E89] cursor-pointer"
-                >
-                  <Package size={18} />
-                  Set up tracking
-                </button>
-              </motion.div>
-            )}
-
             {step === "shipping" && (
               <motion.form
                 key="shipping"
@@ -367,6 +159,20 @@ export default function CheckoutModal({ isOpen, onClose }) {
                 onSubmit={handleShippingSubmit}
                 className="space-y-5"
               >
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/30">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold text-emerald-700 dark:text-emerald-400">
+                      Payment received
+                    </span>
+                    <span className="text-lg font-black text-emerald-800 dark:text-emerald-300">
+                      {formatNaira(checkoutTotal)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-emerald-600/80 dark:text-emerald-400/80">
+                    {checkoutItemCount} {checkoutItemCount === 1 ? "item" : "items"} paid via Flutterwave
+                  </p>
+                </div>
+
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Where should we deliver your items?
                 </p>
@@ -503,3 +309,4 @@ export default function CheckoutModal({ isOpen, onClose }) {
     </div>
   )
 }
+

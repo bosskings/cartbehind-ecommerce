@@ -19,7 +19,7 @@ const Navbar = () => {
   const [searchTerm, setSearchTerm] = useState("")
   const [showSearch, setShowSearch] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(() => typeof window !== "undefined" && window.scrollY > 12)
+  const [isScrolled, setIsScrolled] = useState(false)
   const { cartCount } = useCart()
   const { logoutUser, isUserAuthenticated } = useAuth()
   const { theme, toggleTheme, mounted } = useTheme()

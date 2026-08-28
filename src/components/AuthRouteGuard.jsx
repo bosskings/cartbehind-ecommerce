@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { useAuth } from "@/components/AuthContext"
@@ -25,7 +25,12 @@ function getSafeNextPath(next) {
 export default function AuthRouteGuard({ children }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { authReady, isUserAuthenticated, isAdminAuthenticated } = useAuth()
+  const { isUserAuthenticated, isAdminAuthenticated } = useAuth()
+  const [authReady, setAuthReady] = useState(false)
+
+  useEffect(() => {
+    setAuthReady(true)
+  }, [])
 
   const isAdminRoute = isAdminPath(pathname)
   const isAdminLogin = pathname === ADMIN_LOGIN_PATH
