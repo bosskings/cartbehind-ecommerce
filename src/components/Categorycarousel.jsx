@@ -125,11 +125,11 @@ export default function CategoryCarousel() {
             setAtStart(false);
             setAtEnd(false);
           }}
-          spaceBetween={16}
-          slidesPerView={2.4}
+          spaceBetween={8}
+          slidesPerView={4}
           breakpoints={{
-            360: { slidesPerView: 2.8, spaceBetween: 14 },
-            480: { slidesPerView: 3, spaceBetween: 14 },
+            360: { slidesPerView: 4, spaceBetween: 8 },
+            480: { slidesPerView: 4, spaceBetween: 12 },
             640: { slidesPerView: 4.5, spaceBetween: 12 },
             768: { slidesPerView: 6, spaceBetween: 5 },
             1024: { slidesPerView: 7.5, spaceBetween: 12 },
@@ -150,7 +150,7 @@ export default function CategoryCarousel() {
                 aria-label={category.name}
                 className="group flex w-full flex-col items-center gap-2 rounded-2xl py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--theme) focus-visible:ring-offset-2"
               >
-                <span className="relative h-32 w-32 shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-(--theme)/40 sm:h-28 sm:w-28 md:h-30 md:w-30">
+                <span className="relative h-16 w-16 min-[360px]:h-[72px] min-[360px]:w-[72px] shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-(--theme)/40 sm:h-28 sm:w-28 md:h-30 md:w-30">
                   <Image
                     src={category.image}
                     alt=""

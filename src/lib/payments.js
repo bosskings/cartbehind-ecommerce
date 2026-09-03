@@ -71,6 +71,35 @@ export function clearPendingCheckout() {
   window.localStorage.removeItem(PENDING_CHECKOUT_KEY)
 }
 
+export async function completeUserCart({ authToken, userId }) {
+  const backendUrl = getBackendUrl()
+  if (!backendUrl) {
+    throw new Error("NEXT_PUBLIC_BACKEND_URL is missing.")
+  }
+
+  if (!authToken) {
+    throw new Error("You must be logged in to complete your cart.")
+  }
+
+  if (!userId) {
+    throw new Error("We could not find your user id to complete the cart.")
+  }
+
+  const response = await axios.post(
+    `${backendUrl}/api/v1/users/cart/complete`,
+    { id: userId },
+    {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    },
+  )
+
+  console.log("Cart complete response:", response.data)
+
+  return response.data
+}
+
 export async function initiateFlutterwavePayment({ authToken, payload }) {
   const backendUrl = getBackendUrl()
   if (!backendUrl) {
@@ -95,4 +124,5 @@ export async function initiateFlutterwavePayment({ authToken, payload }) {
 }
 
 export { getApiErrorMessage }
+
 

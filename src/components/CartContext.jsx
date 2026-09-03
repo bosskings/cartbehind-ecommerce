@@ -109,12 +109,28 @@ function getBackendUrl() {
   return process.env.NEXT_PUBLIC_BACKEND_URL
 }
 
+function isMissingActiveCartError(error) {
+  const status = error?.response?.status
+  const responseData = error?.response?.data
+  const message =
+    responseData?.message ||
+    responseData?.error ||
+    responseData?.data?.message ||
+    responseData?.data?.error ||
+    error?.message ||
+    ""
+
+  return status === 404 && /active cart not found/i.test(message)
+}
+
 export function CartProvider({ children }) {
   const { isUserAuthenticated, userSession } = useAuth()
   const [items, setItems] = useState(readStoredCart)
   const itemsRef = useRef(items)
   const debounceTimersRef = useRef(new Map())
+  const cartRequestIdRef = useRef(0)
   const authToken = userSession?.authToken
+  const userId = userSession?.user?.id
   const canSyncCart = Boolean(isUserAuthenticated && authToken && getBackendUrl())
 
   const applyItems = useCallback((nextItems) => {
@@ -151,12 +167,11 @@ export function CartProvider({ children }) {
       if (!canSyncCart) return
 
       try {
-        const response = await axios.patch(
+        await axios.patch(
           `${getBackendUrl()}/api/v1/users/cart/update`,
           { productId, quantity },
           { headers: getHeaders() },
         )
-        console.log("Cart update response:", response.data)
       } catch (error) {
         console.error("Failed to sync cart quantity.", error)
       }
@@ -199,6 +214,14 @@ export function CartProvider({ children }) {
     [canSyncCart, syncCartUpdate],
   )
 
+  const clearDebouncedUpdates = useCallback(() => {
+    for (const timer of debounceTimersRef.current.values()) {
+      window.clearTimeout(timer)
+    }
+
+    debounceTimersRef.current.clear()
+  }, [])
+
   useEffect(() => {
     window.localStorage.setItem("cartbehind-cart", JSON.stringify(items))
   }, [items])
@@ -206,12 +229,8 @@ export function CartProvider({ children }) {
   useEffect(() => {
     if (canSyncCart) return
 
-    for (const timer of debounceTimersRef.current.values()) {
-      window.clearTimeout(timer)
-    }
-
-    debounceTimersRef.current.clear()
-  }, [canSyncCart])
+    clearDebouncedUpdates()
+  }, [canSyncCart, clearDebouncedUpdates])
 
   useEffect(() => {
     const debounceTimers = debounceTimersRef.current
@@ -231,12 +250,17 @@ export function CartProvider({ children }) {
     let cancelled = false
 
     async function loadServerCart() {
+      const requestId = ++cartRequestIdRef.current
+
       try {
-        const response = await axios.get(`${getBackendUrl()}/api/v1/users/cart`, {
+        const cartUrl = `${getBackendUrl()}/api/v1/users/cart`
+        const response = await axios.get(cartUrl, {
           headers: getHeaders(),
         })
-        console.log("Cart fetch response:", response.data)
-        if (cancelled) return
+
+        console.log("User cart response:", response.data)
+
+        if (cancelled || requestId !== cartRequestIdRef.current) return
 
         const serverItems = Array.isArray(response.data?.items)
           ? response.data.items.map(normalizeServerCartItem).filter(Boolean)
@@ -244,10 +268,14 @@ export function CartProvider({ children }) {
         const localItems = itemsRef.current
         const mergedItems = mergeCartItems(localItems, serverItems)
 
+        if (requestId !== cartRequestIdRef.current) return
+
         applyItems(mergedItems)
 
         const serverIds = new Set(serverItems.map((item) => item.id))
         for (const item of mergedItems) {
+          if (requestId !== cartRequestIdRef.current) return
+
           const serverItem = serverItems.find((candidate) => candidate.id === item.id)
           if (!serverIds.has(item.id)) {
             syncCartAdd(item.id, item.quantity)
@@ -256,7 +284,15 @@ export function CartProvider({ children }) {
           }
         }
       } catch (error) {
-        if (cancelled) return
+        if (cancelled || requestId !== cartRequestIdRef.current) return
+
+        if (isMissingActiveCartError(error)) {
+          console.log("User cart response:", error?.response?.data)
+          applyItems([])
+          window.localStorage.setItem("cartbehind-cart", JSON.stringify([]))
+          return
+        }
+
         console.error("Failed to load saved cart.", error)
         toast.error("Could not load your saved cart.")
       }
@@ -275,10 +311,10 @@ export function CartProvider({ children }) {
     const nextQuantity = existing ? existing.quantity + 1 : 1
     const nextItems = existing
       ? current.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: nextQuantity }
-            : item,
-        )
+        item.id === product.id
+          ? { ...item, quantity: nextQuantity }
+          : item,
+      )
       : [...current, { ...product, quantity: nextQuantity }]
 
     applyItems(nextItems)
@@ -306,15 +342,20 @@ export function CartProvider({ children }) {
     syncCartDelete(id)
   }
 
-  const clearCart = () => {
-    const currentItems = itemsRef.current
-    applyItems([])
+  const clearCart = useCallback(
+    async () => {
+      cartRequestIdRef.current += 1
+      clearDebouncedUpdates()
 
-    for (const item of currentItems) {
-      syncCartDelete(item.id)
-    }
-  }
+      const currentItems = [...itemsRef.current]
+      applyItems([])
 
+      if (!canSyncCart) return
+
+      await Promise.allSettled(currentItems.map((item) => syncCartDelete(item.id)))
+    },
+    [applyItems, canSyncCart, clearDebouncedUpdates, syncCartDelete],
+  )
   const cartCount = useMemo(
     () => items.reduce((count, item) => count + item.quantity, 0),
     [items],

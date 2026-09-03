@@ -17,7 +17,7 @@ import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import CheckoutModal from "@/components/CheckoutModal"
 import { useOrders } from "@/components/OrderContext"
-import { isSuccessfulPayment } from "@/lib/payments"
+import { isSuccessfulPayment, readPendingCheckout } from "@/lib/payments"
 
 function formatStamp(iso) {
   const d = new Date(iso)
@@ -55,7 +55,7 @@ function TimelineIcon({ type, active }) {
 }
 
 function TrackParcelContent() {
-  const { orders, getOrderByTrackingCode } = useOrders()
+  const { orders, getOrderByTrackingCode, refreshOrders, withOrderDisplayFallbacks } = useOrders()
   const searchParams = useSearchParams()
   const router = useRouter()
   const codeFromUrl = (searchParams.get("code") || "").toUpperCase()
@@ -74,12 +74,18 @@ function TrackParcelContent() {
     if (!paymentStatus || !paymentTxRef) return
 
     if (isSuccessfulPayment(paymentStatus)) {
-      setPaymentInfo({
-        tx_ref: paymentTxRef,
-        transaction_id: paymentTransactionId ? Number(paymentTransactionId) : null,
-        status: paymentStatus,
-      })
-      setPaymentError("")
+      const pendingCheckout = readPendingCheckout()
+      if (pendingCheckout) {
+        setPaymentInfo({
+          tx_ref: paymentTxRef,
+          transaction_id: paymentTransactionId ? Number(paymentTransactionId) : null,
+          status: paymentStatus,
+        })
+        setPaymentError("")
+      } else {
+        setPaymentInfo(null)
+        setPaymentError("")
+      }
       return
     }
 
@@ -90,7 +96,8 @@ function TrackParcelContent() {
   const handleCloseCheckout = useCallback(() => {
     setPaymentInfo(null)
     router.replace("/track")
-  }, [router])
+    refreshOrders()
+  }, [refreshOrders, router])
 
   useEffect(() => {
     if (!codeFromUrl) return
@@ -101,8 +108,8 @@ function TrackParcelContent() {
 
   const order = useMemo(() => {
     if (!activeCode) return null
-    return getOrderByTrackingCode(activeCode)
-  }, [activeCode, getOrderByTrackingCode, orders])
+    return withOrderDisplayFallbacks(getOrderByTrackingCode(activeCode))
+  }, [activeCode, getOrderByTrackingCode, withOrderDisplayFallbacks])
 
   const handleLookup = (event) => {
     event.preventDefault()
@@ -211,13 +218,16 @@ function TrackParcelContent() {
             </button>
           </form>
 
-          {orders.length > 0 && (
+          {orders.filter((item) => item.trackingCode).length > 0 && (
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-400">
                 Recent parcels
               </p>
               <div className="flex flex-wrap gap-2">
-                {orders.slice(0, 6).map((item) => (
+                {orders
+                  .filter((item) => item.trackingCode)
+                  .slice(0, 6)
+                  .map((item) => (
                   <button
                     key={item.id}
                     type="button"
@@ -244,7 +254,7 @@ function TrackParcelContent() {
           <AnimatePresence mode="wait">
             {order && (
               <motion.div
-                key={order.trackingCode}
+                key={order.trackingCode || order.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-white/10 dark:bg-[#12101a]"
@@ -373,7 +383,7 @@ function TrackParcelContent() {
             )}
           </AnimatePresence>
 
-          {!order && orders.length === 0 && !notFound && (
+          {!order && orders.filter((item) => item.trackingCode).length === 0 && !notFound && (
             <div className="rounded-2xl border border-dashed border-gray-200 px-6 py-12 text-center dark:border-white/10">
               <Package className="mx-auto mb-3 text-gray-300" size={36} />
               <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">No parcels yet</p>
@@ -395,6 +405,7 @@ function TrackParcelContent() {
         isOpen={Boolean(paymentInfo)}
         onClose={handleCloseCheckout}
         paymentInfo={paymentInfo}
+        onOrderSettled={refreshOrders}
       />
     </main>
   )

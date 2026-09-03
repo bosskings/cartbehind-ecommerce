@@ -1,38 +1,27 @@
 "use client"
 
-import { createContext, useContext, useEffect, useMemo, useState } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
+import { useAuth } from "@/components/AuthContext"
+import { fetchUserOrder, fetchUserOrders, getApiErrorMessage } from "@/lib/orders"
+import {
+  applyOrderTrackingEnhancements,
+  findOrderByTrackingCode,
+  mergeOrderLists,
+} from "@/lib/orderTracking"
 
 const OrderContext = createContext(null)
-const STORAGE_KEY = "cartbehind-orders"
-
-function readStoredOrders() {
-  if (typeof window === "undefined") return []
-
-  const stored = window.localStorage.getItem(STORAGE_KEY)
-  if (!stored) return []
-
-  try {
-    const parsed = JSON.parse(stored)
-    return Array.isArray(parsed) ? parsed : []
-  } catch {
-    window.localStorage.removeItem(STORAGE_KEY)
-    return []
-  }
-}
 
 function pad(n) {
   return String(n).padStart(2, "0")
 }
 
 function formatTimestamp(date, timeZone = "GMT+1") {
-  const d = new Date(date)
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} ${timeZone}`
-}
+  if (!date) return ""
 
-export function generateTrackingCode() {
-  const stamp = Date.now().toString().slice(-10)
-  const rand = Math.floor(100 + Math.random() * 900)
-  return `CBHNG${stamp}${rand}`
+  const d = new Date(date)
+  if (Number.isNaN(d.getTime())) return ""
+
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())} ${timeZone}`
 }
 
 export function estimateDeliveryDays(country = "", state = "") {
@@ -43,10 +32,10 @@ export function estimateDeliveryDays(country = "", state = "") {
   return 5
 }
 
-function buildTimeline({ createdAt, destination, deliveryDays }) {
-  const start = new Date(createdAt)
+export function buildTimeline({ createdAt, destination, deliveryDays }) {
+  const start = createdAt ? new Date(createdAt) : new Date()
   const hours = (h) => new Date(start.getTime() + h * 60 * 60 * 1000).toISOString()
-  const city = destination.state || destination.country || "Destination"
+  const city = destination?.state || destination?.country || "Destination"
 
   return [
     {
@@ -88,7 +77,7 @@ function buildTimeline({ createdAt, destination, deliveryDays }) {
     {
       id: "forecast",
       title: "Carrier update",
-      note: `Carrier note: Last-mile delivery forecast — ${deliveryDays} days to ${city}`,
+      note: `Carrier note: Last-mile delivery forecast - ${deliveryDays} days to ${city}`,
       at: hours(1.5),
       icon: "dot",
     },
@@ -109,79 +98,103 @@ function buildTimeline({ createdAt, destination, deliveryDays }) {
   ]
 }
 
+export function withOrderDisplayFallbacks(order) {
+  if (!order) return null
+
+  const destination = order.destination || {}
+  const deliveryDays = order.deliveryDays || estimateDeliveryDays(destination.country, destination.state)
+  const createdAt = order.createdAt || new Date().toISOString()
+
+  return {
+    ...order,
+    createdAt,
+    deliveryDays,
+    origin: order.origin || "Lagos, Nigeria",
+    destination: {
+      address: destination.address || "",
+      state: destination.state || "",
+      country: destination.country || "",
+    },
+    timeline: order.timeline?.length
+      ? order.timeline
+      : buildTimeline({ createdAt, destination, deliveryDays }),
+    progressSteps: order.progressSteps?.length
+      ? order.progressSteps
+      : [
+          { label: "Lagos", done: true, current: true },
+          { label: destination.country || "En route", done: false, current: false },
+          { label: destination.state || "Local hub", done: false, current: false },
+          { label: "Delivered", done: false, current: false },
+        ],
+  }
+}
+
 export function OrderProvider({ children }) {
-  const [orders, setOrders] = useState(readStoredOrders)
+  const { isUserAuthenticated, userSession } = useAuth()
+  const [orders, setOrders] = useState([])
+  const [loadingOrders, setLoadingOrders] = useState(false)
+  const [ordersError, setOrdersError] = useState("")
+  const authToken = userSession?.authToken
 
-  useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(orders))
-  }, [orders])
-
-  const createOrder = ({ items, total, payment, shipping }) => {
-    const createdAt = new Date().toISOString()
-    const deliveryDays = estimateDeliveryDays(shipping.country, shipping.state)
-    const trackingCode = generateTrackingCode()
-
-    const order = {
-      id: `ord_${Date.now()}`,
-      trackingCode,
-      status: "Delivering",
-      deliveryDays,
-      origin: "Lagos, Nigeria",
-      destination: {
-        address: shipping.address,
-        country: shipping.country,
-        state: shipping.state,
-      },
-      payment: payment.provider
-        ? {
-            provider: payment.provider,
-            txRef: payment.txRef,
-            transactionId: payment.transactionId,
-            status: payment.status,
-          }
-        : {
-            last4: payment.last4,
-            brand: payment.brand || "Card",
-          },
-      items: items.map((item) => ({
-        id: item.id,
-        title: item.title,
-        quantity: item.quantity,
-        price: item.price,
-        image: item.image,
-      })),
-      total,
-      createdAt,
-      timeline: buildTimeline({
-        createdAt,
-        destination: shipping,
-        deliveryDays,
-      }),
-      progressSteps: [
-        { label: "Lagos", done: true, current: true },
-        { label: shipping.country || "En route", done: false, current: false },
-        { label: shipping.state || "Local hub", done: false, current: false },
-        { label: "Delivered", done: false, current: false },
-      ],
+  const refreshOrders = useCallback(async () => {
+    if (!isUserAuthenticated || !authToken) {
+      setOrders([])
+      setOrdersError("")
+      return []
     }
 
-    setOrders((current) => [order, ...current])
-    return order
-  }
+    try {
+      setLoadingOrders(true)
+      setOrdersError("")
+      const nextOrders = mergeOrderLists(await fetchUserOrders(authToken))
+      setOrders(nextOrders)
+      return nextOrders
+    } catch (error) {
+      console.error(error)
+      const message = getApiErrorMessage(error, "Could not load your orders.")
+      setOrdersError(message)
+      const fallbackOrders = mergeOrderLists([])
+      setOrders(fallbackOrders)
+      return fallbackOrders
+    } finally {
+      setLoadingOrders(false)
+    }
+  }, [authToken, isUserAuthenticated])
 
-  const getOrderByTrackingCode = (code) => {
-    const normalized = code.trim().toUpperCase()
-    return orders.find((order) => order.trackingCode.toUpperCase() === normalized) || null
-  }
+  useEffect(() => {
+    refreshOrders()
+  }, [refreshOrders])
+
+  const getOrderById = useCallback(
+    async (orderId) => {
+      if (!authToken || !orderId) return null
+
+      const cached = orders.find((order) => String(order.id) === String(orderId))
+      if (cached) return cached
+
+      const fetched = await fetchUserOrder(authToken, orderId)
+      return applyOrderTrackingEnhancements(fetched)
+    },
+    [authToken, orders],
+  )
+
+  const getOrderByTrackingCode = useCallback(
+    (code) => findOrderByTrackingCode(orders, code),
+    [orders],
+  )
 
   const value = useMemo(
     () => ({
       orders,
-      createOrder,
+      loadingOrders,
+      ordersError,
+      refreshOrders,
+      getOrderById,
       getOrderByTrackingCode,
       formatTimestamp,
+      withOrderDisplayFallbacks,
     }),
-    [orders],
+    [getOrderById, getOrderByTrackingCode, loadingOrders, orders, ordersError, refreshOrders],
   )
 
   return <OrderContext.Provider value={value}>{children}</OrderContext.Provider>
