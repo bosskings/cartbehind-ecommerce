@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation } from "swiper/modules";
+import { FreeMode, Navigation } from "swiper/modules";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 // Swiper core styles (required)
 import "swiper/css";
@@ -50,11 +50,6 @@ export default function CategoryCarousel() {
   const nextRef = useRef(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
-  const [navReady, setNavReady] = useState(false);
-
-  useEffect(() => {
-    setNavReady(true);
-  }, []);
 
   return (
     <section className="w-[95%] md:w-full mx-auto py-8">
@@ -105,16 +100,13 @@ export default function CategoryCarousel() {
         className="relative mask-[linear-gradient(to_right,transparent,black_2%,black_98%,transparent)]"
       >
         <Swiper
-          modules={[Navigation]}
+          modules={[FreeMode, Navigation]}
 
           onBeforeInit={(swiper) => {
             swiper.params.navigation.prevEl = prevRef.current;
             swiper.params.navigation.nextEl = nextRef.current;
           }}
-          navigation={navReady ? {
-            prevEl: prevRef.current,
-            nextEl: nextRef.current,
-          } : false}
+          navigation
           onSlideChange={(swiper) => {
             setAtStart(swiper.isBeginning);
             setAtEnd(swiper.isEnd);
@@ -126,6 +118,13 @@ export default function CategoryCarousel() {
             setAtEnd(false);
           }}
           spaceBetween={8}
+          freeMode={{
+            enabled: true,
+            momentum: true,
+            momentumRatio: 0.8,
+            momentumVelocityRatio: 0.8,
+          }}
+          grabCursor
           slidesPerView={4}
           breakpoints={{
             360: { slidesPerView: 4, spaceBetween: 8 },
