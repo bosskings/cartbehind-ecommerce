@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { FaRegMoon, FaRegSun } from "react-icons/fa"
 import { IoSearch } from "react-icons/io5"
 import { FiShoppingBag } from "react-icons/fi"
-import { LuLogIn, LuLogOut, LuMenu, LuPackage } from "react-icons/lu"
+import { LuClipboardList, LuLogIn, LuLogOut, LuMenu, LuPackage } from "react-icons/lu"
 import { motion } from "framer-motion"
 import { IoMdClose } from "react-icons/io"
 import Link from "next/link"
@@ -112,6 +112,17 @@ const Navbar = () => {
               <IoSearch size={20} />
             </button>
 
+            {isUserAuthenticated && (
+              <Link
+                href="/orders"
+                className={`hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition ${iconButtonClass}`}
+                aria-label="Purchase history"
+              >
+                <LuClipboardList size={18} />
+                <span className="hidden lg:inline">Orders</span>
+              </Link>
+            )}
+
             <Link
               href="/track"
               className={`hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-semibold transition ${iconButtonClass}`}
@@ -210,6 +221,16 @@ const Navbar = () => {
             <LuPackage size={16} />
             Track parcel
           </Link>
+          {isUserAuthenticated && (
+            <Link
+              href="/orders"
+              onClick={() => setShowMenu(false)}
+              className="mb-1 flex h-10 w-full items-center gap-2 rounded-lg px-2 text-sm font-semibold text-(--theme) hover:bg-(--theme)/10"
+            >
+              <LuClipboardList size={16} />
+              Purchase history
+            </Link>
+          )}
           {isUserAuthenticated ? (
             <button
               type="button"

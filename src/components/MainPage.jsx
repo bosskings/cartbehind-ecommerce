@@ -134,8 +134,8 @@ const MainPage = ({ category = 'All' }) => {
     category === 'All'
       ? products
       : products.filter(
-          (product) => product.category?.toLowerCase() === category.toLowerCase(),
-        )
+        (product) => product.category?.toLowerCase() === category.toLowerCase(),
+      )
 
   const categoryGroups = useMemo(
     () => groupProductsByCategory(filteredProducts),
@@ -264,43 +264,43 @@ const MainPage = ({ category = 'All' }) => {
 
       <div className='w-full sm:w-[95%] md:w-[85%] mx-auto'>
 
-      <nav className="mx-auto flex w-[95%] gap-2 overflow-x-auto py-5 scrollbar-hide md:w-[88%] md:justify-center">
-        {navCategories.map((cat) => {
-          const isActive = pathname === getCategoryPath(cat.name)
-          return (
-            <Link
-              key={cat.id}
-              href={getCategoryPath(cat.name)}
-              className={`relative rounded-full px-5 py-2.5 text-xs font-medium transition-colors ${isActive ? "text-white" : "bg-white text-gray-700 hover:bg-gray-100"
-                }`}
-            >
-              {isActive && (
-                <motion.span
-                  layoutId="activeCategoryPill"
-                  className="absolute inset-0 rounded-full bg-(--theme)"
-                  style={{ zIndex: -1 }}
-                  transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-                />
-              )}
-              {cat.name}
-            </Link>
-          )
-        })}
-      </nav>
-        
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: '-100px' }}
-        variants={fadeUp}
-        className="relative w-full"
-      >
-        <div className="mx-auto w-full">
-          <CategoryCarousel />
-        </div>
-      </motion.section>
+        <nav className="mx-auto flex w-[95%] gap-2 overflow-x-auto py-5 scrollbar-hide md:w-[88%] md:justify-center">
+          {navCategories.map((cat) => {
+            const isActive = pathname === getCategoryPath(cat.name)
+            return (
+              <Link
+                key={cat.id}
+                href={getCategoryPath(cat.name)}
+                className={`relative rounded-full px-5 py-2.5 text-xs font-medium transition-colors ${isActive ? "text-white" : "bg-white text-gray-700 hover:bg-gray-100"
+                  }`}
+              >
+                {isActive && (
+                  <motion.span
+                    layoutId="activeCategoryPill"
+                    className="absolute inset-0 rounded-full bg-(--theme)"
+                    style={{ zIndex: -1 }}
+                    transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                  />
+                )}
+                {cat.name}
+              </Link>
+            )
+          })}
+        </nav>
 
-      <section className="mx-auto mt-10 w-full">
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-100px' }}
+          variants={fadeUp}
+          className="relative w-full"
+        >
+          <div className="mx-auto w-full">
+            <CategoryCarousel />
+          </div>
+        </motion.section>
+
+        {/* <section className="mx-auto mt-10 w-full">
         <div className="grid gap-8 md:grid-cols-3">
           {premiumPillars.map(({ icon: Icon, title, text }) => (
             <motion.div
@@ -312,7 +312,6 @@ const MainPage = ({ category = 'All' }) => {
               className="group rounded-3xl shadow-lg p-[1px]"
             >
               <div className="h-full rounded-3xl bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-                {/* Animated icon */}
                 <motion.div
                   initial={prefersReducedMotion ? false : { scale: 0, rotate: -15 }}
                   whileInView={
@@ -330,175 +329,175 @@ const MainPage = ({ category = 'All' }) => {
             </motion.div>
           ))}
         </div>
-      </section>
+      </section> */}
 
-      <div className="mt-10 overflow-hidden border-y border-gray-100 py-4">
-        <div className="flex animate-marquee space-x-10 whitespace-nowrap px-4">
-          {[
-            { icon: ShieldCheck, label: '100% Secure Checkout' },
-            { icon: RotateCcw, label: '30 Days Easy Return' },
-            { icon: Lock, label: 'End‑to‑End Encryption' },
-            { icon: Truck, label: 'Free Shipping Over $150' },
-            { icon: ShieldCheck, label: '24/7 Customer Support' },
-            { icon: RotateCcw, label: 'Easy Order Tracking' },
-            { icon: Lock, label: 'Verified Returns Policy' },
-            { icon: Truck, label: 'Secure Payment Guarantee' },
-            { icon: ShieldCheck, label: 'Premium Packaging' },
-            { icon: RotateCcw, label: 'Lifetime Product Support' },
-            { icon: Lock, label: 'Instant Fraud Protection' },
-            { icon: Truck, label: 'Fast Local Delivery' },
-          ].map(({ icon: Icon, label }, idx) => (
-            <div key={idx} className="flex items-center gap-2 text-sm text-gray-500">
-              <Icon size={16} className="text-(--theme)" />
-              <span>{label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {loading ? (
-        <p className="mx-auto mt-12 w-[95%] text-sm text-gray-500 dark:text-gray-400">
-          Loading products...
-        </p>
-      ) : error ? (
-        <p className="mx-auto mt-12 w-[95%] text-sm text-red-500">{error}</p>
-      ) : categoryGroups.length === 0 ? (
-        <p className="mx-auto mt-12 w-[95%] text-sm text-gray-500 dark:text-gray-400">
-          No products available yet.
-        </p>
-      ) : (
-        categoryGroups.map(({ category: categoryName, products: categoryProducts }) => (
-          <section key={categoryName} className="relative mx-auto mt-12 w-full">
-            <div className="mb-4 ml-5 flex items-end justify-between gap-4 pr-5">
-              <h2 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                {categoryName}
-              </h2>
-              <Link
-                href={getCategoryPath(categoryName)}
-                className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.24em] text-gray-500 transition-colors hover:text-(--theme) dark:text-gray-400"
-              >
-                View all
-                <ChevronRight size={14} />
-              </Link>
-            </div>
-            <motion.div
-              variants={staggerContainer}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: '-50px' }}
-              className="mx-auto grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5"
-            >
-              {categoryProducts.slice(0, PRODUCTS_PER_CATEGORY).map((product) => (
-                <motion.div
-                  key={product.id}
-                  variants={fadeUp}
-                  whileHover={prefersReducedMotion ? {} : { scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)' }}
-                  className="rounded-2xl transition-shadow duration-300"
-                >
-                  <ProductCard product={product} />
-                </motion.div>
-              ))}
-            </motion.div>
-          </section>
-        ))
-      )}
-
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: '-50px' }}
-        variants={fadeUp}
-        className="relative mx-auto mt-12 w-[95%] sm:w-[98%]"
-      >
-        {dealProduct ? (
-          <DealOfTheDay
-            productName={dealProduct.title}
-            price={dealProduct.price}
-            image={dealProduct.image}
-          />
-        ) : (
-          <DealOfTheDay />
-        )}
-      </motion.section>
-
-      {/* ───────── Testimonials Carousel ───────── */}
-      <section className="mx-auto mt-16 w-full">
-        <h2 className="mb-6 text-2xl font-extrabold tracking-tight text-gray-900">
-          What Our Community Says
-        </h2>
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-50 to-amber-50 p-8 shadow-inner md:p-12">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={testimonials[testimonialIndex].id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.35 }}
-              className="text-center"
-            >
-              <Quote size={40} className="mx-auto mb-4 text-(--theme)/30" />
-              <p className="mx-auto max-w-2xl text-lg italic text-gray-700 md:text-xl">
-                “{testimonials[testimonialIndex].quote}”
-              </p>
-              <div className="mt-4 flex justify-center gap-0.5">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star
-                    key={i}
-                    size={18}
-                    className={i < testimonials[testimonialIndex].rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}
-                  />
-                ))}
+        <div className="mt-10 overflow-hidden border-y border-gray-100 py-4">
+          <div className="flex animate-marquee space-x-10 whitespace-nowrap px-4">
+            {[
+              { icon: ShieldCheck, label: '100% Secure Checkout' },
+              { icon: RotateCcw, label: '30 Days Easy Return' },
+              { icon: Lock, label: 'End‑to‑End Encryption' },
+              { icon: Truck, label: 'Free Shipping Over $150' },
+              { icon: ShieldCheck, label: '24/7 Customer Support' },
+              { icon: RotateCcw, label: 'Easy Order Tracking' },
+              { icon: Lock, label: 'Verified Returns Policy' },
+              { icon: Truck, label: 'Secure Payment Guarantee' },
+              { icon: ShieldCheck, label: 'Premium Packaging' },
+              { icon: RotateCcw, label: 'Lifetime Product Support' },
+              { icon: Lock, label: 'Instant Fraud Protection' },
+              { icon: Truck, label: 'Fast Local Delivery' },
+            ].map(({ icon: Icon, label }, idx) => (
+              <div key={idx} className="flex items-center gap-2 text-sm text-gray-500">
+                <Icon size={16} className="text-(--theme)" />
+                <span>{label}</span>
               </div>
-              <p className="mt-3 font-semibold text-gray-900">
-                {testimonials[testimonialIndex].author}
-              </p>
-              <p className="text-sm text-gray-500">{testimonials[testimonialIndex].role}</p>
-            </motion.div>
-          </AnimatePresence>
-          {/* Manual dots */}
-          <div className="mt-6 flex justify-center gap-2">
-            {testimonials.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setTestimonialIndex(idx)}
-                className={`h-2 w-2 rounded-full transition-all ${idx === testimonialIndex ? 'w-6 bg-(--theme)' : 'bg-gray-300'
-                  }`}
-                aria-label={`Go to testimonial ${idx + 1}`}
-              />
             ))}
           </div>
         </div>
-      </section>
 
-      {/* ───────── Newsletter Sign‑Up ───────── */}
-      <section className="mx-auto mt-16 w-full">
-        <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 px-8 py-10 text-center text-white md:px-16">
-          <h2 className="text-3xl font-bold tracking-tight">Unlock 10% Off Your First Order</h2>
-          <p className="mt-3 text-gray-300">Be the first to know about new drops, exclusive offers, and style inspiration.</p>
-          <form
-            onSubmit={(e) => e.preventDefault()}
-            className="mx-auto mt-6 flex max-w-md flex-col gap-3 sm:flex-row"
-          >
-            <div className="relative flex-1">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="w-full rounded-full border border-gray-600 bg-white/10 py-3 pl-11 pr-4 text-sm text-white placeholder-gray-400 outline-none backdrop-blur-sm transition focus:border-(--theme) "
-              />
+        {loading ? (
+          <p className="mx-auto mt-12 w-[95%] text-sm text-gray-500 dark:text-gray-400">
+            Loading products...
+          </p>
+        ) : error ? (
+          <p className="mx-auto mt-12 w-[95%] text-sm text-red-500">{error}</p>
+        ) : categoryGroups.length === 0 ? (
+          <p className="mx-auto mt-12 w-[95%] text-sm text-gray-500 dark:text-gray-400">
+            No products available yet.
+          </p>
+        ) : (
+          categoryGroups.map(({ category: categoryName, products: categoryProducts }) => (
+            <section key={categoryName} className="relative mx-auto mt-12 w-full">
+              <div className="mb-4 ml-5 flex items-end justify-between gap-4 pr-5">
+                <h2 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                  {categoryName}
+                </h2>
+                <Link
+                  href={getCategoryPath(categoryName)}
+                  className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.24em] text-gray-500 transition-colors hover:text-(--theme) dark:text-gray-400"
+                >
+                  View all
+                  <ChevronRight size={14} />
+                </Link>
+              </div>
+              <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: '-50px' }}
+                className="mx-auto grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5"
+              >
+                {categoryProducts.slice(0, PRODUCTS_PER_CATEGORY).map((product) => (
+                  <motion.div
+                    key={product.id}
+                    variants={fadeUp}
+                    whileHover={prefersReducedMotion ? {} : { scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)' }}
+                    className="rounded-2xl transition-shadow duration-300"
+                  >
+                    <ProductCard product={product} />
+                  </motion.div>
+                ))}
+              </motion.div>
+            </section>
+          ))
+        )}
+
+        <motion.section
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: '-50px' }}
+          variants={fadeUp}
+          className="relative mx-auto mt-12 w-[95%] sm:w-[98%]"
+        >
+          {dealProduct ? (
+            <DealOfTheDay
+              productName={dealProduct.title}
+              price={dealProduct.price}
+              image={dealProduct.image}
+            />
+          ) : (
+            <DealOfTheDay />
+          )}
+        </motion.section>
+
+        {/* ───────── Testimonials Carousel ───────── */}
+        <section className="mx-auto mt-16 w-full">
+          <h2 className="mb-6 text-2xl font-extrabold tracking-tight text-gray-900">
+            What Our Community Says
+          </h2>
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-50 to-amber-50 p-8 shadow-inner md:p-12">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={testimonials[testimonialIndex].id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.35 }}
+                className="text-center"
+              >
+                <Quote size={40} className="mx-auto mb-4 text-(--theme)/30" />
+                <p className="mx-auto max-w-2xl text-lg italic text-gray-700 md:text-xl">
+                  “{testimonials[testimonialIndex].quote}”
+                </p>
+                <div className="mt-4 flex justify-center gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star
+                      key={i}
+                      size={18}
+                      className={i < testimonials[testimonialIndex].rating ? 'fill-amber-400 text-amber-400' : 'text-gray-300'}
+                    />
+                  ))}
+                </div>
+                <p className="mt-3 font-semibold text-gray-900">
+                  {testimonials[testimonialIndex].author}
+                </p>
+                <p className="text-sm text-gray-500">{testimonials[testimonialIndex].role}</p>
+              </motion.div>
+            </AnimatePresence>
+            {/* Manual dots */}
+            <div className="mt-6 flex justify-center gap-2">
+              {testimonials.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setTestimonialIndex(idx)}
+                  className={`h-2 w-2 rounded-full transition-all ${idx === testimonialIndex ? 'w-6 bg-(--theme)' : 'bg-gray-300'
+                    }`}
+                  aria-label={`Go to testimonial ${idx + 1}`}
+                />
+              ))}
             </div>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.98 }}
-              type="submit"
-              className="rounded-full bg-(--theme) px-6 py-3 font-semibold text-[var(--theme-second)] transition-colors duration-300 hover:bg-[#280E89] cursor-pointer"
+          </div>
+        </section>
+
+        {/* ───────── Newsletter Sign‑Up ───────── */}
+        <section className="mx-auto mt-16 w-full">
+          <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 px-8 py-10 text-center text-white md:px-16">
+            <h2 className="text-3xl font-bold tracking-tight">Unlock 10% Off Your First Order</h2>
+            <p className="mt-3 text-gray-300">Be the first to know about new drops, exclusive offers, and style inspiration.</p>
+            <form
+              onSubmit={(e) => e.preventDefault()}
+              className="mx-auto mt-6 flex max-w-md flex-col gap-3 sm:flex-row"
             >
-              Subscribe
-            </motion.button>
-          </form>
-          <p className="mt-3 text-xs text-gray-500">Unsubscribe anytime.</p>
-        </div>
-      </section>
+              <div className="relative flex-1">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="w-full rounded-full border border-gray-600 bg-white/10 py-3 pl-11 pr-4 text-sm text-white placeholder-gray-400 outline-none backdrop-blur-sm transition focus:border-(--theme) "
+                />
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.98 }}
+                type="submit"
+                className="rounded-full bg-(--theme) px-6 py-3 font-semibold text-[var(--theme-second)] transition-colors duration-300 hover:bg-[#280E89] cursor-pointer"
+              >
+                Subscribe
+              </motion.button>
+            </form>
+            <p className="mt-3 text-xs text-gray-500">Unsubscribe anytime.</p>
+          </div>
+        </section>
       </div>
 
       {/* ───────── Back to Top Button ───────── */}

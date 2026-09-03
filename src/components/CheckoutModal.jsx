@@ -1,36 +1,81 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { X, CheckCircle2, Package, MapPin, Copy, Check } from "lucide-react"
+import { X, CheckCircle2, Package, MapPin, Copy, Check, ArrowRight } from "lucide-react"
 import { useCart } from "@/components/CartContext"
 import { useOrders } from "@/components/OrderContext"
 import { useAuth } from "@/components/AuthContext"
 import { useRouter } from "next/navigation"
-import { clearPendingCheckout, readPendingCheckout } from "@/lib/payments"
+import {
+  clearPendingCheckout,
+  completeUserCart,
+  getApiErrorMessage,
+  readPendingCheckout,
+} from "@/lib/payments"
+import { generateTrackingCode, saveOrderTrackingRecord } from "@/lib/orderTracking"
 
 const fieldClass =
   "h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none transition focus:border-(--theme) focus:bg-white dark:border-white/10 dark:bg-[#16131f] dark:text-gray-200 dark:focus:bg-[#1a1625]"
 
 const formatNaira = (amount) => `₦${amount.toLocaleString("en-NG")}`
 
-export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
+function findMatchingOrder(orders, paymentInfo) {
+  if (!orders?.length) return null
+
+  const txRef = String(paymentInfo?.tx_ref || "")
+  const transactionId = String(paymentInfo?.transaction_id || "")
+
+  return (
+    orders.find((order) => {
+      const payment = order.payment || {}
+      return (
+        (txRef && String(payment.txRef || payment.tx_ref || order.txRef || order.tx_ref || "") === txRef) ||
+        (transactionId &&
+          String(
+            payment.transactionId ||
+            payment.transaction_id ||
+            order.transactionId ||
+            order.transaction_id ||
+            "",
+          ) === transactionId)
+      )
+    }) || null
+  )
+}
+
+function isMissingActiveCartError(error) {
+  const status = error?.response?.status
+  const message =
+    error?.response?.data?.message ||
+    error?.response?.data?.error ||
+    error?.message ||
+    ""
+
+  return status === 404 && /active cart not found/i.test(message)
+}
+
+export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSettled }) {
   const { items, subtotal, clearCart } = useCart()
-  const { createOrder } = useOrders()
-  const { isUserAuthenticated } = useAuth()
+  const { refreshOrders, withOrderDisplayFallbacks } = useOrders()
+  const { isUserAuthenticated, userSession } = useAuth()
   const router = useRouter()
+  const authToken = userSession?.authToken
+  const userId = userSession?.user?.id
 
   const [step, setStep] = useState("shipping")
   const [error, setError] = useState("")
   const [copied, setCopied] = useState(false)
   const [order, setOrder] = useState(null)
   const [checkout, setCheckout] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
 
   const [shipping, setShipping] = useState({
     address: "",
     country: "",
     state: "",
   })
+  const initializedPaymentRef = useRef(null)
 
   useEffect(() => {
     if (!isOpen || isUserAuthenticated) return
@@ -39,17 +84,23 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
   }, [isOpen, isUserAuthenticated, onClose, router])
 
   useEffect(() => {
-    if (!isOpen) return
-
-    if (!paymentInfo) {
-      onClose()
+    if (!isOpen || !paymentInfo) {
+      if (!isOpen) initializedPaymentRef.current = null
       return
     }
 
+    if (!authToken || !userId) return
+
+    const sessionKey = `${paymentInfo.tx_ref}:${paymentInfo.transaction_id ?? ""}`
+    if (initializedPaymentRef.current === sessionKey) return
+
+    initializedPaymentRef.current = sessionKey
     setStep("shipping")
     setError("")
     setCopied(false)
     setOrder(null)
+    setSubmitting(false)
+
     const pendingCheckout = readPendingCheckout()
     setCheckout({
       items: pendingCheckout?.items?.length ? pendingCheckout.items : items,
@@ -57,7 +108,36 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
       itemCount: Number(pendingCheckout?.itemCount ?? items.length) || 0,
     })
     setShipping({ address: "", country: "", state: "" })
-  }, [isOpen, paymentInfo, onClose])
+
+    let cancelled = false
+
+    void (async () => {
+      try {
+        const response = await completeUserCart({ authToken, userId })
+        if (response) {
+          await clearCart()
+        }
+      } catch (err) {
+        if (isMissingActiveCartError(err)) {
+          return
+        }
+
+        console.error("Failed to complete paid cart.", err)
+        if (cancelled) return
+
+        setError(
+          getApiErrorMessage(
+            err,
+            "Payment received, but we could not complete your cart yet. You can still confirm your delivery location.",
+          ),
+        )
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [authToken, isOpen, items, paymentInfo, subtotal, userId])
 
   if (!isOpen || !isUserAuthenticated || !paymentInfo) return null
 
@@ -70,7 +150,7 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
     done: "Order confirmed",
   }[step]
 
-  const handleShippingSubmit = (event) => {
+  const handleShippingSubmit = async (event) => {
     event.preventDefault()
     setError("")
 
@@ -84,26 +164,59 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
       return
     }
 
-    const created = createOrder({
-      items: checkoutItems,
-      total: checkoutTotal,
-      payment: {
-        provider: "flutterwave",
-        txRef: paymentInfo.tx_ref,
-        transactionId: paymentInfo.transaction_id,
-        status: "successful",
-      },
-      shipping: {
+    try {
+      setSubmitting(true)
+      const refreshedOrders = await refreshOrders()
+      const matchedOrder = findMatchingOrder(refreshedOrders, paymentInfo)
+      const destination = {
         address: shipping.address.trim(),
         country: shipping.country.trim(),
         state: shipping.state.trim(),
-      },
-    })
+      }
 
-    setOrder(created)
-    clearPendingCheckout()
-    clearCart()
-    setStep("done")
+      const baseOrder =
+        matchedOrder ||
+        {
+          id: paymentInfo.tx_ref || "payment-confirmed",
+          status: "Processing",
+          total: checkoutTotal,
+          itemCount: checkoutItemCount,
+          items: checkoutItems,
+          createdAt: new Date().toISOString(),
+          payment: {
+            provider: "flutterwave",
+            txRef: paymentInfo.tx_ref,
+            transactionId: paymentInfo.transaction_id,
+            status: "successful",
+          },
+        }
+
+      const trackingCode = baseOrder.trackingCode || generateTrackingCode(destination.state)
+
+      saveOrderTrackingRecord({
+        orderId: baseOrder.id,
+        txRef: paymentInfo.tx_ref,
+        trackingCode,
+        destination,
+      })
+
+      const receiptOrder = withOrderDisplayFallbacks({
+        ...baseOrder,
+        trackingCode,
+        destination,
+      })
+
+      setOrder(receiptOrder)
+      clearPendingCheckout()
+      setStep("done")
+      await refreshOrders()
+      onOrderSettled?.()
+    } catch (err) {
+      console.error(err)
+      setError("Your payment was received, but we could not refresh your order yet. Please check purchase history.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const copyTracking = async () => {
@@ -117,6 +230,10 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
     }
   }
 
+  const destinationText = [order?.destination?.address, order?.destination?.state, order?.destination?.country]
+    .filter(Boolean)
+    .join(", ")
+
   return (
     <div className="fixed inset-0 z-80 flex items-center justify-center bg-black/35 px-4 backdrop-blur-sm">
       <motion.div
@@ -127,11 +244,7 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-black/5 bg-[#f4f4f4]/95 px-6 py-5 backdrop-blur dark:border-white/10 dark:bg-[#16131f]/95">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--theme)/10 text-(--theme)">
-              {step === "done" ? (
-                <CheckCircle2 size={20} />
-              ) : (
-                <MapPin size={20} />
-              )}
+              {step === "done" ? <CheckCircle2 size={20} /> : <MapPin size={20} />}
             </div>
             <div>
               <h2 className="text-2xl font-black text-gray-900 dark:text-white">Checkout</h2>
@@ -182,10 +295,9 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
                   <input
                     className={fieldClass}
                     value={shipping.address}
-                    onChange={(e) =>
-                      setShipping((s) => ({ ...s, address: e.target.value }))
-                    }
+                    onChange={(e) => setShipping((s) => ({ ...s, address: e.target.value }))}
                     placeholder="12 Admiralty Way, Lekki"
+                    disabled={submitting}
                   />
                 </label>
 
@@ -195,10 +307,9 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
                     <input
                       className={fieldClass}
                       value={shipping.country}
-                      onChange={(e) =>
-                        setShipping((s) => ({ ...s, country: e.target.value }))
-                      }
+                      onChange={(e) => setShipping((s) => ({ ...s, country: e.target.value }))}
                       placeholder="Nigeria"
+                      disabled={submitting}
                     />
                   </label>
                   <label className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
@@ -206,10 +317,9 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
                     <input
                       className={fieldClass}
                       value={shipping.state}
-                      onChange={(e) =>
-                        setShipping((s) => ({ ...s, state: e.target.value }))
-                      }
+                      onChange={(e) => setShipping((s) => ({ ...s, state: e.target.value }))}
                       placeholder="Lagos"
+                      disabled={submitting}
                     />
                   </label>
                 </div>
@@ -218,10 +328,11 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
 
                 <button
                   type="submit"
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-(--theme) px-8 py-3.5 text-base font-bold text-(--theme-second) transition-all duration-300 hover:scale-105 hover:bg-[#280E89] cursor-pointer"
+                  disabled={submitting}
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-(--theme) px-8 py-3.5 text-base font-bold text-(--theme-second) transition-all duration-300 hover:scale-105 hover:bg-[#280E89] disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
                 >
-                  Confirm delivery location
-                  <span aria-hidden="true">→</span>
+                  {submitting ? "Confirming..." : "Confirm delivery location"}
+                  <ArrowRight size={16} />
                 </button>
               </motion.form>
             )}
@@ -246,38 +357,32 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
                     You&apos;re all set
                   </h3>
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                    Item will be shipped to you in{" "}
-                    <span className="font-bold text-(--theme)">
-                      {order.deliveryDays}{" "}
-                      {order.deliveryDays === 1 ? "day" : "days"}
-                    </span>
-                    .
+                    Your order has been confirmed and will appear in purchase history.
                   </p>
-                  <p className="mt-1 text-xs text-gray-400">
-                    {order.destination.address}, {order.destination.state},{" "}
-                    {order.destination.country}
-                  </p>
+                  {destinationText && <p className="mt-1 text-xs text-gray-400">{destinationText}</p>}
                 </div>
 
                 <div className="rounded-2xl border border-(--theme)/15 bg-white p-5 dark:border-white/10 dark:bg-[#16131f]">
                   <p className="text-xs font-bold uppercase tracking-[0.28em] text-gray-400">
-                    Tracking code
+                    {order.trackingCode ? "Tracking code" : "Order id"}
                   </p>
                   <div className="mt-3 flex items-center justify-center gap-2">
-                    <code className="text-lg font-black tracking-wide text-gray-950 dark:text-white">
-                      {order.trackingCode}
+                    <code className="break-all text-lg font-black tracking-wide text-gray-950 dark:text-white">
+                      {order.trackingCode || order.id}
                     </code>
-                    <button
-                      type="button"
-                      onClick={copyTracking}
-                      className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-(--theme) dark:hover:bg-white/10"
-                      aria-label="Copy tracking code"
-                    >
-                      {copied ? <Check size={16} /> : <Copy size={16} />}
-                    </button>
+                    {order.trackingCode && (
+                      <button
+                        type="button"
+                        onClick={copyTracking}
+                        className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-(--theme) dark:hover:bg-white/10"
+                        aria-label="Copy tracking code"
+                      >
+                        {copied ? <Check size={16} /> : <Copy size={16} />}
+                      </button>
+                    )}
                   </div>
                   <p className="mt-2 text-xs text-gray-400">
-                    Use Track parcel in the navbar anytime to follow your shipment.
+                    You can open Purchase history anytime to continue tracking this order.
                   </p>
                 </div>
 
@@ -286,12 +391,12 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo }) {
                     type="button"
                     onClick={() => {
                       onClose()
-                      router.push(`/track?code=${encodeURIComponent(order.trackingCode)}`)
+                      router.push(order.trackingCode ? `/track?code=${encodeURIComponent(order.trackingCode)}` : "/orders")
                     }}
                     className="flex w-full items-center justify-center gap-2 rounded-full border border-(--theme)/25 bg-white px-6 py-3.5 text-sm font-bold text-(--theme) transition-all duration-300 hover:scale-105 cursor-pointer dark:bg-[#16131f]"
                   >
                     <Package size={16} />
-                    Track parcel
+                    {order.trackingCode ? "Track parcel" : "Purchase history"}
                   </button>
                   <button
                     type="button"
