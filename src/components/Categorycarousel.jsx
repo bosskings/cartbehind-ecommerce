@@ -121,9 +121,10 @@ export default function CategoryCarousel() {
           freeMode={{
             enabled: true,
             momentum: true,
-            momentumRatio: 0.8,
-            momentumVelocityRatio: 0.8,
+            momentumRatio: 0.65,
+            momentumVelocityRatio: 0.65,
           }}
+          resistanceRatio={0.6}
           grabCursor
           slidesPerView={4}
           breakpoints={{
