@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { X, CheckCircle2, Package, MapPin, Copy, Check, ArrowRight } from "lucide-react"
+import { X, CheckCircle2, Package, MapPin, ArrowRight } from "lucide-react"
 import { useCart } from "@/components/CartContext"
 import { useOrders } from "@/components/OrderContext"
 import { useAuth } from "@/components/AuthContext"
@@ -12,6 +12,7 @@ import {
   completeUserCart,
   getApiErrorMessage,
   readPendingCheckout,
+  saveDeliveryLocation,
 } from "@/lib/payments"
 
 const fieldClass =
@@ -64,7 +65,6 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
 
   const [step, setStep] = useState("shipping")
   const [error, setError] = useState("")
-  const [copied, setCopied] = useState(false)
   const [order, setOrder] = useState(null)
   const [checkout, setCheckout] = useState(null)
   const [submitting, setSubmitting] = useState(false)
@@ -96,7 +96,6 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     initializedPaymentRef.current = sessionKey
     setStep("shipping")
     setError("")
-    setCopied(false)
     setOrder(null)
     setSubmitting(false)
 
@@ -195,6 +194,12 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
         destination,
       })
 
+      saveDeliveryLocation({
+        orderId: receiptOrder.id,
+        trackingCode: receiptOrder.trackingCode,
+        paymentReference: paymentInfo.tx_ref,
+        destination,
+      })
       setOrder(receiptOrder)
       clearPendingCheckout()
       setStep("done")
@@ -205,17 +210,6 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
       setError("Your payment was received, but we could not refresh your order yet. Please check purchase history.")
     } finally {
       setSubmitting(false)
-    }
-  }
-
-  const copyTracking = async () => {
-    if (!order?.trackingCode) return
-    try {
-      await navigator.clipboard.writeText(order.trackingCode)
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 1600)
-    } catch {
-      setCopied(false)
     }
   }
 
@@ -351,41 +345,17 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
                   {destinationText && <p className="mt-1 text-xs text-gray-400">{destinationText}</p>}
                 </div>
 
-                <div className="rounded-2xl border border-(--theme)/15 bg-white p-5 dark:border-white/10 dark:bg-[#16131f]">
-                  <p className="text-xs font-bold uppercase tracking-[0.28em] text-gray-400">
-                    {order.trackingCode ? "Tracking code" : "Order id"}
-                  </p>
-                  <div className="mt-3 flex items-center justify-center gap-2">
-                    <code className="break-all text-lg font-black tracking-wide text-gray-950 dark:text-white">
-                      {order.trackingCode || order.id}
-                    </code>
-                    {order.trackingCode && (
-                      <button
-                        type="button"
-                        onClick={copyTracking}
-                        className="rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-(--theme) dark:hover:bg-white/10"
-                        aria-label="Copy tracking code"
-                      >
-                        {copied ? <Check size={16} /> : <Copy size={16} />}
-                      </button>
-                    )}
-                  </div>
-                  <p className="mt-2 text-xs text-gray-400">
-                    You can open Purchase history anytime to continue tracking this order.
-                  </p>
-                </div>
-
                 <div className="grid gap-3 sm:grid-cols-2">
                   <button
                     type="button"
                     onClick={() => {
                       onClose()
-                      router.push(order.trackingCode ? `/track?code=${encodeURIComponent(order.trackingCode)}` : "/orders")
+                      router.push("/orders")
                     }}
                     className="flex w-full items-center justify-center gap-2 rounded-full border border-(--theme)/25 bg-white px-6 py-3.5 text-sm font-bold text-(--theme) transition-all duration-300 hover:scale-105 cursor-pointer dark:bg-[#16131f]"
                   >
                     <Package size={16} />
-                    {order.trackingCode ? "Track parcel" : "Purchase history"}
+                    Purchase history
                   </button>
                   <button
                     type="button"

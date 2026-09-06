@@ -35,7 +35,7 @@ import TransitDetailsModal from "@/components/admin/TransitDetailsModal"
 import { Field, inputClass } from "@/components/admin/formUi"
 import { formatOrderDate } from "@/components/admin/transitUtils"
 import { getAdminToken, uploadToCloudinary } from "@/lib/cloudinary"
-import { fetchAdminOrders, getApiErrorMessage } from "@/lib/orders"
+import { fetchAdminOrders, fetchAdminOverview, getApiErrorMessage } from "@/lib/orders"
 import { ADMIN_LOGIN_PATH } from "@/lib/adminRoutes"
 
 const emptyForm = {
@@ -80,6 +80,10 @@ function formatNumber(value) {
 
 function formatNaira(value) {
   return `NGN ${formatNumber(Number(value) || 0)}`
+}
+
+function formatOverviewValue(value, overview, loading) {
+  return loading ? "..." : overview ? formatNumber(value) : "--"
 }
 
 function ProductImage({ src, title }) {
@@ -147,6 +151,9 @@ export default function AdminPage() {
   const [orders, setOrders] = useState([])
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [ordersError, setOrdersError] = useState("")
+  const [overview, setOverview] = useState(null)
+  const [overviewLoading, setOverviewLoading] = useState(false)
+  const [overviewError, setOverviewError] = useState("")
   const [transitEditorOrder, setTransitEditorOrder] = useState(null)
   const [transitDetailsOrder, setTransitDetailsOrder] = useState(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
@@ -175,8 +182,32 @@ export default function AdminPage() {
     }
   }, [])
 
+  const loadOverview = useCallback(async () => {
+    const token = getAdminToken()
+    if (!token) {
+      setOverviewError("Admin token is missing. Please log in again.")
+      return
+    }
+
+    setOverviewLoading(true)
+    setOverviewError("")
+    try {
+      setOverview(await fetchAdminOverview(token))
+    } catch (error) {
+      setOverviewError(getApiErrorMessage(error, "Could not load admin overview."))
+    } finally {
+      setOverviewLoading(false)
+    }
+  }, [])
+
   const closeTransitEditor = useCallback(() => setTransitEditorOrder(null), [])
   const closeTransitDetails = useCallback(() => setTransitDetailsOrder(null), [])
+
+  useEffect(() => {
+    if (activeSection !== "overview") return undefined
+    const timer = window.setTimeout(loadOverview, 0)
+    return () => window.clearTimeout(timer)
+  }, [activeSection, loadOverview])
 
   useEffect(() => {
     if (activeSection !== "orders") return undefined
@@ -194,34 +225,38 @@ export default function AdminPage() {
     () => [
       {
         label: "Total Users",
-        value: "1,248",
-        meta: "Mock active shoppers",
+        value: formatOverviewValue(overview?.totalUsers, overview, overviewLoading),
+        meta: "Registered users",
         icon: Users,
         tone: "bg-[#280E89]/10 text-(--theme)",
       },
       {
         label: "Products",
-        value: formatNumber(products.length),
-        meta: "Local admin catalog",
+        value: formatOverviewValue(overview?.totalProducts, overview, overviewLoading),
+        meta: "Products in catalog",
         icon: ShoppingBag,
         tone: "bg-yellow-200 text-[#280E89]",
       },
       {
-        label: "Delivered Items",
-        value: "836",
-        meta: "Mock completed orders",
+        label: "Total Orders",
+        value: formatOverviewValue(overview?.totalOrders, overview, overviewLoading),
+        meta: overview
+          ? `${formatNumber(overview.totalOrdersPending)} pending, ${formatNumber(overview.totalOrdersDelivered)} delivered`
+          : overviewLoading ? "Loading overview..." : "Overview unavailable",
         icon: PackageCheck,
         tone: "bg-emerald-100 text-emerald-700",
       },
       {
-        label: "Items In Transit",
-        value: "64",
-        meta: "Mock moving parcels",
+        label: "Total Transits",
+        value: formatOverviewValue(overview?.totalTransits, overview, overviewLoading),
+        meta: overview
+          ? `${formatNumber(overview.totalTransitsInTransit)} currently in transit`
+          : overviewLoading ? "Loading overview..." : "Overview unavailable",
         icon: Truck,
         tone: "bg-blue-100 text-blue-700",
       },
     ],
-    [products.length],
+    [overview, overviewLoading],
   )
 
   const filteredProducts = useMemo(() => {
@@ -524,6 +559,12 @@ export default function AdminPage() {
         <div className="mx-auto max-w-7xl space-y-6 overflow-hidden px-4 py-6 max-[390px]:px-3 sm:px-6 lg:px-8">
           {activeSection === "overview" && (
             <>
+              {overviewError && (
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+                  {overviewError}
+                </div>
+              )}
+
               <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {stats.map((stat) => {
                   const Icon = stat.icon
@@ -660,11 +701,11 @@ export default function AdminPage() {
                             <td className="px-4 py-4 text-right"><div className="flex justify-end gap-2">
                               <button type="button" onClick={() => setTransitEditorOrder(order)} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200">
                                 <Truck size={16} />Create transit
-                                </button>
-                                <button type="button" onClick={() => setTransitDetailsOrder(order)} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-(--theme) px-3 text-sm font-bold text-(--theme-second) transition hover:opacity-90"><Search size={16} />View transit details
                               </button>
-                              </div>
-                              </td>
+                              <button type="button" onClick={() => setTransitDetailsOrder(order)} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-(--theme) px-3 text-sm font-bold text-(--theme-second) transition hover:opacity-90"><Search size={16} />View transit details
+                              </button>
+                            </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>

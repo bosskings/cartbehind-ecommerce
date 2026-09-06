@@ -1,6 +1,7 @@
 import axios from "axios"
 
 const PENDING_CHECKOUT_KEY = "cartbehind-pending-checkout"
+const DELIVERY_LOCATIONS_KEY = "cartbehind-delivery-locations"
 
 function getBackendUrl() {
   return process.env.NEXT_PUBLIC_BACKEND_URL
@@ -69,6 +70,39 @@ export function clearPendingCheckout() {
   if (typeof window === "undefined") return
 
   window.localStorage.removeItem(PENDING_CHECKOUT_KEY)
+}
+
+function readDeliveryLocations() {
+  if (typeof window === "undefined") return {}
+
+  try {
+    const stored = window.localStorage.getItem(DELIVERY_LOCATIONS_KEY)
+    const parsed = stored ? JSON.parse(stored) : {}
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {}
+  } catch {
+    window.localStorage.removeItem(DELIVERY_LOCATIONS_KEY)
+    return {}
+  }
+}
+
+export function saveDeliveryLocation({ orderId, trackingCode, paymentReference, destination }) {
+  if (typeof window === "undefined" || !destination) return
+
+  const locations = readDeliveryLocations()
+  const keys = [orderId, trackingCode, paymentReference].filter(Boolean).map(String)
+  for (const key of keys) {
+    locations[key] = destination
+  }
+
+  if (keys.length) {
+    window.localStorage.setItem(DELIVERY_LOCATIONS_KEY, JSON.stringify(locations))
+  }
+}
+
+export function readDeliveryLocation({ orderId, trackingCode, paymentReference }) {
+  const locations = readDeliveryLocations()
+  const keys = [orderId, trackingCode, paymentReference].filter(Boolean).map(String)
+  return keys.map((key) => locations[key]).find(Boolean) || null
 }
 
 export async function completeUserCart({ authToken, userId }) {
