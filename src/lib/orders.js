@@ -182,11 +182,37 @@ export async function fetchAdminOrders(authToken) {
   return normalizeAdminOrdersResponse(response.data)
 }
 
+export async function fetchAdminOverview(authToken) {
+  const backendUrl = getBackendUrlOrThrow()
+  if (!authToken) throw new Error("Admin authentication is required to view the overview.")
+
+  const response = await axios.get(`${backendUrl}/api/v1/admin/overview`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+  })
+
+  console.log("Admin overview response:", response.data)
+  return response.data
+}
+
 export async function createAdminTransit(authToken, payload) {
   const backendUrl = getBackendUrlOrThrow()
   if (!authToken) throw new Error("Admin authentication is required to create transit.")
 
   const response = await axios.post(`${backendUrl}/api/v1/admin/transit`, payload, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`,
+    },
+  })
+
+  return response.data
+}
+
+export async function addAdminTransitStep(authToken, transitId, payload) {
+  const backendUrl = getBackendUrlOrThrow()
+  if (!authToken) throw new Error("Admin authentication is required to add a transit step.")
+
+  const response = await axios.patch(`${backendUrl}/api/v1/admin/transit/${transitId}`, payload, {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${authToken}`,

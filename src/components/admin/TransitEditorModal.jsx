@@ -5,6 +5,7 @@ import toast from "react-hot-toast"
 import { Plus, Trash2, Truck, X } from "lucide-react"
 import { getAdminToken } from "@/lib/cloudinary"
 import {
+  addAdminTransitStep,
   createAdminTransit,
   fetchAdminTransit,
   getApiErrorMessage,
@@ -121,13 +122,13 @@ export default function TransitEditorModal({ order, onClose, onSuccess }) {
   }
 
   const draftEntries = editingOrder?.timeline?.filter((entry) => !entry.saved) || []
+  const isAddingStep = Boolean(editingOrder?.transitId)
   const formValid = Boolean(
-    editingOrder?.deliveryStatus &&
-      editingOrder?.carrier &&
-      draftEntries.length > 0 &&
-      draftEntries.every(
-        (entry) => entry.comment.trim() && entry.at && entry.currentLocation.trim(),
-      ),
+    (isAddingStep || (editingOrder?.deliveryStatus && editingOrder?.carrier)) &&
+    draftEntries.length > 0 &&
+    draftEntries.every(
+      (entry) => entry.comment.trim() && (isAddingStep || entry.at) && entry.currentLocation.trim(),
+    ),
   )
 
   const handleGenerateTransit = async (event) => {
@@ -161,10 +162,9 @@ export default function TransitEditorModal({ order, onClose, onSuccess }) {
       return
     }
 
-    // Append new steps onto the existing currentLocation array
     const currentLocation = [...existingLocations, ...newLocations]
 
-    const payload = {
+    const createPayload = {
       orderId: editingOrder.id,
       carrier: editingOrder.carrier,
       status: editingOrder.deliveryStatus,
@@ -175,12 +175,31 @@ export default function TransitEditorModal({ order, onClose, onSuccess }) {
     setIsGenerating(true)
 
     try {
-      console.log("Admin transit POST payload:", payload)
-      const response = await createAdminTransit(token, payload)
-      console.log("Admin transit POST response:", response)
+      let response
+      if (isAddingStep) {
+        for (const location of newLocations) {
+          const stepPayload = {
+            location: location.location,
+            description: location.description,
+          }
+          const transitId = editingOrder.transitId
+          console.log("Admin transit PATCH payload:", {
+            endpoint: `/api/v1/admin/transit/${transitId}`,
+            orderId: editingOrder.id,
+            transitId,
+            ...stepPayload,
+          })
+          response = await addAdminTransitStep(token, transitId, stepPayload)
+        }
+        console.log("Admin transit PATCH response:", response)
+      } else {
+        console.log("Admin transit POST payload:", createPayload)
+        response = await createAdminTransit(token, createPayload)
+        console.log("Admin transit POST response:", response)
+      }
 
       const refreshed = await fetchAdminTransit(token, editingOrder.id)
-      console.log("Admin transit GET after create:", refreshed)
+      console.log("Admin transit GET after save:", refreshed)
       const transit = getTransitFromResponse(refreshed)
 
       setEditingOrder((current) => ({
@@ -194,7 +213,7 @@ export default function TransitEditorModal({ order, onClose, onSuccess }) {
 
       await onSuccess?.()
       toast.success(
-        existingLocations.length
+        isAddingStep
           ? "Transit step added successfully."
           : "Transit created successfully.",
       )

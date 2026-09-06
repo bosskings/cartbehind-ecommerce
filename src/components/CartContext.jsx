@@ -10,12 +10,10 @@ import {
   useState,
 } from "react"
 import axios from "axios"
-import toast from "react-hot-toast"
 import { useAuth } from "@/components/AuthContext"
 
 const CartContext = createContext(null)
 const CART_SYNC_DEBOUNCE_MS = 800
-
 function readStoredCart() {
   if (typeof window === "undefined") {
     return []
