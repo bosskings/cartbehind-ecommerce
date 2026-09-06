@@ -144,7 +144,7 @@ export default function Footer() {
           </div>
 
           <p className="text-sm text-[#7A7A85]">
-            © 2026 Rave. All rights reserved.{" "}
+            © 2026 CartBehind. All rights reserved.{" "}
             <a
               href={TERMS_PDF_PATH}
               target="_blank"
