@@ -42,15 +42,15 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [isHomePage])
 
-  const menuOptions = [
-    { id: 1, label: "Beauty, Fragrances" },
-    { id: 2, label: "Furniture" },
-    { id: 3, label: "Groceries" },
-    { id: 4, label: "Home Decorations" },
-    { id: 5, label: "Mens Shoes" },
-    { id: 6, label: "Home Watches" },
-    { id: 7, label: "Home Accessories" },
-  ]
+  // const menuOptions = [
+  //   { id: 1, label: "Beauty, Fragrances" },
+  //   { id: 2, label: "Furniture" },
+  //   { id: 3, label: "Groceries" },
+  //   { id: 4, label: "Home Decorations" },
+  //   { id: 5, label: "Mens Shoes" },
+  //   { id: 6, label: "Home Watches" },
+  //   { id: 7, label: "Home Accessories" },
+  // ]
 
   const searchInputClasses = isNavActive
     ? "border-gray-200 text-gray-700 placeholder:text-gray-400 dark:border-white/15 dark:text-gray-200 dark:placeholder:text-gray-500"
@@ -252,7 +252,7 @@ const Navbar = () => {
               Login
             </Link>
           )}
-          {menuOptions.map((option) => (
+          {/* {menuOptions.map((option) => (
             <Link
               href="#"
               key={option.id}
@@ -260,7 +260,7 @@ const Navbar = () => {
             >
               {option.label}
             </Link>
-          ))}
+          ))} */}
         </motion.div>
       )}
 

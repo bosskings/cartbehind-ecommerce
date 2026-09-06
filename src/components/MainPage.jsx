@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Image from 'next/image'
 import { motion, useReducedMotion, AnimatePresence } from 'framer-motion'
 import { Swiper, SwiperSlide } from 'swiper/react'
-import { usePathname } from "next/navigation"
 import Link from 'next/link'
 import { Autoplay, Pagination, EffectFade } from 'swiper/modules'
 import {
@@ -137,17 +136,27 @@ function ProductCardSkeleton() {
 
 // ——— Main Page Component ———
 const MainPage = ({ category = 'All' }) => {
-  const pathname = usePathname()
   const prefersReducedMotion = useReducedMotion()
   const { products, loading, error } = useProducts()
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [testimonialIndex, setTestimonialIndex] = useState(0)
 
+  // Currently selected category filter — seeded from the `category` prop so
+  // direct loads of /category/[slug] (SSR / refresh / shared link) still work.
+  const [activeCategory, setActiveCategory] = useState(category)
+  const navRef = useRef(null)
+
+  // Re-sync if the prop ever changes (e.g. a real navigation to /category/[slug]
+  // from somewhere else in the app, such as a footer link or search redirect).
+  useEffect(() => {
+    setActiveCategory(category)
+  }, [category])
+
   const filteredProducts =
-    category === 'All'
+    activeCategory === 'All'
       ? products
       : products.filter(
-        (product) => product.category?.toLowerCase() === category.toLowerCase(),
+        (product) => product.category?.toLowerCase() === activeCategory.toLowerCase(),
       )
 
   const categoryGroups = useMemo(
@@ -164,6 +173,21 @@ const MainPage = ({ category = 'All' }) => {
   }, [products])
 
   const dealProduct = filteredProducts[0]
+
+  // Instant client-side filter: updates state (no refetch) and shallow-updates
+  // the URL via pushState so it stays shareable/bookmarkable without
+  // triggering a Next.js route navigation / remount.
+  const handleCategorySelect = useCallback((name) => {
+    setActiveCategory(name)
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', getCategoryPath(name))
+    }
+  }, [])
+
+  const handleViewAll = useCallback((name) => {
+    handleCategorySelect(name)
+    navRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [handleCategorySelect])
 
   // Back-to-top visibility
   useEffect(() => {
@@ -187,103 +211,21 @@ const MainPage = ({ category = 'All' }) => {
 
   return (
     <>
-      {/* <section className="relative h-screen w-full overflow-hidden">
-        <Swiper
-          modules={[Autoplay, Pagination, EffectFade]}
-          effect="fade"
-          autoplay={{ delay: 5000, disableOnInteraction: false }}
-          pagination={{ clickable: true, dynamicBullets: true }}
-          loop={true}
-          className="h-full w-full"
-        >
-          {heroSlides.map((slide) => (
-            <SwiperSlide key={slide.id}>
-              <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
-                <motion.div
-                  className="absolute inset-0"
-                  initial={{ scale: 1 }}
-                  animate={{ scale: 1.05 }}
-                  transition={{ duration: 5, ease: 'linear' }}
-                  style={{ willChange: 'transform' }}
-                >
-                  <Image
-                    src={slide.image}
-                    fill
-                    className="object-cover object-top"
-                    alt={slide.title}
-                    priority
-                  />
-                </motion.div>
-
-                <div className="absolute inset-0 bg-black/55" />
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(242,169,37,0.34),transparent_32%),linear-gradient(to_top,rgba(0,0,0,0.8),rgba(0,0,0,0.2))]" />
-
-                <div className="relative z-10 mx-auto flex h-full max-w-7xl items-center px-6 pt-20 md:px-10">
-                  <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.8, delay: 0.2 }}
-                    className="max-w-3xl text-white"
-                  >
-                    <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-white/90 backdrop-blur-md">
-                      <Sparkles size={14} className="text-(--theme)" />
-                      curated luxury
-                    </span>
-
-                    <h1 className="mt-6 font-extrabold leading-[1.05] tracking-tight text-[clamp(2.6rem,6vw,5.8rem)]">
-                      {slide.title} <br />
-                      <span className="text-(--theme-second)">{slide.highlight}</span>
-                    </h1>
-
-                    <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-200 md:text-xl">
-                      {slide.subtitle}
-                    </p>
-
-                    <div className="mt-8 flex flex-wrap gap-3">
-                      <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.98 }}
-                        animate={{
-                          boxShadow: [
-                            "0 0 20px rgba(var(--theme-rgb),0.4)",
-                            "0 0 35px rgba(var(--theme-rgb),0.1)",
-                            "0 0 20px rgba(var(--theme-rgb),0.4)",
-                          ],
-                        }}
-                        transition={{
-                          boxShadow: { repeat: Infinity, duration: 2.5, ease: "easeInOut" },
-                        }}
-                        aria-label={slide.cta}
-                        className="flex items-center gap-2 rounded-full bg-(--theme) px-7 py-3 font-semibold text-[var(--theme-second)] transition-colors duration-300 hover:bg-[#280E89] cursor-pointer"
-                      >
-                        {slide.cta}
-                        <ArrowRight size={16} />
-                      </motion.button>
-
-                      <button className="rounded-full border border-white/35 bg-white/10 px-6 py-3 font-semibold text-white backdrop-blur-md transition-colors hover:bg-white/20">
-                        Explore drop
-                      </button>
-                    </div>
-                  </motion.div>
-                </div>
-              </div>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-
-      </section> */}
-
       <Hero />
 
       <div className='w-full sm:w-[95%] md:w-[85%] mx-auto'>
 
-        <nav className="mx-auto flex w-[95%] gap-2 overflow-x-auto py-5 scrollbar-hide md:w-[88%] md:justify-center">
+        <nav
+          ref={navRef}
+          className="mx-auto flex w-[95%] gap-2 overflow-x-auto py-5 scrollbar-hide md:w-[88%] md:justify-center"
+        >
           {navCategories.map((cat) => {
-            const isActive = pathname === getCategoryPath(cat.name)
+            const isActive = activeCategory === cat.name
             return (
-              <Link
+              <button
                 key={cat.id}
-                href={getCategoryPath(cat.name)}
+                type="button"
+                onClick={() => handleCategorySelect(cat.name)}
                 className={`relative rounded-full px-5 py-2.5 text-xs font-medium transition-colors ${isActive ? "text-white" : "bg-white text-gray-700 hover:bg-gray-100"
                   }`}
               >
@@ -296,7 +238,7 @@ const MainPage = ({ category = 'All' }) => {
                   />
                 )}
                 {cat.name}
-              </Link>
+              </button>
             )
           })}
         </nav>
@@ -312,37 +254,6 @@ const MainPage = ({ category = 'All' }) => {
             <CategoryCarousel />
           </div>
         </motion.section>
-
-        {/* <section className="mx-auto mt-10 w-full">
-        <div className="grid gap-8 md:grid-cols-3">
-          {premiumPillars.map(({ icon: Icon, title, text }) => (
-            <motion.div
-              key={title}
-              initial={{ opacity: 0, y: 18 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.45 }}
-              className="group rounded-3xl shadow-lg p-[1px]"
-            >
-              <div className="h-full rounded-3xl bg-white p-6 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-                <motion.div
-                  initial={prefersReducedMotion ? false : { scale: 0, rotate: -15 }}
-                  whileInView={
-                    prefersReducedMotion ? {} : { scale: 1, rotate: 0 }
-                  }
-                  viewport={{ once: true }}
-                  transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-                  className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-(--theme)/18 text-(--theme)"
-                >
-                  <Icon size={20} />
-                </motion.div>
-                <h3 className="text-lg font-bold text-gray-900">{title}</h3>
-                <p className="mt-2 text-sm text-gray-600">{text}</p>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section> */}
 
         <div className="mt-10 overflow-hidden border-y border-gray-100 py-4">
           <div className="flex animate-marquee space-x-10 whitespace-nowrap px-4">
@@ -385,13 +296,14 @@ const MainPage = ({ category = 'All' }) => {
                 <h2 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
                   {categoryName}
                 </h2>
-                <Link
-                  href={getCategoryPath(categoryName)}
+                <button
+                  type="button"
+                  onClick={() => handleViewAll(categoryName)}
                   className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.24em] text-gray-500 transition-colors hover:text-(--theme) dark:text-gray-400"
                 >
                   View all
                   <ChevronRight size={14} />
-                </Link>
+                </button>
               </div>
               <motion.div
                 variants={staggerContainer}
