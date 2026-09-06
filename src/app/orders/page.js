@@ -142,7 +142,9 @@ export default function OrdersPage() {
               <ul className="space-y-4">
                 {orders.map((order) => {
                   const deliverySummary = getDeliverySummary(order.destination)
-                  const displayDate = formatOrderDate(order.createdAt) || formatTimestamp(order.createdAt)
+                  const orderDate = order.datePurchased || order.createdAt
+                  const displayDate = formatOrderDate(orderDate) || formatTimestamp(orderDate)
+                  const deliveryStatus = order.deliveryStatus || order.status
 
                   return (
                     <li
@@ -156,7 +158,7 @@ export default function OrdersPage() {
                               Order {order.id}
                             </h2>
                             <span className="rounded-full bg-(--theme)/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-(--theme)">
-                              {order.status}
+                              {deliveryStatus}
                             </span>
                             {order.paymentStatus && (
                               <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
@@ -194,6 +196,12 @@ export default function OrdersPage() {
                                 <span className="text-gray-400">Tracking:</span> Not available yet
                               </p>
                             )}
+                            <p>
+                              <span className="text-gray-400">Transit:</span>{" "}
+                              <span className={order.transit ? "font-semibold text-emerald-700 dark:text-emerald-300" : "text-gray-500"}>
+                                {order.transit ? "Generated" : "Not generated yet"}
+                              </span>
+                            </p>
                           </div>
 
                           {deliverySummary && (

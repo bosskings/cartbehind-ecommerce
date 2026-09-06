@@ -122,6 +122,19 @@ const PRODUCTS_PER_CATEGORY = 5
 const getCategoryPath = (name) =>
   name === "All" ? "/" : `/category/${name.toLowerCase().replace(/\s+/g, "-")}`
 
+function ProductCardSkeleton() {
+  return (
+    <div className="animate-pulse overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-[#16131f]">
+      <div className="aspect-[5/5] w-full bg-gray-200 dark:bg-white/10" />
+      <div className="space-y-3 border-t-2 border-transparent px-5 pb-5 pt-4">
+        <div className="h-3 w-1/3 rounded bg-gray-200 dark:bg-white/10" />
+        <div className="h-4 w-4/5 rounded bg-gray-200 dark:bg-white/10" />
+        <div className="h-6 w-1/2 rounded bg-gray-200 dark:bg-white/10" />
+      </div>
+    </div>
+  )
+}
+
 // ——— Main Page Component ———
 const MainPage = ({ category = 'All' }) => {
   const pathname = usePathname()
@@ -356,9 +369,9 @@ const MainPage = ({ category = 'All' }) => {
         </div>
 
         {loading ? (
-          <p className="mx-auto mt-12 w-[95%] text-sm text-gray-500 dark:text-gray-400">
-            Loading products...
-          </p>
+          <div className="mx-auto mt-12 grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5">
+            {Array.from({ length: 10 }, (_, index) => <ProductCardSkeleton key={index} />)}
+          </div>
         ) : error ? (
           <p className="mx-auto mt-12 w-[95%] text-sm text-red-500">{error}</p>
         ) : categoryGroups.length === 0 ? (

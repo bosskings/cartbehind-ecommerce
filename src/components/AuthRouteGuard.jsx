@@ -34,7 +34,7 @@ export default function AuthRouteGuard({ children }) {
 
   const isAdminRoute = isAdminPath(pathname)
   const isAdminLogin = pathname === ADMIN_LOGIN_PATH
-  const isUserAuthRoute = pathname === "/login" || pathname === "/signup" || pathname === "/verify-email"
+  const isUserAuthRoute = ["/login", "/signup", "/verify-email", "/forgot-password", "/reset-password"].includes(pathname)
   const shouldBlockAdmin = isAdminRoute && !isAdminLogin && !isAdminAuthenticated
   const shouldLeaveAdminLogin = isAdminLogin && isAdminAuthenticated
   const shouldLeaveUserAuth = isUserAuthRoute && isUserAuthenticated

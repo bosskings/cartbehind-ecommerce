@@ -201,6 +201,45 @@ export function AuthProvider({ children }) {
     }
   }
 
+  const requestPasswordReset = async (email) => {
+    try {
+      const backendUrl = getBackendUrl()
+      if (!backendUrl) return { ok: false, message: "NEXT_PUBLIC_BACKEND_URL is missing." }
+      const response = await axios.post(`${backendUrl}/api/v1/users/forgot-password`, { email })
+      const ok = response.data?.status !== "ERROR"
+      return { ok, message: response.data?.message || (ok ? "Reset code sent to your email." : "Could not send reset code."), data: response.data }
+    } catch (error) {
+      console.error(error)
+      return { ok: false, message: getApiErrorMessage(error, "Could not send reset code.") }
+    }
+  }
+
+  const verifyResetCode = async (email, otp) => {
+    try {
+      const backendUrl = getBackendUrl()
+      if (!backendUrl) return { ok: false, message: "NEXT_PUBLIC_BACKEND_URL is missing." }
+      const response = await axios.post(`${backendUrl}/api/v1/users/verify-reset-code`, { email, otp })
+      const ok = response.data?.status !== "ERROR"
+      return { ok, message: response.data?.message || (ok ? "OTP verified. You may reset your password." : "Invalid reset code."), data: response.data }
+    } catch (error) {
+      console.error(error)
+      return { ok: false, message: getApiErrorMessage(error, "Could not verify reset code.") }
+    }
+  }
+
+  const resetPassword = async (email, newPassword, newPasswordConfirm) => {
+    try {
+      const backendUrl = getBackendUrl()
+      if (!backendUrl) return { ok: false, message: "NEXT_PUBLIC_BACKEND_URL is missing." }
+      const response = await axios.post(`${backendUrl}/api/v1/users/reset-password`, { email, newPassword, newPasswordConfirm })
+      const ok = response.data?.status !== "ERROR"
+      return { ok, message: response.data?.message || (ok ? "Password reset successfully." : "Could not reset password."), data: response.data }
+    } catch (error) {
+      console.error(error)
+      return { ok: false, message: getApiErrorMessage(error, "Could not reset password.") }
+    }
+  }
+
   const logoutUser = () => {
     clearUserSession()
     setUserSession(null)
@@ -222,6 +261,9 @@ export function AuthProvider({ children }) {
       verifyUserEmail,
       loginUser,
       loginAdmin,
+      requestPasswordReset,
+      verifyResetCode,
+      resetPassword,
       logoutUser,
       logoutAdmin,
     }),

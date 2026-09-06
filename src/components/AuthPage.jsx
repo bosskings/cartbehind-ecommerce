@@ -186,15 +186,15 @@ export default function AuthPage({ mode }) {
             </button>
 
             {!isAdmin && (
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                {isSignup ? "Already have an account?" : "Need an account?"}{" "}
-                <Link
-                  href={isSignup ? `/login${nextQuery}` : `/signup${nextQuery}`}
-                  className="font-bold text-(--theme) transition hover:opacity-70"
-                >
-                  {isSignup ? "Login" : "Sign up"}
-                </Link>
-              </p>
+              <div className="space-y-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                {!isSignup && <Link href={`/forgot-password${nextQuery}`} className="block font-bold text-(--theme) transition hover:opacity-70">Forgot password?</Link>}
+                <p>
+                  {isSignup ? "Already have an account?" : "Need an account?"}{" "}
+                  <Link href={isSignup ? `/login${nextQuery}` : `/signup${nextQuery}`} className="font-bold text-(--theme) transition hover:opacity-70">
+                    {isSignup ? "Login" : "Sign up"}
+                  </Link>
+                </p>
+              </div>
             )}
           </form>
         </section>
