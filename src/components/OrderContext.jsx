@@ -3,11 +3,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 import { useAuth } from "@/components/AuthContext"
 import { fetchUserOrder, fetchUserOrders, getApiErrorMessage } from "@/lib/orders"
-import {
-  applyOrderTrackingEnhancements,
-  findOrderByTrackingCode,
-  mergeOrderLists,
-} from "@/lib/orderTracking"
 
 const OrderContext = createContext(null)
 
@@ -146,16 +141,15 @@ export function OrderProvider({ children }) {
     try {
       setLoadingOrders(true)
       setOrdersError("")
-      const nextOrders = mergeOrderLists(await fetchUserOrders(authToken))
+      const nextOrders = await fetchUserOrders(authToken)
       setOrders(nextOrders)
       return nextOrders
     } catch (error) {
       console.error(error)
       const message = getApiErrorMessage(error, "Could not load your orders.")
       setOrdersError(message)
-      const fallbackOrders = mergeOrderLists([])
-      setOrders(fallbackOrders)
-      return fallbackOrders
+      setOrders([])
+      return []
     } finally {
       setLoadingOrders(false)
     }
@@ -173,13 +167,15 @@ export function OrderProvider({ children }) {
       if (cached) return cached
 
       const fetched = await fetchUserOrder(authToken, orderId)
-      return applyOrderTrackingEnhancements(fetched)
+      return fetched
     },
     [authToken, orders],
   )
 
   const getOrderByTrackingCode = useCallback(
-    (code) => findOrderByTrackingCode(orders, code),
+    (code) => orders.find(
+      (order) => String(order.trackingCode || "").toUpperCase() === String(code || "").trim().toUpperCase(),
+    ) || null,
     [orders],
   )
 

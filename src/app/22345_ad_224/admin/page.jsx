@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
@@ -8,6 +8,7 @@ import {
   BarChart3,
   Boxes,
   CheckCircle2,
+  ClipboardList,
   ChevronRight,
   Edit3,
   ImagePlus,
@@ -17,6 +18,7 @@ import {
   Moon,
   PackageCheck,
   PackagePlus,
+  RefreshCw,
   Search,
   ShoppingBag,
   Sun,
@@ -28,7 +30,12 @@ import {
 import { products as seededProducts } from "@/data/products"
 import { useTheme } from "@/components/ThemeContext"
 import { useAuth } from "@/components/AuthContext"
+import TransitEditorModal from "@/components/admin/TransitEditorModal"
+import TransitDetailsModal from "@/components/admin/TransitDetailsModal"
+import { Field, inputClass } from "@/components/admin/formUi"
+import { formatOrderDate } from "@/components/admin/transitUtils"
 import { getAdminToken, uploadToCloudinary } from "@/lib/cloudinary"
+import { fetchAdminOrders, getApiErrorMessage } from "@/lib/orders"
 import { ADMIN_LOGIN_PATH } from "@/lib/adminRoutes"
 
 const emptyForm = {
@@ -46,6 +53,7 @@ const emptyForm = {
 
 const sections = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "orders", label: "Orders", icon: ClipboardList },
   { id: "upload", label: "Upload Product", icon: PackagePlus },
   { id: "products", label: "Products", icon: Boxes },
 ]
@@ -83,21 +91,6 @@ function ProductImage({ src, title }) {
       role="img"
     />
   )
-}
-
-function Field({ label, children }) {
-  return (
-    <label className="space-y-2">
-      <span className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400">
-        {label}
-      </span>
-      {children}
-    </label>
-  )
-}
-
-function inputClass(extra = "") {
-  return `h-12 w-full rounded-xl border border-gray-200 bg-white px-4 text-sm text-gray-800 outline-none transition focus:border-(--theme) focus:shadow-[0_0_0_3px_rgba(var(--theme-rgb),0.12)] dark:border-white/10 dark:bg-[#12101a] dark:text-gray-100 ${extra}`
 }
 
 function ImageUploadField({ label, preview, onFileSelect }) {
@@ -151,6 +144,11 @@ export default function AdminPage() {
   const [form, setForm] = useState(emptyForm)
   const [editingProduct, setEditingProduct] = useState(null)
   const [editingImageFile, setEditingImageFile] = useState(null)
+  const [orders, setOrders] = useState([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
+  const [ordersError, setOrdersError] = useState("")
+  const [transitEditorOrder, setTransitEditorOrder] = useState(null)
+  const [transitDetailsOrder, setTransitDetailsOrder] = useState(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [isUploadingProduct, setIsUploadingProduct] = useState(false)
   const [query, setQuery] = useState("")
@@ -158,6 +156,33 @@ export default function AdminPage() {
   const { theme, toggleTheme, mounted } = useTheme()
   const { logoutAdmin } = useAuth()
   const router = useRouter()
+
+  const loadOrders = useCallback(async () => {
+    const token = getAdminToken()
+    if (!token) {
+      setOrdersError("Admin token is missing. Please log in again.")
+      return
+    }
+
+    setOrdersLoading(true)
+    setOrdersError("")
+    try {
+      setOrders(await fetchAdminOrders(token))
+    } catch (error) {
+      setOrdersError(getApiErrorMessage(error, "Could not load admin orders."))
+    } finally {
+      setOrdersLoading(false)
+    }
+  }, [])
+
+  const closeTransitEditor = useCallback(() => setTransitEditorOrder(null), [])
+  const closeTransitDetails = useCallback(() => setTransitDetailsOrder(null), [])
+
+  useEffect(() => {
+    if (activeSection !== "orders") return undefined
+    const timer = window.setTimeout(loadOrders, 0)
+    return () => window.clearTimeout(timer)
+  }, [activeSection, loadOrders])
 
   useEffect(() => {
     window.localStorage.removeItem("cartbehind-admin-products")
@@ -209,6 +234,16 @@ export default function AdminPage() {
         .some((value) => value.toLowerCase().includes(term)),
     )
   }, [products, query])
+
+  const filteredOrders = useMemo(() => {
+    const term = query.trim().toLowerCase()
+    if (!term) return orders
+    return orders.filter((order) =>
+      [order.id, order.userId, order.deliveryStatus, order.paymentStatus]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(term)),
+    )
+  }, [orders, query])
 
   const updateForm = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }))
@@ -561,6 +596,94 @@ export default function AdminPage() {
             </>
           )}
 
+          {activeSection === "orders" && (
+            <section className="rounded-2xl border border-white/80 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-[#16131f] sm:p-6">
+              <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="text-xl font-black">Recent Orders</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Manage delivery transit using backend order IDs.</p>
+                </div>
+                <div className="flex w-full gap-2 lg:w-auto">
+                  <div className="relative min-w-0 flex-1 lg:w-80">
+                    <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="Search orders..."
+                      className="h-11 w-full rounded-xl border border-gray-200 bg-[#f7f5fb] pl-10 pr-4 text-sm outline-none transition focus:border-(--theme) dark:border-white/10 dark:bg-[#12101a]"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={loadOrders}
+                    disabled={ordersLoading}
+                    aria-label="Refresh orders"
+                    title="Refresh orders"
+                    className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition hover:border-(--theme) hover:text-(--theme) disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-gray-300"
+                  >
+                    <RefreshCw size={17} className={ordersLoading ? "animate-spin" : ""} />
+                  </button>
+                </div>
+              </div>
+
+              {ordersLoading && <p className="rounded-xl bg-[#f7f5fb] px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#12101a]">Loading orders...</p>}
+              {ordersError && (
+                <div className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-600 sm:flex-row sm:items-center sm:justify-between">
+                  <span>{ordersError}</span>
+                  <button type="button" onClick={loadOrders} className="font-bold underline">Try again</button>
+                </div>
+              )}
+              {!ordersLoading && !ordersError && !filteredOrders.length && (
+                <p className="rounded-xl bg-[#f7f5fb] px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#12101a]">No orders found.</p>
+              )}
+
+              {!ordersLoading && !ordersError && filteredOrders.length > 0 && (
+                <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-white/10">
+                  <div className="hidden overflow-x-auto lg:block">
+                    <table className="w-full min-w-[760px] text-left text-sm">
+                      <thead className="bg-[#f7f5fb] text-xs uppercase tracking-[0.16em] text-gray-500 dark:bg-[#12101a] dark:text-gray-400">
+                        <tr>
+                          <th className="px-4 py-4">Order</th>
+                          <th className="px-4 py-4">Purchase date</th>
+                          <th className="px-4 py-4">Payment</th>
+                          <th className="px-4 py-4">Delivery</th>
+                          <th className="px-4 py-4 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-white/10">
+                        {filteredOrders.map((order) => (
+                          <tr key={order.id}>
+                            <td className="px-4 py-4"><p className="font-bold">{order.id}</p><p className="mt-1 text-xs text-gray-500">User {order.userId || "Unknown"}</p></td>
+                            <td className="px-4 py-4 text-gray-600 dark:text-gray-300">{formatOrderDate(order.datePurchased)}</td>
+                            <td className="px-4 py-4 font-semibold">{order.paymentStatus || "Unknown"}</td>
+                            <td className="px-4 py-4 font-semibold">{order.deliveryStatus || "PENDING"}</td>
+                            <td className="px-4 py-4 text-right"><div className="flex justify-end gap-2">
+                              <button type="button" onClick={() => setTransitEditorOrder(order)} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200">
+                                <Truck size={16} />Create transit
+                                </button>
+                                <button type="button" onClick={() => setTransitDetailsOrder(order)} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-(--theme) px-3 text-sm font-bold text-(--theme-second) transition hover:opacity-90"><Search size={16} />View transit details
+                              </button>
+                              </div>
+                              </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="grid gap-3 p-3 lg:hidden">
+                    {filteredOrders.map((order) => (
+                      <article key={order.id} className="rounded-xl border border-gray-100 bg-[#f7f5fb] p-4 dark:border-white/10 dark:bg-[#12101a]">
+                        <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-bold">{order.id}</p><p className="mt-1 text-xs text-gray-500">User {order.userId || "Unknown"}</p></div><span className="shrink-0 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-bold text-yellow-800">{order.deliveryStatus || "PENDING"}</span></div>
+                        <p className="mt-3 text-xs text-gray-500">{formatOrderDate(order.datePurchased)}</p>
+                        <div className="mt-4 grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => setTransitEditorOrder(order)} className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 dark:border-white/10 dark:text-gray-200"><Truck size={16} />Create transit</button><button type="button" onClick={() => setTransitDetailsOrder(order)} className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-(--theme) text-sm font-bold text-(--theme-second)"><Search size={16} />View details</button></div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
           {activeSection === "upload" && (
             <section className="rounded-2xl border border-white/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-[#16131f] sm:p-7">
               <div className="mb-6 flex items-center gap-3">
@@ -753,6 +876,21 @@ export default function AdminPage() {
           )}
         </div>
       </section>
+
+      {transitEditorOrder && (
+        <TransitEditorModal
+          order={transitEditorOrder}
+          onClose={closeTransitEditor}
+          onSuccess={loadOrders}
+        />
+      )}
+
+      {transitDetailsOrder && (
+        <TransitDetailsModal
+          order={transitDetailsOrder}
+          onClose={closeTransitDetails}
+        />
+      )}
 
       {editingProduct && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4">

@@ -13,7 +13,6 @@ import {
   getApiErrorMessage,
   readPendingCheckout,
 } from "@/lib/payments"
-import { generateTrackingCode, saveOrderTrackingRecord } from "@/lib/orderTracking"
 
 const fieldClass =
   "h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none transition focus:border-(--theme) focus:bg-white dark:border-white/10 dark:bg-[#16131f] dark:text-gray-200 dark:focus:bg-[#1a1625]"
@@ -191,18 +190,8 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
           },
         }
 
-      const trackingCode = baseOrder.trackingCode || generateTrackingCode(destination.state)
-
-      saveOrderTrackingRecord({
-        orderId: baseOrder.id,
-        txRef: paymentInfo.tx_ref,
-        trackingCode,
-        destination,
-      })
-
       const receiptOrder = withOrderDisplayFallbacks({
         ...baseOrder,
-        trackingCode,
         destination,
       })
 

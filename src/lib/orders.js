@@ -97,6 +97,49 @@ export function normalizeSingleOrderResponse(data) {
   return normalizeOrder(order)
 }
 
+export function normalizeAdminOrder(rawOrder) {
+  const order = normalizeOrder(rawOrder)
+  if (!order) return null
+
+  const timeline = Array.isArray(rawOrder.timeline)
+    ? rawOrder.timeline
+      .map((event, index) => ({
+        ...event,
+        id: event.id || event._id || `timeline-${index}`,
+        comment: event.comment || event.note || event.title || "",
+        at: event.at || event.dateTime || event.datetime || event.date || "",
+        currentLocation: event.currentLocation || event.location || "",
+      }))
+      .filter((event) => event.comment || event.at)
+      .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+    : []
+
+  return {
+    ...order,
+    id: rawOrder._id || order.id,
+    orderId: rawOrder._id || order.id,
+    status: rawOrder.deliveryStatus || order.status,
+    deliveryStatus: rawOrder.deliveryStatus || order.status,
+    paymentStatus: rawOrder.paymentStatus || order.paymentStatus,
+    currentLocation: rawOrder.currentLocation || rawOrder.location || "",
+    timeline,
+    datePurchased: rawOrder.datePurchased || order.createdAt || "",
+    userId: rawOrder.userId || "",
+  }
+}
+
+export function normalizeAdminOrdersResponse(data) {
+  const orders =
+    (Array.isArray(data?.orders) && data.orders) ||
+    (Array.isArray(data?.data?.orders) && data.data.orders) ||
+    []
+
+  return orders.map(normalizeAdminOrder).filter(Boolean).sort((a, b) =>
+    new Date(b.datePurchased || b.createdAt || 0).getTime() -
+    new Date(a.datePurchased || a.createdAt || 0).getTime(),
+  )
+}
+
 export async function fetchUserOrders(authToken) {
   const backendUrl = getBackendUrlOrThrow()
   const response = await axios.get(`${backendUrl}/api/v1/users/orders`, {
@@ -115,6 +158,67 @@ export async function fetchUserOrder(authToken, orderId) {
 
   console.log("Single order fetch response:", response.data)
   return normalizeSingleOrderResponse(response.data)
+}
+
+export async function fetchUserTrackedParcel(authToken, trackingCode) {
+  const backendUrl = getBackendUrlOrThrow()
+  const response = await axios.get(
+    `${backendUrl}/api/v1/users/track-parcel/${encodeURIComponent(trackingCode)}`,
+    { headers: getHeaders(authToken) },
+  )
+
+  console.log("User track-parcel endpoint response:", response.data)
+  return response.data
+}
+
+export async function fetchAdminOrders(authToken) {
+  const backendUrl = getBackendUrlOrThrow()
+  if (!authToken) throw new Error("Admin authentication is required to view orders.")
+
+  const response = await axios.get(`${backendUrl}/api/v1/admin/orders`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+  })
+
+  return normalizeAdminOrdersResponse(response.data)
+}
+
+export async function createAdminTransit(authToken, payload) {
+  const backendUrl = getBackendUrlOrThrow()
+  if (!authToken) throw new Error("Admin authentication is required to create transit.")
+
+  const response = await axios.post(`${backendUrl}/api/v1/admin/transit`, payload, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`,
+    },
+  })
+
+  return response.data
+}
+
+export async function fetchAdminTransit(authToken, orderId) {
+  const backendUrl = getBackendUrlOrThrow()
+  if (!authToken) throw new Error("Admin authentication is required to view transit details.")
+
+  const response = await axios.get(`${backendUrl}/api/v1/admin/transit/${orderId}`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+  })
+
+  return response.data
+}
+
+export async function updateAdminTransit(authToken, currentLocationId, payload) {
+  const backendUrl = getBackendUrlOrThrow()
+  if (!authToken) throw new Error("Admin authentication is required to update transit details.")
+
+  const response = await axios.put(`${backendUrl}/api/v1/admin/transit/${currentLocationId}`, payload, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${authToken}`,
+    },
+  })
+
+  return response.data
 }
 
 export { getApiErrorMessage }

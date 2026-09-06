@@ -19,6 +19,7 @@ const Navbar = () => {
   const [searchTerm, setSearchTerm] = useState("")
   const [showSearch, setShowSearch] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const { cartCount } = useCart()
   const { logoutUser, isUserAuthenticated } = useAuth()
@@ -67,6 +68,7 @@ const Navbar = () => {
     logoutUser()
     toast.success("Logged out successfully.")
     setShowMenu(false)
+    setShowLogoutConfirm(false)
     router.replace("/")
   }
 
@@ -144,7 +146,7 @@ const Navbar = () => {
             {isUserAuthenticated ? (
               <button
                 type="button"
-                onClick={handleLogout}
+                onClick={() => setShowLogoutConfirm(true)}
                 className={`rounded-full cursor-pointer p-2 ${iconButtonClass}`}
                 aria-label="Logout"
                 title="Logout"
@@ -234,7 +236,7 @@ const Navbar = () => {
           {isUserAuthenticated ? (
             <button
               type="button"
-              onClick={handleLogout}
+              onClick={() => setShowLogoutConfirm(true)}
               className="mb-1 flex h-10 w-full items-center gap-2 rounded-lg px-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/10"
             >
               <LuLogOut size={16} />
@@ -260,6 +262,46 @@ const Navbar = () => {
             </Link>
           ))}
         </motion.div>
+      )}
+
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4" role="presentation">
+          <button
+            type="button"
+            aria-label="Close logout confirmation"
+            onClick={() => setShowLogoutConfirm(false)}
+            className="absolute inset-0 cursor-default"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="logout-dialog-title"
+            className="relative w-full max-w-sm rounded-2xl border border-white/80 bg-white p-6 shadow-2xl dark:border-white/10 dark:bg-[#16131f]"
+          >
+            <h2 id="logout-dialog-title" className="text-xl font-black text-gray-950 dark:text-white">
+              Log out of CartBehind?
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">
+              You will need to sign in again to access your account.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowLogoutConfirm(false)}
+                className="h-11 rounded-xl border border-gray-200 px-4 text-sm font-bold text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="h-11 rounded-xl bg-(--theme) px-4 text-sm font-black text-(--theme-second) transition hover:opacity-90"
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
