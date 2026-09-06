@@ -27,7 +27,6 @@ import {
   Users,
   X,
 } from "lucide-react"
-import { products as seededProducts } from "@/data/products"
 import { useTheme } from "@/components/ThemeContext"
 import { useAuth } from "@/components/AuthContext"
 import TransitEditorModal from "@/components/admin/TransitEditorModal"
@@ -35,7 +34,8 @@ import TransitDetailsModal from "@/components/admin/TransitDetailsModal"
 import { Field, inputClass } from "@/components/admin/formUi"
 import { formatOrderDate } from "@/components/admin/transitUtils"
 import { getAdminToken, uploadToCloudinary } from "@/lib/cloudinary"
-import { fetchAdminOrders, fetchAdminOverview, getApiErrorMessage } from "@/lib/orders"
+import { fetchAdminOrders, fetchAdminOverview, getApiErrorMessage, isAdminAuthError } from "@/lib/orders"
+import { fetchProducts } from "@/lib/products"
 import { ADMIN_LOGIN_PATH } from "@/lib/adminRoutes"
 
 const emptyForm = {
@@ -58,19 +58,22 @@ const sections = [
   { id: "products", label: "Products", icon: Boxes },
 ]
 
+const RECENT_PRODUCTS_LIMIT = 5
+
 function normalizeProduct(product, index = 0) {
   return {
-    id: product.id ?? Date.now() + index,
-    brand: product.brand || "CartBehind",
-    title: product.title || "Untitled product",
+    id: product.id ?? product._id ?? Date.now() + index,
+    brand: product.brand || product.category || "CartBehind",
+    title: product.title || product.name || "Untitled product",
     price: Number(product.price) || 0,
     originalPrice: Number(product.originalPrice) || 0,
     discountPercent: Number(product.discountPercent) || 0,
-    image: product.image || "/thumbnail.webp",
+    image: product.image?.url || product.image || product.url || "/thumbnail.webp",
     category: product.category || "General",
     description: product.description || "",
     tags: product.tags || [],
     stock: Number(product.stock) || 0,
+    createdAt: product.createdAt || product.created_at || "",
   }
 }
 
@@ -144,7 +147,9 @@ function ImageUploadField({ label, preview, onFileSelect }) {
 
 export default function AdminPage() {
   const [activeSection, setActiveSection] = useState("overview")
-  const [products, setProducts] = useState(() => seededProducts.map(normalizeProduct))
+  const [products, setProducts] = useState([])
+  const [productsLoading, setProductsLoading] = useState(false)
+  const [productsError, setProductsError] = useState("")
   const [form, setForm] = useState(emptyForm)
   const [editingProduct, setEditingProduct] = useState(null)
   const [editingImageFile, setEditingImageFile] = useState(null)
@@ -164,10 +169,15 @@ export default function AdminPage() {
   const { logoutAdmin } = useAuth()
   const router = useRouter()
 
+  const redirectToAdminLogin = useCallback(() => {
+    logoutAdmin()
+    router.replace(ADMIN_LOGIN_PATH)
+  }, [logoutAdmin, router])
+
   const loadOrders = useCallback(async () => {
     const token = getAdminToken()
     if (!token) {
-      setOrdersError("Admin token is missing. Please log in again.")
+      redirectToAdminLogin()
       return
     }
 
@@ -176,16 +186,20 @@ export default function AdminPage() {
     try {
       setOrders(await fetchAdminOrders(token))
     } catch (error) {
+      if (isAdminAuthError(error)) {
+        redirectToAdminLogin()
+        return
+      }
       setOrdersError(getApiErrorMessage(error, "Could not load admin orders."))
     } finally {
       setOrdersLoading(false)
     }
-  }, [])
+  }, [redirectToAdminLogin])
 
   const loadOverview = useCallback(async () => {
     const token = getAdminToken()
     if (!token) {
-      setOverviewError("Admin token is missing. Please log in again.")
+      redirectToAdminLogin()
       return
     }
 
@@ -194,12 +208,29 @@ export default function AdminPage() {
     try {
       setOverview(await fetchAdminOverview(token))
     } catch (error) {
+      if (isAdminAuthError(error)) {
+        redirectToAdminLogin()
+        return
+      }
       setOverviewError(getApiErrorMessage(error, "Could not load admin overview."))
     } finally {
       setOverviewLoading(false)
     }
-  }, [])
+  }, [redirectToAdminLogin])
 
+  const loadProducts = useCallback(async () => {
+    setProductsLoading(true)
+    setProductsError("")
+    try {
+      const backendProducts = await fetchProducts()
+      setProducts(backendProducts.map(normalizeProduct))
+    } catch (error) {
+      setProducts([])
+      setProductsError(error.message || "Could not load products.")
+    } finally {
+      setProductsLoading(false)
+    }
+  }, [])
   const closeTransitEditor = useCallback(() => setTransitEditorOrder(null), [])
   const closeTransitDetails = useCallback(() => setTransitDetailsOrder(null), [])
 
@@ -216,9 +247,10 @@ export default function AdminPage() {
   }, [activeSection, loadOrders])
 
   useEffect(() => {
-    window.localStorage.removeItem("cartbehind-admin-products")
-  }, [])
-
+    if (activeSection !== "overview" && activeSection !== "products") return undefined
+    const timer = window.setTimeout(loadProducts, 0)
+    return () => window.clearTimeout(timer)
+  }, [activeSection, loadProducts])
   const hasUploadedImage = Boolean(form.url && form.publicId && form.fileType)
 
   const stats = useMemo(
@@ -259,6 +291,24 @@ export default function AdminPage() {
     [overview, overviewLoading],
   )
 
+
+  const recentProducts = useMemo(
+    () =>
+      [...products]
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice(0, RECENT_PRODUCTS_LIMIT),
+    [products],
+  )
+
+  const productCategories = useMemo(() => {
+    const counts = new Map()
+    for (const product of products) {
+      const category = product.category || "General"
+      counts.set(category, (counts.get(category) || 0) + 1)
+    }
+
+    return Array.from(counts.entries()).map(([category, count]) => ({ category, count }))
+  }, [products])
   const filteredProducts = useMemo(() => {
     const term = query.trim().toLowerCase()
     if (!term) return products
@@ -309,6 +359,10 @@ export default function AdminPage() {
 
       toast.success("Product image uploaded successfully.")
     } catch (error) {
+      if (isAdminAuthError(error)) {
+        redirectToAdminLogin()
+        return
+      }
       toast.error(error.message || "Image upload failed. Please try again.")
     } finally {
       setIsUploadingImage(false)
@@ -347,7 +401,7 @@ export default function AdminPage() {
     }
 
     if (!token) {
-      toast.error("Admin token is missing. Please log in again.")
+      redirectToAdminLogin()
       return
     }
 
@@ -376,18 +430,28 @@ export default function AdminPage() {
       console.log(data)
 
       if (!response.ok) {
-        throw new Error(data?.message || "Product upload failed.")
+        const error = new Error(data?.message || "Product upload failed.")
+        error.status = response.status
+        throw error
       }
 
       setForm(emptyForm)
       toast.success(data?.message || "Product uploaded successfully.")
+      await loadProducts()
     } catch (error) {
+      if (isAdminAuthError(error)) {
+        redirectToAdminLogin()
+        return
+      }
       toast.error(error.message || "Product upload failed. Please try again.")
     } finally {
       setIsUploadingProduct(false)
     }
   }
 
+  const handleRefreshProducts = () => {
+    loadProducts()
+  }
   const openEditProduct = (product) => {
     setEditingImageFile(null)
     setEditingProduct(product)
@@ -429,6 +493,10 @@ export default function AdminPage() {
       setEditingImageFile(null)
       toast.success("Product updated successfully.")
     } catch (error) {
+      if (isAdminAuthError(error)) {
+        redirectToAdminLogin()
+        return
+      }
       toast.error(error.message || "Image upload failed. Please try again.")
     } finally {
       setIsUploadingProduct(false)
@@ -593,7 +661,7 @@ export default function AdminPage() {
                   <div className="mb-6 flex min-w-0 flex-wrap items-center justify-between gap-3 max-[390px]:mb-4 max-[390px]:gap-2">
                     <div>
                       <h2 className="text-xl font-black max-[390px]:text-lg">Catalog Overview</h2>
-                      <p className="text-sm text-gray-500 max-[390px]:text-xs dark:text-gray-400">A quick read on the local product set.</p>
+                      <p className="text-sm text-gray-500 max-[390px]:text-xs dark:text-gray-400">A quick read on the live product catalog.</p>
                     </div>
                     <button
                       type="button"
@@ -605,32 +673,51 @@ export default function AdminPage() {
                     </button>
                   </div>
 
-                  <div className="grid min-w-0 gap-3 max-[390px]:gap-2 sm:grid-cols-3">
-                    {["Beauty", "Home", "General"].map((category) => {
-                      const count = products.filter((product) => product.category === category).length
-                      return (
+                  {productsLoading ? (
+                    <p className="rounded-xl bg-[#f7f5fb] px-4 py-6 text-center text-sm text-gray-500 dark:bg-[#12101a]">Loading products...</p>
+                  ) : productsError ? (
+                    <div className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-600 sm:flex-row sm:items-center sm:justify-between">
+                      <span>{productsError}</span>
+                      <button type="button" onClick={loadProducts} className="font-bold underline">Try again</button>
+                    </div>
+                  ) : productCategories.length ? (
+                    <div className="grid min-w-0 gap-3 max-[390px]:gap-2 sm:grid-cols-3">
+                      {productCategories.slice(0, 6).map(({ category, count }) => (
                         <div key={category} className="min-w-0 rounded-xl bg-[#f7f5fb] p-4 max-[390px]:p-3 dark:bg-[#12101a]">
                           <p className="truncate text-sm font-bold max-[390px]:text-xs">{category}</p>
                           <p className="mt-2 text-2xl font-black text-(--theme) max-[390px]:text-xl">{count}</p>
                         </div>
-                      )
-                    })}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="rounded-xl bg-[#f7f5fb] px-4 py-6 text-center text-sm text-gray-500 dark:bg-[#12101a]">No products available yet.</p>
+                  )}
                 </div>
 
                 <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] max-[390px]:p-4 dark:border-white/10 dark:bg-[#16131f]">
                   <h2 className="text-xl font-black max-[390px]:text-lg">Recent Products</h2>
                   <div className="mt-5 min-w-0 space-y-3 max-[390px]:mt-4 max-[390px]:space-y-2">
-                    {products.slice(0, 4).map((product) => (
-                      <div key={product.id} className="flex min-w-0 items-center gap-3 overflow-hidden rounded-xl bg-[#f7f5fb] p-3 max-[390px]:gap-2 max-[390px]:p-2 dark:bg-[#12101a]">
-                        <ProductImage src={product.image} title={product.title} />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-bold">{product.title}</p>
-                          <p className="truncate text-xs text-gray-500 dark:text-gray-400">{formatNaira(product.price)}</p>
-                        </div>
-                        <CheckCircle2 size={17} className="shrink-0 text-emerald-500" />
+                    {productsLoading ? (
+                      <p className="rounded-xl bg-[#f7f5fb] px-4 py-6 text-center text-sm text-gray-500 dark:bg-[#12101a]">Loading products...</p>
+                    ) : productsError ? (
+                      <div className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-600 sm:flex-row sm:items-center sm:justify-between">
+                        <span>{productsError}</span>
+                        <button type="button" onClick={handleRefreshProducts} className="font-bold underline">Try again</button>
                       </div>
-                    ))}
+                    ) : recentProducts.length ? (
+                      recentProducts.map((product) => (
+                        <div key={product.id} className="flex min-w-0 items-center gap-3 overflow-hidden rounded-xl bg-[#f7f5fb] p-3 max-[390px]:gap-2 max-[390px]:p-2 dark:bg-[#12101a]">
+                          <ProductImage src={product.image} title={product.title} />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-bold">{product.title}</p>
+                            <p className="truncate text-xs text-gray-500 dark:text-gray-400">{formatNaira(product.price)}</p>
+                          </div>
+                          <CheckCircle2 size={17} className="shrink-0 text-emerald-500" />
+                        </div>
+                      ))
+                    ) : (
+                      <p className="rounded-xl bg-[#f7f5fb] px-4 py-6 text-center text-sm text-gray-500 dark:bg-[#12101a]">No products available yet.</p>
+                    )}
                   </div>
                 </div>
               </section>
@@ -840,8 +927,8 @@ export default function AdminPage() {
             <section className="rounded-2xl border border-white/80 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-[#16131f] sm:p-6">
               <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <h2 className="text-xl font-black">Uploaded Products</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Edit the local product catalog before backend wiring.</p>
+                  <h2 className="text-xl font-black">Products</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Products fetched from the live store catalog.</p>
                 </div>
                 <div className="relative w-full lg:w-80">
                   <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -854,33 +941,46 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="hidden overflow-hidden rounded-xl border border-gray-100 dark:border-white/10 lg:block">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-[#f7f5fb] text-xs uppercase tracking-[0.18em] text-gray-500 dark:bg-[#12101a] dark:text-gray-400">
-                    <tr>
-                      <th className="px-4 py-4">Product</th>
-                      <th className="px-4 py-4">Category</th>
-                      <th className="px-4 py-4">Price</th>
-                      <th className="px-4 py-4">Stock</th>
-                      <th className="px-4 py-4 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-white/10">
-                    {filteredProducts.map((product) => (
-                      <tr key={product.id}>
-                        <td className="px-4 py-4">
-                          <div className="flex cursor-pointer items-center gap-3">
-                            <ProductImage src={product.image} title={product.title} />
-                            <div className="min-w-0">
-                              <p className="truncate font-bold">{product.title}</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">{product.brand}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-gray-600 dark:text-gray-300">{product.category}</td>
-                        <td className="px-4 py-4 font-bold">{formatNaira(product.price)}</td>
-                        <td className="px-4 py-4">{formatNumber(product.stock)}</td>
-                        <td className="px-4 py-4 text-right">
+
+              {productsLoading && <p className="rounded-xl bg-[#f7f5fb] px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#12101a]">Loading products...</p>}
+              {productsError && (
+                <div className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-600 sm:flex-row sm:items-center sm:justify-between">
+                  <span>{productsError}</span>
+                  <button type="button" onClick={handleRefreshProducts} className="font-bold underline">Try again</button>
+                </div>
+              )}
+              {!productsLoading && !productsError && !filteredProducts.length && (
+                <p className="rounded-xl bg-[#f7f5fb] px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#12101a]">No products found.</p>
+              )}
+              {!productsLoading && !productsError && filteredProducts.length > 0 && (
+                <>
+                  <div className="hidden overflow-hidden rounded-xl border border-gray-100 dark:border-white/10 lg:block">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-[#f7f5fb] text-xs uppercase tracking-[0.18em] text-gray-500 dark:bg-[#12101a] dark:text-gray-400">
+                        <tr>
+                          <th className="px-4 py-4">Product</th>
+                          <th className="px-4 py-4">Category</th>
+                          <th className="px-4 py-4">Price</th>
+                          <th className="px-4 py-4">Stock</th>
+                          {/* <th className="px-4 py-4 text-right">Action</th> */}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-white/10">
+                        {filteredProducts.map((product) => (
+                          <tr key={product.id}>
+                            <td className="px-4 py-4">
+                              <div className="flex cursor-pointer items-center gap-3">
+                                <ProductImage src={product.image} title={product.title} />
+                                <div className="min-w-0">
+                                  <p className="truncate font-bold">{product.title}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">{product.brand}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-4 text-gray-600 dark:text-gray-300">{product.category}</td>
+                            <td className="px-4 py-4 font-bold">{formatNaira(product.price)}</td>
+                            <td className="px-4 py-4">{formatNumber(product.stock)}</td>
+                            {/* <td className="px-4 py-4 text-right">
                           <button
                             type="button"
                             onClick={() => openEditProduct(product)}
@@ -889,30 +989,32 @@ export default function AdminPage() {
                             <Edit3 size={16} />
                             Edit
                           </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        </td> */}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-              <div className="grid gap-3 lg:hidden">
-                {filteredProducts.map((product) => (
-                  <article key={product.id} className="rounded-xl border border-gray-100 bg-[#f7f5fb] p-4 dark:border-white/10 dark:bg-[#12101a]">
-                    <div className="flex items-start gap-3">
-                      <ProductImage src={product.image} title={product.title} />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate font-bold">{product.title}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{product.brand} / {product.category}</p>
-                        <p className="mt-2 text-sm font-black">{formatNaira(product.price)}</p>
-                      </div>
-                      <button type="button" onClick={() => openEditProduct(product)} className="cursor-pointer rounded-full bg-white p-2 text-(--theme) shadow-sm dark:bg-[#16131f]">
-                        <Edit3 size={16} />
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
+                  <div className="grid gap-3 lg:hidden">
+                    {filteredProducts.map((product) => (
+                      <article key={product.id} className="rounded-xl border border-gray-100 bg-[#f7f5fb] p-4 dark:border-white/10 dark:bg-[#12101a]">
+                        <div className="flex items-start gap-3">
+                          <ProductImage src={product.image} title={product.title} />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-bold">{product.title}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{product.brand} / {product.category}</p>
+                            <p className="mt-2 text-sm font-black">{formatNaira(product.price)}</p>
+                          </div>
+                          <button type="button" onClick={() => openEditProduct(product)} className="cursor-pointer rounded-full bg-white p-2 text-(--theme) shadow-sm dark:bg-[#16131f]">
+                            <Edit3 size={16} />
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              )}
             </section>
           )}
         </div>
@@ -923,6 +1025,7 @@ export default function AdminPage() {
           order={transitEditorOrder}
           onClose={closeTransitEditor}
           onSuccess={loadOrders}
+          onAuthExpired={redirectToAdminLogin}
         />
       )}
 
@@ -930,6 +1033,7 @@ export default function AdminPage() {
         <TransitDetailsModal
           order={transitDetailsOrder}
           onClose={closeTransitDetails}
+          onAuthExpired={redirectToAdminLogin}
         />
       )}
 
