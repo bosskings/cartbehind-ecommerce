@@ -7,6 +7,7 @@ import { getAdminToken } from "@/lib/cloudinary"
 import {
   fetchAdminTransit,
   getApiErrorMessage,
+  isAdminAuthError,
   updateAdminTransit,
 } from "@/lib/orders"
 import { Field, inputClass } from "@/components/admin/formUi"
@@ -16,7 +17,7 @@ import {
   transitStatusOptions,
 } from "@/components/admin/transitUtils"
 
-export default function TransitDetailsModal({ order, onClose }) {
+export default function TransitDetailsModal({ order, onClose, onAuthExpired }) {
   const [transitDetails, setTransitDetails] = useState(null)
   const [snapshot, setSnapshot] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -31,8 +32,7 @@ export default function TransitDetailsModal({ order, onClose }) {
     const loadDetails = async () => {
       const token = getAdminToken()
       if (!token) {
-        toast.error("Admin token is missing. Please log in again.")
-        onClose()
+        onAuthExpired?.()
         return
       }
 
@@ -50,6 +50,10 @@ export default function TransitDetailsModal({ order, onClose }) {
         setSnapshot(transit ? structuredClone(transit) : null)
       } catch (error) {
         if (cancelled) return
+        if (isAdminAuthError(error)) {
+          onAuthExpired?.()
+          return
+        }
         toast.error(getApiErrorMessage(error, "Could not load transit details."))
         onClose()
       } finally {
@@ -62,7 +66,7 @@ export default function TransitDetailsModal({ order, onClose }) {
     return () => {
       cancelled = true
     }
-  }, [order?.id, onClose])
+  }, [order?.id, onAuthExpired, onClose])
 
   const cancelLocationEdit = () => {
     if (snapshot) {
@@ -83,7 +87,7 @@ export default function TransitDetailsModal({ order, onClose }) {
 
     const token = getAdminToken()
     if (!token) {
-      toast.error("Admin token is missing. Please log in again.")
+      onAuthExpired?.()
       return
     }
 
@@ -119,6 +123,10 @@ export default function TransitDetailsModal({ order, onClose }) {
       toast.success("Transit details updated successfully.")
     } catch (error) {
       console.error("Admin transit update failed:", error)
+      if (isAdminAuthError(error)) {
+        onAuthExpired?.()
+        return
+      }
       toast.error(getApiErrorMessage(error, "Could not update transit details."))
     } finally {
       setIsUpdating(false)

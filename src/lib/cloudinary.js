@@ -22,7 +22,9 @@ export async function uploadToCloudinary(file) {
   }
 
   if (!token) {
-    throw new Error("Admin token is missing. Please log in again.")
+    const error = new Error("Admin token is missing. Please log in again.")
+    error.status = 401
+    throw error
   }
 
   const signatureRes = await fetch(`${API_URL}/api/v1/admin/cloudinary-signature`, {
@@ -36,7 +38,9 @@ export async function uploadToCloudinary(file) {
   console.log(signature)
 
   if (!signatureRes.ok) {
-    throw new Error(signature?.message || "Failed to get Cloudinary signature.")
+    const error = new Error(signature?.message || "Failed to get Cloudinary signature.")
+    error.status = signatureRes.status
+    throw error
   }
 
   const formData = new FormData()

@@ -8,6 +8,11 @@ function getApiErrorMessage(error, fallback) {
   return error?.response?.data?.message || error?.response?.data?.error || fallback
 }
 
+function isAdminAuthError(error) {
+  const status = error?.response?.status || error?.status
+  return status === 401 || status === 403
+}
+
 function getHeaders(authToken) {
   if (!authToken) {
     throw new Error("You must be logged in to view orders.")
@@ -247,4 +252,4 @@ export async function updateAdminTransit(authToken, currentLocationId, payload) 
   return response.data
 }
 
-export { getApiErrorMessage }
+export { getApiErrorMessage, isAdminAuthError }

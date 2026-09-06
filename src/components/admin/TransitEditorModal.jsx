@@ -9,6 +9,7 @@ import {
   createAdminTransit,
   fetchAdminTransit,
   getApiErrorMessage,
+  isAdminAuthError,
 } from "@/lib/orders"
 import { Field, inputClass } from "@/components/admin/formUi"
 import {
@@ -28,7 +29,7 @@ function toLocationPayload(entry) {
   }
 }
 
-export default function TransitEditorModal({ order, onClose, onSuccess }) {
+export default function TransitEditorModal({ order, onClose, onSuccess, onAuthExpired }) {
   const [editingOrder, setEditingOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -42,8 +43,7 @@ export default function TransitEditorModal({ order, onClose, onSuccess }) {
     const loadTransit = async () => {
       const token = getAdminToken()
       if (!token) {
-        toast.error("Admin token is missing. Please log in again.")
-        onClose()
+        onAuthExpired?.()
         return
       }
 
@@ -85,6 +85,10 @@ export default function TransitEditorModal({ order, onClose, onSuccess }) {
             timeline: [createTimelineEntry()],
           }))
         } else {
+          if (isAdminAuthError(loadError)) {
+            onAuthExpired?.()
+            return
+          }
           const message = getApiErrorMessage(loadError, "Could not load existing transit details.")
           setError(message)
           toast.error(message)
@@ -99,7 +103,7 @@ export default function TransitEditorModal({ order, onClose, onSuccess }) {
     return () => {
       cancelled = true
     }
-  }, [order?.id, onClose])
+  }, [order, onAuthExpired, onClose])
 
   const updateEditingOrder = (field, value) => {
     setEditingOrder((current) => ({ ...current, [field]: value }))
@@ -137,7 +141,7 @@ export default function TransitEditorModal({ order, onClose, onSuccess }) {
 
     const token = getAdminToken()
     if (!token) {
-      toast.error("Admin token is missing. Please log in again.")
+      onAuthExpired?.()
       return
     }
 
@@ -219,6 +223,10 @@ export default function TransitEditorModal({ order, onClose, onSuccess }) {
       )
     } catch (generateError) {
       console.error("Admin transit request failed:", generateError)
+      if (isAdminAuthError(generateError)) {
+        onAuthExpired?.()
+        return
+      }
       toast.error(getApiErrorMessage(generateError, "Could not generate transit details."))
     } finally {
       setIsGenerating(false)
