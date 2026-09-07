@@ -118,6 +118,11 @@ const testimonials = [
 
 
 const PRODUCTS_PER_CATEGORY = 5
+const navCategories = [
+  { id: 1, name: "All" },
+  { id: 2, name: "Same day delivery" },
+  { id: 3, name: "7 day delivery" },
+]
 const getCategoryPath = (name) =>
   name === "All" ? "/" : `/category/${name.toLowerCase().replace(/\s+/g, "-")}`
 
@@ -141,16 +146,9 @@ const MainPage = ({ category = 'All' }) => {
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [testimonialIndex, setTestimonialIndex] = useState(0)
 
-  // Currently selected category filter — seeded from the `category` prop so
-  // direct loads of /category/[slug] (SSR / refresh / shared link) still work.
+
   const [activeCategory, setActiveCategory] = useState(category)
   const navRef = useRef(null)
-
-  // Re-sync if the prop ever changes (e.g. a real navigation to /category/[slug]
-  // from somewhere else in the app, such as a footer link or search redirect).
-  useEffect(() => {
-    setActiveCategory(category)
-  }, [category])
 
   const filteredProducts =
     activeCategory === 'All'
@@ -164,19 +162,10 @@ const MainPage = ({ category = 'All' }) => {
     [filteredProducts],
   )
 
-  const navCategories = useMemo(() => {
-    const unique = [...new Set(products.map((product) => product.category).filter(Boolean))]
-    return [
-      { id: 1, name: "All" },
-      ...unique.map((name, index) => ({ id: index + 2, name })),
-    ]
-  }, [products])
 
   const dealProduct = filteredProducts[0]
 
-  // Instant client-side filter: updates state (no refetch) and shallow-updates
-  // the URL via pushState so it stays shareable/bookmarkable without
-  // triggering a Next.js route navigation / remount.
+
   const handleCategorySelect = useCallback((name) => {
     setActiveCategory(name)
     if (typeof window !== 'undefined') {
@@ -220,13 +209,11 @@ const MainPage = ({ category = 'All' }) => {
           className="mx-auto flex w-[95%] gap-2 overflow-x-auto py-5 scrollbar-hide md:w-[88%] md:justify-center"
         >
           {navCategories.map((cat) => {
-            const isActive = activeCategory === cat.name
+            const isActive = activeCategory === "All" && cat.name === "All"
             return (
-              <button
+              <span
                 key={cat.id}
-                type="button"
-                onClick={() => handleCategorySelect(cat.name)}
-                className={`relative rounded-full px-5 py-2.5 text-xs font-medium transition-colors ${isActive ? "text-white" : "bg-white text-gray-700 hover:bg-gray-100"
+                className={`relative rounded-full px-5 py-2.5 text-xs font-medium transition-colors ${isActive ? "text-white" : "bg-white text-gray-700"
                   }`}
               >
                 {isActive && (
@@ -238,7 +225,7 @@ const MainPage = ({ category = 'All' }) => {
                   />
                 )}
                 {cat.name}
-              </button>
+              </span>
             )
           })}
         </nav>

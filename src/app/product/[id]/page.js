@@ -41,11 +41,11 @@ function ProductImage({ src, alt, className, sizes, priority = false }) {
   )
 }
 
-const reviews = [
-  { name: "Eleanor Collins", comment: "Would not recommend!" },
-  { name: "Lucas Gordon", comment: "Very satisfied!" },
-  { name: "Eleanor Collins", comment: "Highly impressed!" },
-]
+// const reviews = [
+//   { name: "Eleanor Collins", comment: "Would not recommend!" },
+//   { name: "Lucas Gordon", comment: "Very satisfied!" },
+//   { name: "Eleanor Collins", comment: "Highly impressed!" },
+// ]
 
 export default function ProductDetailPage({ params }) {
   const { id } = use(params)
@@ -264,7 +264,7 @@ export default function ProductDetailPage({ params }) {
               ) : null}
             </section>
 
-            <section className="rounded-[28px] border border-white/80 bg-white/95 p-6 shadow-[0_8px_40px_rgba(40,14,137,0.06)] lg:p-7 dark:border-white/10 dark:bg-surface dark:shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
+            {/* <section className="rounded-[28px] border border-white/80 bg-white/95 p-6 shadow-[0_8px_40px_rgba(40,14,137,0.06)] lg:p-7 dark:border-white/10 dark:bg-surface dark:shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
               <p className="text-xs font-bold uppercase tracking-[0.32em] text-gray-400 dark:text-gray-500">
                 Reviews
               </p>
@@ -291,7 +291,7 @@ export default function ProductDetailPage({ params }) {
                   </div>
                 ))}
               </div>
-            </section>
+            </section> */}
           </div>
         </div>
       </main>
