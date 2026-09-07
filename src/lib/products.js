@@ -96,3 +96,46 @@ export function groupProductsByCategory(products) {
     products: items,
   }))
 }
+
+export function normalizeCategory(apiCategory) {
+  const name = apiCategory.name || apiCategory.category || "Untitled category"
+  const image = apiCategory.image?.url || apiCategory.image?.secure_url || apiCategory.image || "/thumbnail.webp"
+
+  return {
+    id: apiCategory._id || apiCategory.id || name,
+    name,
+    image,
+    publicId: apiCategory.image?.publicId || apiCategory.image?.public_id || "",
+    fileType: apiCategory.image?.fileType || apiCategory.image?.format || "",
+    createdAt: apiCategory.createdAt || "",
+    updatedAt: apiCategory.updatedAt || "",
+  }
+}
+
+export async function fetchProductCategories({ token } = {}) {
+  if (!API_URL) {
+    throw new Error("NEXT_PUBLIC_BACKEND_URL is missing.")
+  }
+
+  const response = await fetch(`${API_URL}/api/v1/admin/categories`, {
+    cache: "no-store",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  })
+
+  if (!response.ok) {
+    const error = new Error("Failed to fetch categories.")
+    error.status = response.status
+    throw error
+  }
+
+  const data = await response.json()
+  const list = Array.isArray(data.categories)
+    ? data.categories
+    : Array.isArray(data.category)
+      ? data.category
+      : Array.isArray(data)
+        ? data
+        : []
+
+  return list.map(normalizeCategory)
+}
