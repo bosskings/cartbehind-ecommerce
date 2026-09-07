@@ -11,6 +11,7 @@ import {
   ClipboardList,
   ChevronRight,
   Edit3,
+  Image as ImageIcon,
   ImagePlus,
   LayoutDashboard,
   LogOut,
@@ -23,6 +24,7 @@ import {
   ShoppingBag,
   Sun,
   Truck,
+  Trash2,
   UploadCloud,
   Users,
   X,
@@ -55,7 +57,31 @@ const sections = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "orders", label: "Orders", icon: ClipboardList },
   { id: "upload", label: "Upload Product", icon: PackagePlus },
+  { id: "categoryImages", label: "Category Images", icon: ImageIcon },
   { id: "products", label: "Products", icon: Boxes },
+]
+
+const productCategoryOptions = [
+  "Flowers",
+  "Necklace",
+  "Wristwatches",
+  "Military wears",
+  "Customized Gifts",
+  "Bags and Crossbody bags",
+  "Teddy bear",
+  "Sex toys",
+  "Clothings",
+  "Chocolates and cakes Wines",
+  "Fruits basket and box",
+  "Perfumes, Deodorants and creams",
+  "love packages",
+  "Car keys",
+  "House key",
+  "Greeting Cards",
+  "Supplements",
+  "Letter and Documents",
+  "Rings",
+  "Bracelets",
 ]
 
 const RECENT_PRODUCTS_LIMIT = 5
@@ -153,6 +179,7 @@ export default function AdminPage() {
   const [form, setForm] = useState(emptyForm)
   const [editingProduct, setEditingProduct] = useState(null)
   const [editingImageFile, setEditingImageFile] = useState(null)
+  const [productPendingDelete, setProductPendingDelete] = useState(null)
   const [orders, setOrders] = useState([])
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [ordersError, setOrdersError] = useState("")
@@ -163,7 +190,9 @@ export default function AdminPage() {
   const [transitDetailsOrder, setTransitDetailsOrder] = useState(null)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [isUploadingProduct, setIsUploadingProduct] = useState(false)
+  const [deletingProductId, setDeletingProductId] = useState(null)
   const [query, setQuery] = useState("")
+  const [categoryImages, setCategoryImages] = useState({})
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { theme, toggleTheme, mounted } = useTheme()
   const { logoutAdmin } = useAuth()
@@ -451,6 +480,83 @@ export default function AdminPage() {
 
   const handleRefreshProducts = () => {
     loadProducts()
+  }
+
+  const requestDeleteProduct = (product) => {
+    if (!product?.id) return
+    setProductPendingDelete(product)
+  }
+
+  const closeDeleteProductModal = () => {
+    if (deletingProductId) return
+    setProductPendingDelete(null)
+  }
+
+  const handleDeleteProduct = async () => {
+    const product = productPendingDelete
+    if (!product?.id) return
+
+    const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL
+    const token = getAdminToken()
+
+    if (!API_URL) {
+      toast.error("NEXT_PUBLIC_BACKEND_URL is missing.")
+      return
+    }
+
+    if (!token) {
+      redirectToAdminLogin()
+      return
+    }
+
+    setDeletingProductId(product.id)
+
+    try {
+      const response = await fetch(`${API_URL}/api/v1/admin/delete-item/${encodeURIComponent(product.id)}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        const error = new Error(data?.message || "Product delete failed.")
+        error.status = response.status
+        throw error
+      }
+
+      setProducts((current) => current.filter((item) => item.id !== product.id))
+      setProductPendingDelete(null)
+      toast.success(data?.message || "Product deleted successfully.")
+    } catch (error) {
+      if (isAdminAuthError(error)) {
+        redirectToAdminLogin()
+        return
+      }
+      toast.error(error.message || "Product delete failed. Please try again.")
+    } finally {
+      setDeletingProductId(null)
+    }
+  }
+
+  const handleCategoryImageChange = (category, event) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.")
+      event.target.value = ""
+      return
+    }
+
+    const previewUrl = URL.createObjectURL(file)
+    setCategoryImages((current) => ({
+      ...current,
+      [category]: previewUrl,
+    }))
+    event.target.value = ""
   }
   const openEditProduct = (product) => {
     setEditingImageFile(null)
@@ -836,12 +942,20 @@ export default function AdminPage() {
                   />
                 </Field>
                 <Field label="Category">
-                  <input
+                  <select
                     className={inputClass()}
                     value={form.category}
                     onChange={(event) => updateForm("category", event.target.value)}
-                    placeholder="decoration"
-                  />
+                  >
+                    <option value="" disabled>
+                      Select category
+                    </option>
+                    {productCategoryOptions.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
                 <Field label="Price">
                   <input
@@ -923,6 +1037,63 @@ export default function AdminPage() {
             </section>
           )}
 
+          {activeSection === "categoryImages" && (
+            <section className="rounded-2xl border border-white/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-[#16131f] sm:p-7">
+              <div className="mb-6 flex items-center gap-3">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-(--theme) text-(--theme-second)">
+                  <ImageIcon size={22} />
+                </span>
+                <div>
+                  <h2 className="text-xl font-black">Category Images</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Add or replace the display image for each storefront category.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3">
+                {productCategoryOptions.map((category) => {
+                  const preview = categoryImages[category]
+                  return (
+                    <article
+                      key={category}
+                      className="flex min-w-0 items-center gap-4 rounded-xl border border-gray-100 bg-[#f7f5fb] p-3 dark:border-white/10 dark:bg-[#12101a]"
+                    >
+                      <div
+                        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-dashed border-gray-300 bg-white bg-cover bg-center text-(--theme) dark:border-white/15 dark:bg-[#16131f] sm:h-20 sm:w-20"
+                        style={preview ? { backgroundImage: `url("${preview}")` } : undefined}
+                      >
+                        {!preview && <ImagePlus size={22} />}
+                      </div>
+                      <p className="min-w-0 flex-1 truncate text-sm font-black text-gray-900 dark:text-gray-100 sm:text-base">
+                        {category}
+                      </p>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 text-xs font-black text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200 sm:px-4">
+                          <Edit3 size={15} />
+                          <span className="hidden sm:inline">Edit picture</span>
+                          <span className="sm:hidden">Edit</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="sr-only"
+                            onChange={(event) => handleCategoryImageChange(category, event)}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          disabled={!preview}
+                          className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-(--theme) px-3 text-xs font-black text-(--theme-second) transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+                        >
+                          Upload
+                        </button>
+                      </div>
+                    </article>
+                  )
+                })}
+              </div>
+            </section>
+          )}
           {activeSection === "products" && (
             <section className="rounded-2xl border border-white/80 bg-white p-4 shadow-[0_12px_40px_rgba(15,23,42,0.06)] dark:border-white/10 dark:bg-[#16131f] sm:p-6">
               <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -962,7 +1133,7 @@ export default function AdminPage() {
                           <th className="px-4 py-4">Category</th>
                           <th className="px-4 py-4">Price</th>
                           <th className="px-4 py-4">Stock</th>
-                          {/* <th className="px-4 py-4 text-right">Action</th> */}
+                          <th className="px-4 py-4 text-right">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-white/10">
@@ -980,16 +1151,17 @@ export default function AdminPage() {
                             <td className="px-4 py-4 text-gray-600 dark:text-gray-300">{product.category}</td>
                             <td className="px-4 py-4 font-bold">{formatNaira(product.price)}</td>
                             <td className="px-4 py-4">{formatNumber(product.stock)}</td>
-                            {/* <td className="px-4 py-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => openEditProduct(product)}
-                            className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-4 text-sm font-bold text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200"
-                          >
-                            <Edit3 size={16} />
-                            Edit
-                          </button>
-                        </td> */}
+                            <td className="px-4 py-4 text-right">
+                              <button
+                                type="button"
+                                disabled={deletingProductId === product.id}
+                                onClick={() => requestDeleteProduct(product)}
+                                className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-red-200 px-4 text-sm font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"
+                              >
+                                <Trash2 size={16} />
+                                {deletingProductId === product.id ? "Deleting..." : "Delete"}
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -1006,8 +1178,14 @@ export default function AdminPage() {
                             <p className="text-xs text-gray-500 dark:text-gray-400">{product.brand} / {product.category}</p>
                             <p className="mt-2 text-sm font-black">{formatNaira(product.price)}</p>
                           </div>
-                          <button type="button" onClick={() => openEditProduct(product)} className="cursor-pointer rounded-full bg-white p-2 text-(--theme) shadow-sm dark:bg-[#16131f]">
-                            <Edit3 size={16} />
+                          <button
+                            type="button"
+                            disabled={deletingProductId === product.id}
+                            onClick={() => requestDeleteProduct(product)}
+                            aria-label={`Delete ${product.title}`}
+                            className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white text-red-600 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#16131f] dark:text-red-300 dark:hover:bg-red-500/10"
+                          >
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </article>
@@ -1037,6 +1215,43 @@ export default function AdminPage() {
         />
       )}
 
+      {productPendingDelete && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4">
+          <div className="w-full max-w-md rounded-t-3xl border border-white/10 bg-white p-5 shadow-2xl dark:bg-[#16131f] sm:rounded-2xl sm:p-6">
+            <div className="flex items-start gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300">
+                <Trash2 size={22} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="text-lg font-black text-gray-950 dark:text-white">Delete product?</h2>
+                <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400">
+                  This will remove <span className="font-bold text-gray-800 dark:text-gray-200">{productPendingDelete.title}</span> from the product catalog.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                disabled={Boolean(deletingProductId)}
+                onClick={closeDeleteProductModal}
+                className="h-11 cursor-pointer rounded-xl border border-gray-200 px-5 text-sm font-bold text-gray-600 transition hover:border-(--theme) hover:text-(--theme) disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={Boolean(deletingProductId)}
+                onClick={handleDeleteProduct}
+                className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-black text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Trash2 size={17} />
+                {deletingProductId ? "Deleting..." : "Delete product"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {editingProduct && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-0 sm:items-center sm:p-4">
           <form onSubmit={handleSaveEdit} className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl border border-white/10 bg-white p-5 shadow-2xl dark:bg-[#16131f] sm:rounded-2xl sm:p-6">
