@@ -162,6 +162,15 @@ const MainPage = ({ category = 'All' }) => {
     [filteredProducts],
   )
 
+  const exploreCategories = useMemo(
+    () =>
+      groupProductsByCategory(products).map(({ category: categoryName, products: categoryProducts }) => ({
+        id: categoryName,
+        name: categoryName,
+        image: categoryProducts[0]?.image || "/thumbnail.webp",
+      })),
+    [products],
+  )
 
   const dealProduct = filteredProducts[0]
 
@@ -238,7 +247,7 @@ const MainPage = ({ category = 'All' }) => {
           className="relative w-full"
         >
           <div className="mx-auto w-full">
-            <CategoryCarousel />
+            <CategoryCarousel categories={exploreCategories} activeCategory={activeCategory} onCategorySelect={handleCategorySelect} />
           </div>
         </motion.section>
 

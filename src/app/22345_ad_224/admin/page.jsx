@@ -37,7 +37,7 @@ import { Field, inputClass } from "@/components/admin/formUi"
 import { formatOrderDate } from "@/components/admin/transitUtils"
 import { getAdminToken, uploadToCloudinary } from "@/lib/cloudinary"
 import { fetchAdminOrders, fetchAdminOverview, getApiErrorMessage, isAdminAuthError } from "@/lib/orders"
-import { fetchProducts } from "@/lib/products"
+import { fetchProductCategories, fetchProducts, normalizeCategory } from "@/lib/products"
 import { ADMIN_LOGIN_PATH } from "@/lib/adminRoutes"
 
 const emptyForm = {
@@ -61,28 +61,6 @@ const sections = [
   { id: "products", label: "Products", icon: Boxes },
 ]
 
-const productCategoryOptions = [
-  "Flowers",
-  "Necklace",
-  "Wristwatches",
-  "Military wears",
-  "Customized Gifts",
-  "Bags and Crossbody bags",
-  "Teddy bear",
-  "Sex toys",
-  "Clothings",
-  "Chocolates and cakes Wines",
-  "Fruits basket and box",
-  "Perfumes, Deodorants and creams",
-  "love packages",
-  "Car keys",
-  "House key",
-  "Greeting Cards",
-  "Supplements",
-  "Letter and Documents",
-  "Rings",
-  "Bracelets",
-]
 
 const RECENT_PRODUCTS_LIMIT = 5
 
@@ -192,7 +170,11 @@ export default function AdminPage() {
   const [isUploadingProduct, setIsUploadingProduct] = useState(false)
   const [deletingProductId, setDeletingProductId] = useState(null)
   const [query, setQuery] = useState("")
+  const [categories, setCategories] = useState([])
+  const [categoriesLoading, setCategoriesLoading] = useState(false)
+  const [categoriesError, setCategoriesError] = useState("")
   const [categoryImages, setCategoryImages] = useState({})
+  const [uploadingCategoryId, setUploadingCategoryId] = useState(null)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { theme, toggleTheme, mounted } = useTheme()
   const { logoutAdmin } = useAuth()
@@ -260,6 +242,29 @@ export default function AdminPage() {
       setProductsLoading(false)
     }
   }, [])
+
+  const loadCategories = useCallback(async () => {
+    const token = getAdminToken()
+    if (!token) {
+      redirectToAdminLogin()
+      return
+    }
+
+    setCategoriesLoading(true)
+    setCategoriesError("")
+    try {
+      setCategories(await fetchProductCategories({ token }))
+    } catch (error) {
+      if (isAdminAuthError(error)) {
+        redirectToAdminLogin()
+        return
+      }
+      setCategories([])
+      setCategoriesError(error.message || "Could not load categories.")
+    } finally {
+      setCategoriesLoading(false)
+    }
+  }, [redirectToAdminLogin])
   const closeTransitEditor = useCallback(() => setTransitEditorOrder(null), [])
   const closeTransitDetails = useCallback(() => setTransitDetailsOrder(null), [])
 
@@ -280,6 +285,12 @@ export default function AdminPage() {
     const timer = window.setTimeout(loadProducts, 0)
     return () => window.clearTimeout(timer)
   }, [activeSection, loadProducts])
+
+  useEffect(() => {
+    if (activeSection !== "upload" && activeSection !== "categoryImages") return undefined
+    const timer = window.setTimeout(loadCategories, 0)
+    return () => window.clearTimeout(timer)
+  }, [activeSection, loadCategories])
   const hasUploadedImage = Boolean(form.url && form.publicId && form.fileType)
 
   const stats = useMemo(
@@ -554,14 +565,130 @@ export default function AdminPage() {
     const previewUrl = URL.createObjectURL(file)
     setCategoryImages((current) => ({
       ...current,
-      [category]: previewUrl,
+      [category.id]: { file, preview: previewUrl },
     }))
     event.target.value = ""
+  }
+
+  const handleUploadCategoryImage = async (category) => {
+    const selectedImage = categoryImages[category.id]
+    if (!selectedImage?.file) return
+
+    const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL
+    const token = getAdminToken()
+
+    if (!API_URL) {
+      toast.error("NEXT_PUBLIC_BACKEND_URL is missing.")
+      return
+    }
+
+    if (!token) {
+      redirectToAdminLogin()
+      return
+    }
+
+    setUploadingCategoryId(category.id)
+
+    try {
+      const uploaded = await uploadToCloudinary(selectedImage.file)
+      const response = await fetch(`${API_URL}/api/v1/admin/update-category-img/${encodeURIComponent(category.id)}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: category.name,
+          url: uploaded.secure_url || uploaded.url || "",
+          publicId: uploaded.public_id || "",
+          fileType: uploaded.format || "",
+        }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        const error = new Error(data?.message || "Category image upload failed.")
+        error.status = response.status
+        throw error
+      }
+
+      const updatedCategory = data?.category ? normalizeCategory(data.category) : {
+        ...category,
+        image: uploaded.secure_url || uploaded.url || selectedImage.preview,
+        publicId: uploaded.public_id || "",
+        fileType: uploaded.format || "",
+      }
+
+      setCategories((current) =>
+        current.map((item) => (item.id === category.id ? updatedCategory : item)),
+      )
+      setCategoryImages((current) => {
+        const next = { ...current }
+        delete next[category.id]
+        return next
+      })
+      toast.success(data?.message || "Category image updated successfully.")
+    } catch (error) {
+      if (isAdminAuthError(error)) {
+        redirectToAdminLogin()
+        return
+      }
+      toast.error(error.message || "Category image upload failed. Please try again.")
+    } finally {
+      setUploadingCategoryId(null)
+    }
   }
   const openEditProduct = (product) => {
     setEditingImageFile(null)
     setEditingProduct(product)
   }
+
+  // const handleSaveEdit = async (event) => {
+  //   event.preventDefault()
+  //   if (!editingProduct) return
+
+  //   if (!editingProduct.title.trim()) {
+  //     toast.error("Please enter a product name.")
+  //     return
+  //   }
+
+  //   if (!Number(editingProduct.price) || Number(editingProduct.price) <= 0) {
+  //     toast.error("Please enter a valid product price.")
+  //     return
+  //   }
+
+  //   setIsUploadingProduct(true)
+
+  //   try {
+  //     let imageUrl = editingProduct.image
+
+  //     if (editingImageFile) {
+  //       const data = await uploadToCloudinary(editingImageFile)
+  //       imageUrl = data.secure_url || data.url
+  //     }
+
+  //     const updatedProduct = normalizeProduct({
+  //       ...editingProduct,
+  //       image: imageUrl,
+  //     })
+
+  //     setProducts((current) =>
+  //       current.map((product) => (product.id === updatedProduct.id ? updatedProduct : product)),
+  //     )
+  //     setEditingProduct(null)
+  //     setEditingImageFile(null)
+  //     toast.success("Product updated successfully.")
+  //   } catch (error) {
+  //     if (isAdminAuthError(error)) {
+  //       redirectToAdminLogin()
+  //       return
+  //     }
+  //     toast.error(error.message || "Image upload failed. Please try again.")
+  //   } finally {
+  //     setIsUploadingProduct(false)
+  //   }
+  // }
 
   const handleSaveEdit = async (event) => {
     event.preventDefault()
@@ -577,37 +704,84 @@ export default function AdminPage() {
       return
     }
 
+    const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL
+    const token = getAdminToken()
+
+    if (!API_URL) {
+      toast.error("NEXT_PUBLIC_BACKEND_URL is missing.")
+      return
+    }
+
+    if (!token) {
+      redirectToAdminLogin()
+      return
+    }
+
     setIsUploadingProduct(true)
 
     try {
       let imageUrl = editingProduct.image
+      let publicId = editingProduct.publicId || ""
+      let fileType = editingProduct.fileType || ""
 
       if (editingImageFile) {
-        const data = await uploadToCloudinary(editingImageFile)
-        imageUrl = data.secure_url || data.url
+        const uploaded = await uploadToCloudinary(editingImageFile)
+        imageUrl = uploaded.secure_url || uploaded.url || imageUrl
+        publicId = uploaded.public_id || publicId
+        fileType = uploaded.format || fileType
       }
 
-      const updatedProduct = normalizeProduct({
-        ...editingProduct,
-        image: imageUrl,
-      })
+      const response = await fetch(
+        `${API_URL}/api/v1/admin/update-item/${encodeURIComponent(editingProduct.id)}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: editingProduct.title.trim(),
+            description: editingProduct.description || "",
+            price: Number(editingProduct.price),
+            category: editingProduct.category || "",
+            stock: Number(editingProduct.stock) || 0,
+            url: imageUrl,
+            publicId,
+            fileType,
+          }),
+        }
+      )
+
+      const data = await response.json().catch(() => ({}))
+
+      if (!response.ok) {
+        const error = new Error(data?.message || "Product update failed.")
+        error.status = response.status
+        throw error
+      }
+
+      const updatedProduct = normalizeProduct(
+        data?.product ? data.product : { ...editingProduct, image: imageUrl, publicId, fileType }
+      )
 
       setProducts((current) =>
-        current.map((product) => (product.id === updatedProduct.id ? updatedProduct : product)),
+        current.map((product) => (product.id === updatedProduct.id ? updatedProduct : product))
       )
       setEditingProduct(null)
       setEditingImageFile(null)
-      toast.success("Product updated successfully.")
+      toast.success(data?.message || "Product updated successfully.")
     } catch (error) {
       if (isAdminAuthError(error)) {
         redirectToAdminLogin()
         return
       }
-      toast.error(error.message || "Image upload failed. Please try again.")
+      toast.error(error.message || "Product update failed. Please try again.")
     } finally {
       setIsUploadingProduct(false)
     }
   }
+
+
 
   const isDark = mounted && theme === "dark"
   const isBusy = isUploadingImage || isUploadingProduct
@@ -950,9 +1124,9 @@ export default function AdminPage() {
                     <option value="" disabled>
                       Select category
                     </option>
-                    {productCategoryOptions.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.name}>
+                        {category.name}
                       </option>
                     ))}
                   </select>
@@ -1051,47 +1225,61 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="grid gap-3">
-                {productCategoryOptions.map((category) => {
-                  const preview = categoryImages[category]
-                  return (
-                    <article
-                      key={category}
-                      className="flex min-w-0 items-center gap-4 rounded-xl border border-gray-100 bg-[#f7f5fb] p-3 dark:border-white/10 dark:bg-[#12101a]"
-                    >
-                      <div
-                        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-dashed border-gray-300 bg-white bg-cover bg-center text-(--theme) dark:border-white/15 dark:bg-[#16131f] sm:h-20 sm:w-20"
-                        style={preview ? { backgroundImage: `url("${preview}")` } : undefined}
+              {categoriesLoading ? (
+                <p className="rounded-xl bg-[#f7f5fb] px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#12101a]">Loading categories...</p>
+              ) : categoriesError ? (
+                <div className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-600 sm:flex-row sm:items-center sm:justify-between">
+                  <span>{categoriesError}</span>
+                  <button type="button" onClick={loadCategories} className="font-bold underline">Try again</button>
+                </div>
+              ) : categories.length ? (
+                <div className="grid gap-3">
+                  {categories.map((category) => {
+                    const pendingImage = categoryImages[category.id]
+                    const preview = pendingImage?.preview || category.image
+                    const isUploadingCategory = uploadingCategoryId === category.id
+                    return (
+                      <article
+                        key={category.id}
+                        className="flex min-w-0 items-center gap-4 rounded-xl border border-gray-100 bg-[#f7f5fb] p-3 dark:border-white/10 dark:bg-[#12101a]"
                       >
-                        {!preview && <ImagePlus size={22} />}
-                      </div>
-                      <p className="min-w-0 flex-1 truncate text-sm font-black text-gray-900 dark:text-gray-100 sm:text-base">
-                        {category}
-                      </p>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 text-xs font-black text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200 sm:px-4">
-                          <Edit3 size={15} />
-                          <span className="hidden sm:inline">Edit picture</span>
-                          <span className="sm:hidden">Edit</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="sr-only"
-                            onChange={(event) => handleCategoryImageChange(category, event)}
-                          />
-                        </label>
-                        <button
-                          type="button"
-                          disabled={!preview}
-                          className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-(--theme) px-3 text-xs font-black text-(--theme-second) transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+                        <div
+                          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-dashed border-gray-300 bg-white bg-cover bg-center text-(--theme) dark:border-white/15 dark:bg-[#16131f] sm:h-20 sm:w-20"
+                          style={preview ? { backgroundImage: `url("${preview}")` } : undefined}
                         >
-                          Upload
-                        </button>
-                      </div>
-                    </article>
-                  )
-                })}
-              </div>
+                          {!preview && <ImagePlus size={22} />}
+                        </div>
+                        <p className="min-w-0 flex-1 truncate text-sm font-black text-gray-900 dark:text-gray-100 sm:text-base">
+                          {category.name}
+                        </p>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 text-xs font-black text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200 sm:px-4">
+                            <Edit3 size={15} />
+                            <span className="hidden sm:inline">Edit picture</span>
+                            <span className="sm:hidden">Edit</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="sr-only"
+                              onChange={(event) => handleCategoryImageChange(category, event)}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            disabled={!pendingImage?.file || isUploadingCategory}
+                            onClick={() => handleUploadCategoryImage(category)}
+                            className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-(--theme) px-3 text-xs font-black text-(--theme-second) transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+                          >
+                            {isUploadingCategory ? "Uploading..." : "Upload"}
+                          </button>
+                        </div>
+                      </article>
+                    )
+                  })}
+                </div>
+              ) : (
+                <p className="rounded-xl bg-[#f7f5fb] px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#12101a]">No categories found.</p>
+              )}
             </section>
           )}
           {activeSection === "products" && (
@@ -1151,16 +1339,27 @@ export default function AdminPage() {
                             <td className="px-4 py-4 text-gray-600 dark:text-gray-300">{product.category}</td>
                             <td className="px-4 py-4 font-bold">{formatNaira(product.price)}</td>
                             <td className="px-4 py-4">{formatNumber(product.stock)}</td>
+
                             <td className="px-4 py-4 text-right">
-                              <button
-                                type="button"
-                                disabled={deletingProductId === product.id}
-                                onClick={() => requestDeleteProduct(product)}
-                                className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-red-200 px-4 text-sm font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"
-                              >
-                                <Trash2 size={16} />
-                                {deletingProductId === product.id ? "Deleting..." : "Delete"}
-                              </button>
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditProduct(product)}
+                                  className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-4 text-sm font-bold text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200"
+                                >
+                                  <Edit3 size={16} />
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={deletingProductId === product.id}
+                                  onClick={() => requestDeleteProduct(product)}
+                                  className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-red-200 px-4 text-sm font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"
+                                >
+                                  <Trash2 size={16} />
+                                  {deletingProductId === product.id ? "Deleting..." : "Delete"}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1178,15 +1377,25 @@ export default function AdminPage() {
                             <p className="text-xs text-gray-500 dark:text-gray-400">{product.brand} / {product.category}</p>
                             <p className="mt-2 text-sm font-black">{formatNaira(product.price)}</p>
                           </div>
-                          <button
-                            type="button"
-                            disabled={deletingProductId === product.id}
-                            onClick={() => requestDeleteProduct(product)}
-                            aria-label={`Delete ${product.title}`}
-                            className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white text-red-600 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#16131f] dark:text-red-300 dark:hover:bg-red-500/10"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openEditProduct(product)}
+                              aria-label={`Edit ${product.title}`}
+                              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white text-gray-600 shadow-sm transition hover:bg-gray-100 dark:bg-[#16131f] dark:text-gray-300 dark:hover:bg-white/10"
+                            >
+                              <Edit3 size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={deletingProductId === product.id}
+                              onClick={() => requestDeleteProduct(product)}
+                              aria-label={`Delete ${product.title}`}
+                              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white text-red-600 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#16131f] dark:text-red-300 dark:hover:bg-red-500/10"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </div>
                       </article>
                     ))}

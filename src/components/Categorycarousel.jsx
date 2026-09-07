@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -10,7 +10,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import "swiper/css";
 import "swiper/css/navigation";
 
-// ---- Category thumbnails (ct-1 … ct-16) ----
 const categories = [
   { name: "Electronics", image: "/ct-1.jpg" },
   { name: "Motorcycles", image: "/ct-2.jpg" },
@@ -29,6 +28,7 @@ const categories = [
   { name: "Sneakers", image: "/ct-15.jpg" },
   { name: "Watches", image: "/ct-16.jpg" },
 ];
+
 
 const headerReveal = {
   hidden: { opacity: 0, y: 16 },
