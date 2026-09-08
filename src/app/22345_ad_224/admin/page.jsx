@@ -33,25 +33,34 @@ import { useTheme } from "@/components/ThemeContext"
 import { useAuth } from "@/components/AuthContext"
 import TransitEditorModal from "@/components/admin/TransitEditorModal"
 import TransitDetailsModal from "@/components/admin/TransitDetailsModal"
+import MultiImageUpload from "@/components/admin/MultiImageUpload"
+import UsersSection from "@/components/admin/UsersSection"
 import { Field, inputClass } from "@/components/admin/formUi"
 import { formatOrderDate } from "@/components/admin/transitUtils"
 import { getAdminToken, uploadToCloudinary } from "@/lib/cloudinary"
 import { fetchAdminOrders, fetchAdminOverview, getApiErrorMessage, isAdminAuthError } from "@/lib/orders"
 import { fetchProductCategories, fetchProducts, normalizeCategory } from "@/lib/products"
+import { fetchAdminUsers } from "@/lib/adminUsers"
 import { ADMIN_LOGIN_PATH } from "@/lib/adminRoutes"
 
-const emptyForm = {
+const createEmptyImageSlot = () => ({
+  file: null,
+  preview: "",
+  url: "",
+  publicID: "",
+  fileType: "",
+})
+
+const createEmptyForm = () => ({
   name: "",
   description: "",
   price: "",
   category: "",
   stock: "",
-  imageFile: null,
-  imagePreview: "",
-  url: "",
-  publicId: "",
-  fileType: "",
-}
+  images: [createEmptyImageSlot(), createEmptyImageSlot(), createEmptyImageSlot()],
+})
+
+const emptyForm = createEmptyForm()
 
 const sections = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
@@ -59,6 +68,7 @@ const sections = [
   { id: "upload", label: "Upload Product", icon: PackagePlus },
   { id: "categoryImages", label: "Category Images", icon: ImageIcon },
   { id: "products", label: "Products", icon: Boxes },
+  { id: "users", label: "Users", icon: Users },
 ]
 
 
@@ -166,7 +176,8 @@ export default function AdminPage() {
   const [overviewError, setOverviewError] = useState("")
   const [transitEditorOrder, setTransitEditorOrder] = useState(null)
   const [transitDetailsOrder, setTransitDetailsOrder] = useState(null)
-  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [uploadingSlotIndex, setUploadingSlotIndex] = useState(null)
+  const [isUploadingAllImages, setIsUploadingAllImages] = useState(false)
   const [isUploadingProduct, setIsUploadingProduct] = useState(false)
   const [deletingProductId, setDeletingProductId] = useState(null)
   const [query, setQuery] = useState("")
@@ -175,6 +186,9 @@ export default function AdminPage() {
   const [categoriesError, setCategoriesError] = useState("")
   const [categoryImages, setCategoryImages] = useState({})
   const [uploadingCategoryId, setUploadingCategoryId] = useState(null)
+  const [users, setUsers] = useState([])
+  const [usersLoading, setUsersLoading] = useState(false)
+  const [usersError, setUsersError] = useState("")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { theme, toggleTheme, mounted } = useTheme()
   const { logoutAdmin } = useAuth()
@@ -265,6 +279,36 @@ export default function AdminPage() {
       setCategoriesLoading(false)
     }
   }, [redirectToAdminLogin])
+
+  const loadUsers = useCallback(async () => {
+    const token = getAdminToken()
+    if (!token) {
+      redirectToAdminLogin()
+      return
+    }
+
+    setUsersLoading(true)
+    setUsersError("")
+    try {
+      const data = await fetchAdminUsers(token)
+      setUsers(data)
+    } catch (error) {
+      if (isAdminAuthError(error)) {
+        redirectToAdminLogin()
+        return
+      }
+      setUsersError(getApiErrorMessage(error, "Could not load users."))
+    } finally {
+      setUsersLoading(false)
+    }
+  }, [redirectToAdminLogin])
+
+  const handleUserBlocked = useCallback((userId) => {
+    setUsers((current) =>
+      current.map((u) => (u.id === userId ? { ...u, active: false } : u))
+    )
+  }, [])
+
   const closeTransitEditor = useCallback(() => setTransitEditorOrder(null), [])
   const closeTransitDetails = useCallback(() => setTransitDetailsOrder(null), [])
 
@@ -291,7 +335,22 @@ export default function AdminPage() {
     const timer = window.setTimeout(loadCategories, 0)
     return () => window.clearTimeout(timer)
   }, [activeSection, loadCategories])
-  const hasUploadedImage = Boolean(form.url && form.publicId && form.fileType)
+
+  useEffect(() => {
+    if (activeSection !== "users") return undefined
+    const timer = window.setTimeout(loadUsers, 0)
+    return () => window.clearTimeout(timer)
+  }, [activeSection, loadUsers])
+
+  const uploadedImages = useMemo(
+    () => form.images.filter((img) => Boolean(img.url && img.publicID)),
+    [form.images],
+  )
+  const hasUploadedImage = uploadedImages.length > 0
+  const pendingImagesCount = useMemo(
+    () => form.images.filter((img) => Boolean(img.file && (!img.url || !img.publicID))).length,
+    [form.images],
+  )
 
   const stats = useMemo(
     () => [
@@ -378,26 +437,100 @@ export default function AdminPage() {
     setEditingProduct((current) => ({ ...current, [field]: value }))
   }
 
-  const handleUploadImage = async () => {
-    if (!form.imageFile) {
-      toast.error("Please choose a product image first.")
+  const isUploadingImage = uploadingSlotIndex !== null || isUploadingAllImages
+
+  const handleSelectSlotImage = (index, file, previewUrl) => {
+    setForm((current) => {
+      const newImages = [...current.images]
+      newImages[index] = {
+        file,
+        preview: previewUrl,
+        url: "",
+        publicID: "",
+        publicId: "",
+        public_id: "",
+        fileType: "",
+      }
+      return { ...current, images: newImages }
+    })
+  }
+
+  const handleRemoveSlotImage = (index) => {
+    setForm((current) => {
+      const newImages = [...current.images]
+      newImages[index] = createEmptyImageSlot()
+      return { ...current, images: newImages }
+    })
+  }
+
+  const handleUploadSlot = async (index) => {
+    const slot = form.images[index]
+    if (!slot?.file) {
+      toast.error("Please choose an image for this slot first.")
       return
     }
 
-    setIsUploadingImage(true)
+    setUploadingSlotIndex(index)
+    try {
+      const data = await uploadToCloudinary(slot.file)
+      setForm((current) => {
+        const newImages = [...current.images]
+        newImages[index] = {
+          ...newImages[index],
+          url: data.secure_url || data.url || "",
+          publicID: data.public_id || "",
+          publicId: data.public_id || "",
+          public_id: data.public_id || "",
+          fileType: data.format || "",
+          preview: data.secure_url || data.url || newImages[index].preview,
+        }
+        return { ...current, images: newImages }
+      })
+      toast.success(`Image ${index + 1} uploaded successfully.`)
+    } catch (error) {
+      if (isAdminAuthError(error)) {
+        redirectToAdminLogin()
+        return
+      }
+      toast.error(error.message || `Failed to upload image ${index + 1}. Please try again.`)
+    } finally {
+      setUploadingSlotIndex(null)
+    }
+  }
+
+  const handleUploadAllPendingImages = async () => {
+    const pendingSlots = form.images
+      .map((slot, index) => ({ slot, index }))
+      .filter(({ slot }) => slot.file && (!slot.url || !(slot.publicID || slot.publicId)))
+
+    if (pendingSlots.length === 0) {
+      toast.error("No pending images to upload.")
+      return
+    }
+
+    setIsUploadingAllImages(true)
+    let count = 0
 
     try {
-      const data = await uploadToCloudinary(form.imageFile)
-
-      setForm((current) => ({
-        ...current,
-        url: data.secure_url || data.url || "",
-        publicId: data.public_id || "",
-        fileType: data.format || "",
-        imagePreview: data.secure_url || data.url || current.imagePreview,
-      }))
-
-      toast.success("Product image uploaded successfully.")
+      for (const { slot, index } of pendingSlots) {
+        setUploadingSlotIndex(index)
+        const data = await uploadToCloudinary(slot.file)
+        setForm((current) => {
+          const newImages = [...current.images]
+          newImages[index] = {
+            ...newImages[index],
+            url: data.secure_url || data.url || "",
+            publicID: data.public_id || "",
+            publicId: data.public_id || "",
+            public_id: data.public_id || "",
+            fileType: data.format || "",
+            preview: data.secure_url || data.url || newImages[index].preview,
+          }
+          return { ...current, images: newImages }
+        })
+        count++
+      }
+      toast.success(`Uploaded ${count} image${count > 1 ? "s" : ""} to Cloudinary.`)
     } catch (error) {
       if (isAdminAuthError(error)) {
         redirectToAdminLogin()
@@ -405,7 +538,8 @@ export default function AdminPage() {
       }
       toast.error(error.message || "Image upload failed. Please try again.")
     } finally {
-      setIsUploadingImage(false)
+      setUploadingSlotIndex(null)
+      setIsUploadingAllImages(false)
     }
   }
 
@@ -427,8 +561,26 @@ export default function AdminPage() {
       return
     }
 
-    if (!hasUploadedImage) {
-      toast.error("Please upload the product image first.")
+    const payloadImages = form.images
+      .filter((img) => Boolean(img.url && (img.publicID || img.publicId)))
+      .map((img) => {
+        const pid = img.publicID || img.publicId || img.public_id || ""
+        return {
+          url: img.url,
+          publicID: pid,
+          publicId: pid,
+          public_id: pid,
+          fileType: img.fileType || "jpg",
+        }
+      })
+
+    if (payloadImages.length === 0) {
+      toast.error("Please upload at least one product image first.")
+      return
+    }
+
+    if (pendingImagesCount > 0) {
+      toast.error("You have selected image(s) that are not yet uploaded. Please click 'Upload all pending' first.")
       return
     }
 
@@ -447,6 +599,22 @@ export default function AdminPage() {
 
     setIsUploadingProduct(true)
 
+    const primaryImage = payloadImages[0] || {}
+    const requestBody = {
+      name: form.name.trim(),
+      description: form.description.trim(),
+      price: Number(form.price),
+      category: form.category.trim(),
+      stock: Number(form.stock),
+      images: payloadImages,
+      url: primaryImage.url || "",
+      publicId: primaryImage.publicId || "",
+      publicID: primaryImage.publicID || "",
+      fileType: primaryImage.fileType || "",
+    }
+
+    console.log("Submitting /admin/upload-item payload:", requestBody)
+
     try {
       const response = await fetch(`${API_URL}/api/v1/admin/upload-item`, {
         method: "POST",
@@ -454,20 +622,11 @@ export default function AdminPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          name: form.name.trim(),
-          description: form.description.trim(),
-          price: Number(form.price),
-          category: form.category.trim(),
-          stock: Number(form.stock),
-          url: form.url,
-          publicId: form.publicId,
-          fileType: form.fileType,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       const data = await response.json()
-      console.log(data)
+      console.log("Response from /admin/upload-item:", data)
 
       if (!response.ok) {
         const error = new Error(data?.message || "Product upload failed.")
@@ -475,7 +634,7 @@ export default function AdminPage() {
         throw error
       }
 
-      setForm(emptyForm)
+      setForm(createEmptyForm())
       toast.success(data?.message || "Product uploaded successfully.")
       await loadProducts()
     } catch (error) {
@@ -916,10 +1075,14 @@ export default function AdminPage() {
               <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {stats.map((stat) => {
                   const Icon = stat.icon
+                  const isClickable = stat.label === "Total Users"
                   return (
                     <article
                       key={stat.label}
-                      className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] max-[390px]:p-4 dark:border-white/10 dark:bg-[#16131f]"
+                      onClick={isClickable ? () => setActiveSection("users") : undefined}
+                      className={`min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] max-[390px]:p-4 dark:border-white/10 dark:bg-[#16131f] ${
+                        isClickable ? "cursor-pointer transition hover:border-(--theme)/50" : ""
+                      }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -930,7 +1093,9 @@ export default function AdminPage() {
                           <Icon size={22} />
                         </span>
                       </div>
-                      <p className="mt-3 text-xs font-medium text-gray-400">{stat.meta}</p>
+                      <p className="mt-3 text-xs font-medium text-gray-400">
+                        {stat.meta} {isClickable && "· Click to manage"}
+                      </p>
                     </article>
                   )
                 })}
@@ -1162,34 +1327,18 @@ export default function AdminPage() {
                   </Field>
                 </div>
                 <div className="lg:col-span-2">
-                  <ImageUploadField
-                    label="Product image"
-                    preview={form.imagePreview || form.url}
-                    onFileSelect={(file, previewUrl) => {
-                      setForm((current) => ({
-                        ...current,
-                        imageFile: file,
-                        imagePreview: previewUrl,
-                        url: "",
-                        publicId: "",
-                        fileType: "",
-                      }))
-                    }}
+                  <MultiImageUpload
+                    images={form.images}
+                    onSelectImage={handleSelectSlotImage}
+                    onRemoveImage={handleRemoveSlotImage}
+                    onUploadSlot={handleUploadSlot}
+                    onUploadAllPending={handleUploadAllPendingImages}
+                    uploadingSlotIndex={uploadingSlotIndex}
+                    isUploadingAll={isUploadingAllImages}
+                    disabled={isBusy}
                   />
-                  {hasUploadedImage && (
-                    <p className="mt-2 text-xs font-semibold text-emerald-600">Image ready for product upload.</p>
-                  )}
                 </div>
                 <div className="flex flex-col gap-3 pt-2 sm:flex-row lg:col-span-2">
-                  <button
-                    type="button"
-                    disabled={isBusy || !form.imageFile}
-                    onClick={handleUploadImage}
-                    className="inline-flex h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 px-6 text-sm font-black text-gray-700 transition hover:border-(--theme) hover:text-(--theme) disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-gray-200"
-                  >
-                    <UploadCloud size={18} />
-                    {isUploadingImage ? "Uploading image..." : "Upload product image"}
-                  </button>
                   <button
                     type="submit"
                     disabled={isBusy || !hasUploadedImage}
@@ -1201,7 +1350,7 @@ export default function AdminPage() {
                   <button
                     type="button"
                     disabled={isBusy}
-                    onClick={() => setForm(emptyForm)}
+                    onClick={() => setForm(createEmptyForm())}
                     className="h-12 cursor-pointer rounded-xl border border-gray-200 px-6 text-sm font-bold text-gray-600 transition hover:border-(--theme) hover:text-(--theme) disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:text-gray-300"
                   >
                     Clear Form
@@ -1403,6 +1552,16 @@ export default function AdminPage() {
                 </>
               )}
             </section>
+          )}
+          {activeSection === "users" && (
+            <UsersSection
+              users={users}
+              loading={usersLoading}
+              error={usersError}
+              onRefresh={loadUsers}
+              onUserBlocked={handleUserBlocked}
+              onAuthExpired={redirectToAdminLogin}
+            />
           )}
         </div>
       </section>

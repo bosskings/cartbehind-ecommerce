@@ -11,7 +11,7 @@ import {
 } from "react"
 import axios from "axios"
 import toast from "react-hot-toast"
-import { useAuth } from "@/components/AuthContext"
+import { useAuth, isUserAuthError } from "@/components/AuthContext"
 
 const CartContext = createContext(null)
 const CART_SYNC_DEBOUNCE_MS = 800
@@ -123,7 +123,7 @@ function isMissingActiveCartError(error) {
 }
 
 export function CartProvider({ children }) {
-  const { isUserAuthenticated, userSession } = useAuth()
+  const { isUserAuthenticated, userSession, handleUserAuthExpired } = useAuth()
   const [items, setItems] = useState(readStoredCart)
   const itemsRef = useRef(items)
   const debounceTimersRef = useRef(new Map())
@@ -285,6 +285,11 @@ export function CartProvider({ children }) {
       } catch (error) {
         if (cancelled || requestId !== cartRequestIdRef.current) return
 
+        if (isUserAuthError(error)) {
+          handleUserAuthExpired?.()
+          return
+        }
+
         if (isMissingActiveCartError(error)) {
           console.log("User cart response:", error?.response?.data)
           applyItems([])
@@ -302,7 +307,7 @@ export function CartProvider({ children }) {
     return () => {
       cancelled = true
     }
-  }, [applyItems, canSyncCart, getHeaders, syncCartAdd, syncCartUpdate])
+  }, [applyItems, canSyncCart, getHeaders, syncCartAdd, syncCartUpdate, handleUserAuthExpired])
 
   const addToCart = (product) => {
     const current = itemsRef.current

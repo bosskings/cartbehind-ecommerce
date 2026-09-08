@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useMemo, useState } from "react"
+import { createContext, useContext, useMemo, useState, useCallback, useEffect } from "react"
 import axios from "axios"
 import { Toaster } from "react-hot-toast"
 
@@ -49,6 +49,25 @@ function getBackendUrl() {
   return process.env.NEXT_PUBLIC_BACKEND_URL
 }
 
+export function isUserAuthError(error) {
+  const status = error?.response?.status || error?.status
+  const message = String(
+    error?.response?.data?.message ||
+    error?.response?.data?.error ||
+    error?.message ||
+    ""
+  ).toLowerCase()
+
+  return (
+    status === 401 ||
+    status === 403 ||
+    message.includes("expired") ||
+    message.includes("invalid token") ||
+    message.includes("jwt") ||
+    message.includes("unauthorized")
+  )
+}
+
 function getApiErrorMessage(error, fallback) {
   return error?.response?.data?.message || error?.response?.data?.error || fallback
 }
@@ -57,6 +76,43 @@ export function AuthProvider({ children }) {
   const [userSession, setUserSession] = useState(readUserSession)
   const [adminSession, setAdminSession] = useState(readAdminSession)
   const [authReady] = useState(() => typeof window !== "undefined")
+
+  const handleUserAuthExpired = useCallback((nextPath) => {
+    clearUserSession()
+    setUserSession(null)
+    if (typeof window !== "undefined") {
+      const currentPath = nextPath || `${window.location.pathname}${window.location.search || ""}`
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = `/login?next=${encodeURIComponent(currentPath)}`
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const interceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        const url = String(error?.config?.url || "")
+        const isAuthEndpoint =
+          url.includes("/login") ||
+          url.includes("/signup") ||
+          url.includes("/verifyEmail") ||
+          url.includes("/forgot-password") ||
+          url.includes("/reset-password") ||
+          url.includes("/verify-reset-code")
+
+        if (!isAuthEndpoint && isUserAuthError(error)) {
+          const isUserRequest = url.includes("/api/v1/users/") || Boolean(userSession?.authToken)
+          if (isUserRequest && !url.includes("/api/v1/admin/")) {
+            handleUserAuthExpired()
+          }
+        }
+        return Promise.reject(error)
+      },
+    )
+
+    return () => axios.interceptors.response.eject(interceptor)
+  }, [handleUserAuthExpired, userSession?.authToken])
 
   const signupUser = async (email, password) => {
     try {
@@ -266,8 +322,9 @@ export function AuthProvider({ children }) {
       resetPassword,
       logoutUser,
       logoutAdmin,
+      handleUserAuthExpired,
     }),
-    [userSession, adminSession, authReady],
+    [userSession, adminSession, authReady, handleUserAuthExpired],
   )
 
   return (

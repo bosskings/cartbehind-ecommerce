@@ -143,6 +143,13 @@ function ProductCardSkeleton() {
 const MainPage = ({ category = 'All' }) => {
   const prefersReducedMotion = useReducedMotion()
   const { products, loading, error } = useProducts()
+
+  useEffect(() => {
+    if (products) {
+      console.log('Products fetched in MainPage:', products)
+    }
+  }, [products])
+
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [testimonialIndex, setTestimonialIndex] = useState(0)
 
@@ -167,7 +174,7 @@ const MainPage = ({ category = 'All' }) => {
       groupProductsByCategory(products).map(({ category: categoryName, products: categoryProducts }) => ({
         id: categoryName,
         name: categoryName,
-        image: categoryProducts[0]?.image || "/thumbnail.webp",
+        image: categoryProducts?.image || "/thumbnail.webp",
       })),
     [products],
   )
@@ -292,14 +299,14 @@ const MainPage = ({ category = 'All' }) => {
                 <h2 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
                   {categoryName}
                 </h2>
-                <button
+                {/* <button
                   type="button"
                   onClick={() => handleViewAll(categoryName)}
                   className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.24em] text-gray-500 transition-colors hover:text-(--theme) dark:text-gray-400"
                 >
                   View all
                   <ChevronRight size={14} />
-                </button>
+                </button> */}
               </div>
               <motion.div
                 variants={staggerContainer}

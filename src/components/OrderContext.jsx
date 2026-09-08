@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
-import { useAuth } from "@/components/AuthContext"
+import { useAuth, isUserAuthError } from "@/components/AuthContext"
 import { fetchUserOrder, fetchUserOrders, getApiErrorMessage } from "@/lib/orders"
 
 const OrderContext = createContext(null)
@@ -125,7 +125,7 @@ export function withOrderDisplayFallbacks(order) {
 }
 
 export function OrderProvider({ children }) {
-  const { isUserAuthenticated, userSession } = useAuth()
+  const { isUserAuthenticated, userSession, handleUserAuthExpired } = useAuth()
   const [orders, setOrders] = useState([])
   const [loadingOrders, setLoadingOrders] = useState(false)
   const [ordersError, setOrdersError] = useState("")
@@ -145,6 +145,12 @@ export function OrderProvider({ children }) {
       setOrders(nextOrders)
       return nextOrders
     } catch (error) {
+      if (isUserAuthError(error)) {
+        handleUserAuthExpired?.()
+        setOrders([])
+        setOrdersError("")
+        return []
+      }
       console.error(error)
       const message = getApiErrorMessage(error, "Could not load your orders.")
       setOrdersError(message)
@@ -153,7 +159,7 @@ export function OrderProvider({ children }) {
     } finally {
       setLoadingOrders(false)
     }
-  }, [authToken, isUserAuthenticated])
+  }, [authToken, isUserAuthenticated, handleUserAuthExpired])
 
   useEffect(() => {
     refreshOrders()
