@@ -18,7 +18,33 @@ import {
 const fieldClass =
   "h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none transition focus:border-(--theme) focus:bg-white dark:border-white/10 dark:bg-[#16131f] dark:text-gray-200 dark:focus:bg-[#1a1625]"
 
+const selectClass =
+  "h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none transition focus:border-(--theme) focus:bg-white dark:border-white/10 dark:bg-[#16131f] dark:text-gray-200 dark:focus:bg-[#1a1625] cursor-pointer"
+
 const formatNaira = (amount) => `₦${amount.toLocaleString("en-NG")}`
+
+const COUNTRIES = [
+  "Afghanistan","Albania","Algeria","Andorra","Angola","Antigua and Barbuda","Argentina","Armenia","Australia","Austria",
+  "Azerbaijan","Bahamas","Bahrain","Bangladesh","Barbados","Belarus","Belgium","Belize","Benin","Bhutan",
+  "Bolivia","Bosnia and Herzegovina","Botswana","Brazil","Brunei","Bulgaria","Burkina Faso","Burundi","Cabo Verde","Cambodia",
+  "Cameroon","Canada","Central African Republic","Chad","Chile","China","Colombia","Comoros","Congo (Brazzaville)","Congo (Kinshasa)",
+  "Costa Rica","Croatia","Cuba","Cyprus","Czech Republic","Denmark","Djibouti","Dominica","Dominican Republic","Ecuador",
+  "Egypt","El Salvador","Equatorial Guinea","Eritrea","Estonia","Eswatini","Ethiopia","Fiji","Finland","France",
+  "Gabon","Gambia","Georgia","Germany","Ghana","Greece","Grenada","Guatemala","Guinea","Guinea-Bissau",
+  "Guyana","Haiti","Honduras","Hungary","Iceland","India","Indonesia","Iran","Iraq","Ireland",
+  "Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kiribati","Kuwait","Kyrgyzstan",
+  "Laos","Latvia","Lebanon","Lesotho","Liberia","Libya","Liechtenstein","Lithuania","Luxembourg","Madagascar",
+  "Malawi","Malaysia","Maldives","Mali","Malta","Marshall Islands","Mauritania","Mauritius","Mexico","Micronesia",
+  "Moldova","Monaco","Mongolia","Montenegro","Morocco","Mozambique","Myanmar","Namibia","Nauru","Nepal",
+  "Netherlands","New Zealand","Nicaragua","Niger","Nigeria","North Korea","North Macedonia","Norway","Oman","Pakistan",
+  "Palau","Palestine","Panama","Papua New Guinea","Paraguay","Peru","Philippines","Poland","Portugal","Qatar",
+  "Romania","Russia","Rwanda","Saint Kitts and Nevis","Saint Lucia","Saint Vincent and the Grenadines","Samoa","San Marino",
+  "Sao Tome and Principe","Saudi Arabia","Senegal","Serbia","Seychelles","Sierra Leone","Singapore","Slovakia","Slovenia",
+  "Solomon Islands","Somalia","South Africa","South Korea","South Sudan","Spain","Sri Lanka","Sudan","Suriname","Sweden",
+  "Switzerland","Syria","Taiwan","Tajikistan","Tanzania","Thailand","Timor-Leste","Togo","Tonga","Trinidad and Tobago",
+  "Tunisia","Turkey","Turkmenistan","Tuvalu","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States",
+  "Uruguay","Uzbekistan","Vanuatu","Vatican City","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe",
+]
 
 function findMatchingOrder(orders, paymentInfo) {
   if (!orders?.length) return null
@@ -70,9 +96,11 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
   const [submitting, setSubmitting] = useState(false)
 
   const [shipping, setShipping] = useState({
-    address: "",
+    addressLine1: "",
+    addressLine2: "",
     country: "",
     state: "",
+    postcode: "",
   })
   const initializedPaymentRef = useRef(null)
 
@@ -105,7 +133,7 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
       total: Number(pendingCheckout?.total ?? subtotal) || 0,
       itemCount: Number(pendingCheckout?.itemCount ?? items.length) || 0,
     })
-    setShipping({ address: "", country: "", state: "" })
+    setShipping({ addressLine1: "", addressLine2: "", country: "", state: "", postcode: "" })
 
     let cancelled = false
 
@@ -152,8 +180,8 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     event.preventDefault()
     setError("")
 
-    if (!shipping.address.trim() || !shipping.country.trim() || !shipping.state.trim()) {
-      setError("Please fill in address, country, and state.")
+    if (!shipping.addressLine1.trim() || !shipping.country.trim() || !shipping.state.trim()) {
+      setError("Please fill in country, address, and state/province.")
       return
     }
 
@@ -167,9 +195,12 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
       const refreshedOrders = await refreshOrders()
       const matchedOrder = findMatchingOrder(refreshedOrders, paymentInfo)
       const destination = {
-        address: shipping.address.trim(),
+        address: [shipping.addressLine1.trim(), shipping.addressLine2.trim()].filter(Boolean).join(", "),
+        addressLine1: shipping.addressLine1.trim(),
+        addressLine2: shipping.addressLine2.trim(),
         country: shipping.country.trim(),
         state: shipping.state.trim(),
+        postcode: shipping.postcode.trim(),
       }
 
       const baseOrder =
@@ -213,7 +244,13 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     }
   }
 
-  const destinationText = [order?.destination?.address, order?.destination?.state, order?.destination?.country]
+  const destinationText = [
+    order?.destination?.addressLine1,
+    order?.destination?.addressLine2,
+    order?.destination?.state,
+    order?.destination?.postcode,
+    order?.destination?.country,
+  ]
     .filter(Boolean)
     .join(", ")
 
@@ -273,35 +310,68 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
                   Where should we deliver your items?
                 </p>
 
+                {/* Country */}
                 <label className="block space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                  <span className="font-semibold">Street address</span>
+                  <span className="font-semibold">Country <span className="text-red-500">*</span></span>
+                  <div className="relative">
+                    <select
+                      className={selectClass}
+                      value={shipping.country}
+                      onChange={(e) => setShipping((s) => ({ ...s, country: e.target.value }))}
+                      disabled={submitting}
+                    >
+                      <option value="">Select your country</option>
+                      {COUNTRIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">▾</span>
+                  </div>
+                </label>
+
+                {/* Address line 1 */}
+                <label className="block space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                  <span className="font-semibold">Address line 1 <span className="text-red-500">*</span></span>
                   <input
                     className={fieldClass}
-                    value={shipping.address}
-                    onChange={(e) => setShipping((s) => ({ ...s, address: e.target.value }))}
+                    value={shipping.addressLine1}
+                    onChange={(e) => setShipping((s) => ({ ...s, addressLine1: e.target.value }))}
                     placeholder="12 Admiralty Way, Lekki"
                     disabled={submitting}
                   />
                 </label>
 
+                {/* Address line 2 */}
+                <label className="block space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                  <span className="font-semibold">Address line 2 <span className="text-gray-400 font-normal text-xs">(optional)</span></span>
+                  <input
+                    className={fieldClass}
+                    value={shipping.addressLine2}
+                    onChange={(e) => setShipping((s) => ({ ...s, addressLine2: e.target.value }))}
+                    placeholder="Apartment, suite, floor, etc."
+                    disabled={submitting}
+                  />
+                </label>
+
+                {/* State & Postcode */}
                 <div className="grid gap-4 md:grid-cols-2">
                   <label className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                    <span className="font-semibold">Country</span>
-                    <input
-                      className={fieldClass}
-                      value={shipping.country}
-                      onChange={(e) => setShipping((s) => ({ ...s, country: e.target.value }))}
-                      placeholder="Nigeria"
-                      disabled={submitting}
-                    />
-                  </label>
-                  <label className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                    <span className="font-semibold">State</span>
+                    <span className="font-semibold">State / Province <span className="text-red-500">*</span></span>
                     <input
                       className={fieldClass}
                       value={shipping.state}
                       onChange={(e) => setShipping((s) => ({ ...s, state: e.target.value }))}
                       placeholder="Lagos"
+                      disabled={submitting}
+                    />
+                  </label>
+                  <label className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold">Postcode</span>
+                    <input
+                      className={fieldClass}
+                      value={shipping.postcode}
+                      onChange={(e) => setShipping((s) => ({ ...s, postcode: e.target.value }))}
+                      placeholder="100001"
                       disabled={submitting}
                     />
                   </label>

@@ -16,7 +16,7 @@ import Link from "next/link"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import CheckoutModal from "@/components/CheckoutModal"
-import { useAuth } from "@/components/AuthContext"
+import { useAuth, isUserAuthError } from "@/components/AuthContext"
 import { useOrders } from "@/components/OrderContext"
 import { fetchUserTrackedParcel } from "@/lib/orders"
 import { isSuccessfulPayment, readPendingCheckout } from "@/lib/payments"
@@ -71,7 +71,7 @@ function TrackingSkeleton() {
 
 function TrackParcelContent() {
   const { refreshOrders, withOrderDisplayFallbacks } = useOrders()
-  const { userSession } = useAuth()
+  const { userSession, handleUserAuthExpired } = useAuth()
   const searchParams = useSearchParams()
   const router = useRouter()
   const codeFromUrl = (searchParams.get("code") || "").toUpperCase()
@@ -166,6 +166,12 @@ function TrackParcelContent() {
         })
         .catch((error) => {
           if (cancelled) return
+          if (isUserAuthError(error)) {
+            handleUserAuthExpired?.()
+            setTrackedTransit(null)
+            setTrackingError("")
+            return
+          }
           console.error("User parcel tracking failed:", error)
           setTrackedTransit(null)
           if (error?.response?.status === 404) {
