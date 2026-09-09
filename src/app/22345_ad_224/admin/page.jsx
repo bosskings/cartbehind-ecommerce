@@ -352,12 +352,12 @@ export default function AdminPage() {
   }, [activeSection, loadUsers])
 
   const uploadedImages = useMemo(
-    () => form.images.filter((img) => Boolean(img.url && img.publicID)),
+    () => form.images.filter((img) => Boolean(img.url && (img.publicID || img.publicId))),
     [form.images],
   )
   const hasUploadedImage = uploadedImages.length > 0
   const pendingImagesCount = useMemo(
-    () => form.images.filter((img) => Boolean(img.file && (!img.url || !img.publicID))).length,
+    () => form.images.filter((img) => Boolean(img.file && (!img.url || !(img.publicID || img.publicId)))).length,
     [form.images],
   )
 
@@ -431,12 +431,29 @@ export default function AdminPage() {
   const filteredOrders = useMemo(() => {
     const term = query.trim().toLowerCase()
     if (!term) return orders
-    return orders.filter((order) =>
-      [order.id, order.userId, order.deliveryStatus, order.paymentStatus]
+    return orders.filter((order) => {
+      const userEmail =
+        order.email ||
+        order.userEmail ||
+        (order.userId && users.find((u) => String(u.id || u._id) === String(order.userId))?.email) ||
+        ""
+      return [order.id, order.userId, userEmail, order.deliveryStatus, order.paymentStatus]
         .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(term)),
-    )
-  }, [orders, query])
+        .some((value) => String(value).toLowerCase().includes(term))
+    })
+  }, [orders, query, users])
+
+  const getOrderUserEmail = (order) => {
+    if (order.email) return order.email
+    if (order.userEmail) return order.userEmail
+    if (order.customerEmail) return order.customerEmail
+    if (order.userId) {
+      if (typeof order.userId === "string" && order.userId.includes("@")) return order.userId
+      const matchedUser = users.find((u) => String(u.id || u._id) === String(order.userId))
+      if (matchedUser?.email) return matchedUser.email
+    }
+    return order.userId || `Order #${order.id}`
+  }
 
   const updateForm = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }))
@@ -1235,7 +1252,10 @@ export default function AdminPage() {
                       <tbody className="divide-y divide-gray-100 dark:divide-white/10">
                         {filteredOrders.map((order) => (
                           <tr key={order.id}>
-                            <td className="px-4 py-4"><p className="font-bold">{order.id}</p><p className="mt-1 text-xs text-gray-500">User {order.userId || "Unknown"}</p></td>
+                            <td className="px-4 py-4">
+                              <p className="font-bold text-gray-900 dark:text-white truncate max-w-xs">{getOrderUserEmail(order)}</p>
+                              <p className="mt-1 text-xs text-gray-500 font-mono">Order #{order.id}</p>
+                            </td>
                             <td className="px-4 py-4 text-gray-600 dark:text-gray-300">{formatOrderDate(order.datePurchased)}</td>
                             <td className="px-4 py-4 font-semibold">{order.paymentStatus || "Unknown"}</td>
                             <td className="px-4 py-4 font-semibold">{order.deliveryStatus || "PENDING"}</td>
@@ -1255,7 +1275,13 @@ export default function AdminPage() {
                   <div className="grid gap-3 p-3 lg:hidden">
                     {filteredOrders.map((order) => (
                       <article key={order.id} className="rounded-xl border border-gray-100 bg-[#f7f5fb] p-4 dark:border-white/10 dark:bg-[#12101a]">
-                        <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="truncate font-bold">{order.id}</p><p className="mt-1 text-xs text-gray-500">User {order.userId || "Unknown"}</p></div><span className="shrink-0 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-bold text-yellow-800">{order.deliveryStatus || "PENDING"}</span></div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate font-bold text-gray-900 dark:text-white">{getOrderUserEmail(order)}</p>
+                            <p className="mt-1 text-xs text-gray-500 font-mono">Order #{order.id}</p>
+                          </div>
+                          <span className="shrink-0 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-bold text-yellow-800">{order.deliveryStatus || "PENDING"}</span>
+                        </div>
                         <p className="mt-3 text-xs text-gray-500">{formatOrderDate(order.datePurchased)}</p>
                         <div className="mt-4 grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => setTransitEditorOrder(order)} className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 dark:border-white/10 dark:text-gray-200"><Truck size={16} />Create transit</button><button type="button" onClick={() => setTransitDetailsOrder(order)} className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-(--theme) text-sm font-bold text-(--theme-second)"><Search size={16} />View details</button></div>
                       </article>
