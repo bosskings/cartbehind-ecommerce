@@ -271,7 +271,7 @@ export function CartProvider({ children }) {
         const serverItems = Array.isArray(response.data?.items)
           ? response.data.items.map(normalizeServerCartItem).filter(Boolean)
           : []
-        const localItems = itemsRef.current
+        const localItems = itemsRef.current?.length ? itemsRef.current : readStoredCart()
         const mergedItems = mergeCartItems(localItems, serverItems)
 
         if (requestId !== cartRequestIdRef.current) return
@@ -298,9 +298,17 @@ export function CartProvider({ children }) {
         }
 
         if (isMissingActiveCartError(error)) {
-          console.log("User cart response:", error?.response?.data)
-          applyItems([])
-          window.localStorage.setItem("cartbehind-cart", JSON.stringify([]))
+          console.log("User cart response: active cart not found on server, preserving local cart")
+          const localItems = itemsRef.current?.length ? itemsRef.current : readStoredCart()
+          if (localItems.length > 0) {
+            applyItems(localItems)
+            for (const item of localItems) {
+              syncCartAdd(item.id, item.quantity)
+            }
+          } else {
+            applyItems([])
+            window.localStorage.setItem("cartbehind-cart", JSON.stringify([]))
+          }
           return
         }
 
