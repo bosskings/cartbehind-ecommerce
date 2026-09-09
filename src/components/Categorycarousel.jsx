@@ -1,5 +1,7 @@
-﻿"use client"
+"use client"
 
+import axios from "axios";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
@@ -10,24 +12,33 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import "swiper/css";
 import "swiper/css/navigation";
 
-const categories = [
-  { name: "Electronics", image: "/ct-1.jpg" },
-  { name: "Motorcycles", image: "/ct-2.jpg" },
-  { name: "Beauty", image: "/ct-3.jpg" },
-  { name: "Smartphones", image: "/ct-4.jpg" },
-  { name: "Sports", image: "/ct-5.jpg" },
-  { name: "Sunglasses", image: "/ct-6.jpg" },
-  { name: "Tablets", image: "/ct-7.jpg" },
-  { name: "Home Decorations", image: "/ct-8.jpg" },
-  { name: "Groceries", image: "/ct-9.jpg" },
-  { name: "Furniture", image: "/ct-10.jpg" },
-  { name: "Fragrances", image: "/ct-11.jpg" },
-  { name: "Kitchen Accessories", image: "/ct-12.jpg" },
-  { name: "Laptops", image: "/ct-13.jpg" },
-  { name: "Mens Shirts", image: "/ct-14.jpg" },
-  { name: "Sneakers", image: "/ct-15.jpg" },
-  { name: "Watches", image: "/ct-16.jpg" },
-];
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+const MotionLink = motion(Link);
+
+// Convert "Home Decorations" → "home-decorations"
+const toSlug = (name) => name.trim().toLowerCase().replace(/\s+/g, "-");
+
+// Fallback images keyed by category name (case-insensitive)
+const FALLBACK_IMAGES = {
+  "electronics": "/ct-1.jpg",
+  "motorcycles": "/ct-2.jpg",
+  "beauty": "/ct-3.jpg",
+  "smartphones": "/ct-4.jpg",
+  "sports": "/ct-5.jpg",
+  "sunglasses": "/ct-6.jpg",
+  "tablets": "/ct-7.jpg",
+  "home decorations": "/ct-8.jpg",
+  "groceries": "/ct-9.jpg",
+  "furniture": "/ct-10.jpg",
+  "fragrances": "/ct-11.jpg",
+  "kitchen accessories": "/ct-12.jpg",
+  "laptops": "/ct-13.jpg",
+  "mens shirts": "/ct-14.jpg",
+  "sneakers": "/ct-15.jpg",
+  "watches": "/ct-16.jpg",
+  "clothings": "/ct-1.jpg",
+};
 
 
 const headerReveal = {
@@ -50,6 +61,30 @@ export default function CategoryCarousel() {
   const nextRef = useRef(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        setLoading(true);
+        setFetchError(null);
+        const res = await axios.get(`${BACKEND_URL}/api/v1/users/categories`);
+        console.log("[CategoryCarousel] /users/categories response:", res);
+        const data = res.data;
+        const list = Array.isArray(data) ? data : data?.categories ?? data?.data ?? [];
+        setCategories(list);
+      } catch (err) {
+        console.error("[CategoryCarousel] Error fetching categories:", err);
+        setFetchError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchCategories();
+  }, []);
 
   return (
     <section className="w-[95%] md:w-full mx-auto py-8">
@@ -139,34 +174,46 @@ export default function CategoryCarousel() {
           }}
           className="py-2!"
         >
-          {categories.map((category) => (
-            <SwiperSlide
-              key={category.name}
-            >
-              <motion.button
-                type="button"
-                variants={itemReveal}
-                whileHover={{ y: -4 }}
-                aria-label={category.name}
-                className="group flex w-full flex-col items-center gap-2 rounded-2xl py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--theme) focus-visible:ring-offset-2"
-              >
-                <span className="relative h-16 w-16 min-[360px]:h-[72px] min-[360px]:w-[72px] shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-(--theme)/40 sm:h-28 sm:w-28 md:h-30 md:w-30">
-                  <Image
-                    src={category.image}
-                    alt=""
-                    fill
-                    sizes="112px"
-                    className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-                  />
-                  {/* Glowing ring on hover */}
-                  <span className="absolute inset-0 rounded-full ring-2 ring-transparent transition-all duration-300 group-hover:ring-(--theme)/30" />
-                </span>
-                <span className="flex h-10 items-center text-center text-sm font-medium leading-tight text-gray-600 transition-colors group-hover:text-(--theme) line-clamp-2 dark:text-gray-300">
-                  {category.name}
-                </span>
-              </motion.button>
-            </SwiperSlide>
-          ))}
+          {categories.map((category) => {
+            // Backend may return plain strings or objects with a .name field
+            const catName = typeof category === "string" ? category : (category?.name || "");
+            const fallbackImg = FALLBACK_IMAGES[catName.toLowerCase()] ?? null;
+            const catImage = (typeof category === "object" && category?.image?.url) ? category.image.url : fallbackImg;
+            const catInitial = catName.trim().charAt(0).toUpperCase();
+
+            return (
+              <SwiperSlide key={catName}>
+                <MotionLink
+                  href={`/category/${toSlug(catName)}`}
+                  variants={itemReveal}
+                  whileHover={{ y: -4 }}
+                  aria-label={`Browse ${catName}`}
+                  className="group flex w-full flex-col items-center gap-2 rounded-2xl py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--theme) focus-visible:ring-offset-2"
+                >
+                  <span className="relative h-16 w-16 min-[360px]:h-[72px] min-[360px]:w-[72px] shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-(--theme)/40 sm:h-28 sm:w-28 md:h-30 md:w-30">
+                    {catImage ? (
+                      <Image
+                        src={catImage}
+                        alt={catName}
+                        fill
+                        sizes="112px"
+                        className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#280E89]/80 to-[#6c47ff]/70 text-xl font-black text-white sm:text-2xl">
+                        {catInitial}
+                      </span>
+                    )}
+                    {/* Glowing ring on hover */}
+                    <span className="absolute inset-0 rounded-full ring-2 ring-transparent transition-all duration-300 group-hover:ring-(--theme)/30" />
+                  </span>
+                  <span className="flex h-10 items-center text-center text-sm font-medium leading-tight text-gray-600 transition-colors group-hover:text-(--theme) line-clamp-2 dark:text-gray-300">
+                    {catName}
+                  </span>
+                </MotionLink>
+              </SwiperSlide>
+            );
+          })}
         </Swiper>
       </motion.div>
     </section>

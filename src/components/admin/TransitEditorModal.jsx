@@ -59,10 +59,11 @@ export default function TransitEditorModal({ order, onClose, onSuccess, onAuthEx
       })
 
       try {
+        console.log("TransitEditorModal opening for order:", order)
         const response = await fetchAdminTransit(token, order.id)
         if (cancelled) return
 
-        console.log("Admin transit GET response:", response)
+        console.log("Entire response from GET /api/v1/admin/transit/" + order.id + ":", response)
 
         // Matches: { status, message, transit: { currentLocation: [...] } }
         const transit = getTransitFromResponse(response)
