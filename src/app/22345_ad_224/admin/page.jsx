@@ -57,6 +57,7 @@ const createEmptyForm = () => ({
   price: "",
   category: "",
   stock: "",
+  deliveryTime: "1",
   images: [createEmptyImageSlot(), createEmptyImageSlot(), createEmptyImageSlot()],
 })
 
@@ -96,6 +97,7 @@ function normalizeProduct(product, index = 0) {
     description: product.description || "",
     tags: product.tags || [],
     stock: Number(product.stock) || 0,
+    deliveryTime: product.deliveryTime != null ? String(product.deliveryTime) : "1",
     createdAt: product.createdAt || product.created_at || "",
   }
 }
@@ -587,6 +589,11 @@ export default function AdminPage() {
       return
     }
 
+    if (!form.deliveryTime) {
+      toast.error("Please select a delivery time.")
+      return
+    }
+
     const payloadImages = form.images
       .filter((img) => Boolean(img.url && (img.publicID || img.publicId)))
       .map((img) => {
@@ -632,6 +639,7 @@ export default function AdminPage() {
       price: Number(form.price),
       category: form.category.trim(),
       stock: Number(form.stock),
+      deliveryTime: String(form.deliveryTime),
       images: payloadImages,
       url: primaryImage.url || "",
       publicId: primaryImage.publicId || "",
@@ -930,6 +938,7 @@ export default function AdminPage() {
             price: Number(editingProduct.price),
             category: editingProduct.category || "",
             stock: Number(editingProduct.stock) || 0,
+            deliveryTime: String(editingProduct.deliveryTime || "1"),
             url: imageUrl,
             publicId,
             fileType,
@@ -1352,6 +1361,18 @@ export default function AdminPage() {
                   />
                 </Field>
                 <div className="lg:col-span-2">
+                  <Field label="Delivery Time">
+                    <select
+                      className={inputClass()}
+                      value={form.deliveryTime}
+                      onChange={(event) => updateForm("deliveryTime", event.target.value)}
+                    >
+                      <option value="1">Same day delivery</option>
+                      <option value="7">7 days delivery</option>
+                    </select>
+                  </Field>
+                </div>
+                <div className="lg:col-span-2">
                   <Field label="Description">
                     <textarea
                       className={inputClass("min-h-28 resize-none py-4")}
@@ -1682,6 +1703,18 @@ export default function AdminPage() {
               <Field label="Price">
                 <input type="number" min="0" className={inputClass()} value={editingProduct.price} onChange={(event) => updateEditingProduct("price", event.target.value)} />
               </Field>
+              <div className="sm:col-span-2">
+                <Field label="Delivery Time">
+                  <select
+                    className={inputClass()}
+                    value={editingProduct.deliveryTime || "1"}
+                    onChange={(event) => updateEditingProduct("deliveryTime", event.target.value)}
+                  >
+                    <option value="1">Same day delivery</option>
+                    <option value="7">7 days delivery</option>
+                  </select>
+                </Field>
+              </div>
               <div className="sm:col-span-2">
                 <ImageUploadField
                   label="Product image"
