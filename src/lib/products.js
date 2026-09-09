@@ -15,13 +15,14 @@ export function normalizeProduct(apiProduct) {
     "/thumbnail.webp"
 
   return {
-    id: apiProduct._id,
-    title: apiProduct.name,
+    id: apiProduct.id ?? apiProduct._id,
+    title: apiProduct.title ?? apiProduct.name ?? "Untitled product",
     description: apiProduct.description ?? "",
     price: apiProduct.price,
     category,
-    brand: category,
+    brand: apiProduct.brand ?? category,
     stock: apiProduct.stock ?? 0,
+    deliveryTime: apiProduct.deliveryTime != null ? String(apiProduct.deliveryTime) : "1",
     image: primaryImage,
     images: Array.isArray(apiProduct.images) ? apiProduct.images : [],
     createdAt: apiProduct.createdAt,
@@ -43,6 +44,7 @@ async function fetchProductsPage(page = 1, limit = DEFAULT_LIMIT) {
   }
 
   const data = await response.json()
+  console.log("Entire products API response from backend:", data)
   const list = Array.isArray(data.products) ? data.products : []
 
   return {

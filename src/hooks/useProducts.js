@@ -16,6 +16,7 @@ export function useProducts() {
         setLoading(true)
         setError(null)
         const data = await fetchProducts()
+        console.log("Main page useProducts loaded products:", data)
         if (!cancelled) {
           setProducts(data)
         }
