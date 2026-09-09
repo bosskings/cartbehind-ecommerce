@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, ArrowRight, Loader2, Package, ShoppingBag } from "lucide-react"
@@ -34,6 +34,16 @@ export default function OrdersPage() {
   const router = useRouter()
   const { isUserAuthenticated } = useAuth()
   const { orders, loadingOrders, ordersError, refreshOrders, formatTimestamp } = useOrders()
+  const [userEmail, setUserEmail] = useState("")
+
+  useEffect(() => {
+    try {
+      const session = JSON.parse(window.localStorage.getItem("cartbehind-user-session") || "{}")
+      setUserEmail(session?.email || "")
+    } catch {
+      setUserEmail("")
+    }
+  }, [])
 
   useEffect(() => {
     if (!isUserAuthenticated) {
@@ -155,7 +165,7 @@ export default function OrdersPage() {
                         <div className="min-w-0 flex-1 space-y-3">
                           <div className="flex flex-wrap items-center gap-2">
                             <h2 className="text-lg font-black text-gray-950 dark:text-white">
-                              Order {order.id}
+                              {userEmail || order.id}
                             </h2>
                             <span className="rounded-full bg-(--theme)/10 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-(--theme)">
                               {deliveryStatus}

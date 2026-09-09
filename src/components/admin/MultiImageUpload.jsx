@@ -90,6 +90,7 @@ export default function MultiImageUpload({
           const isSlotUploading = uploadingSlotIndex === index
           const isUploaded = Boolean(slot.url && (slot.publicID || slot.publicId))
           const isPending = Boolean(slot.file && !isUploaded)
+          const previewSrc = slot.preview || slot.url
 
           return (
             <div
@@ -102,13 +103,24 @@ export default function MultiImageUpload({
                   : "border-gray-200 bg-[#f7f5fb] hover:border-(--theme)/50 dark:border-white/10 dark:bg-[#12101a]"
               }`}
             >
-              {/* Header of card */}
+              {/* Header of card with preview thumbnail */}
               <div className="mb-2 flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <span className="block truncate text-xs font-black text-gray-800 dark:text-gray-100">
-                    {config.title} {config.required && <span className="text-red-500">*</span>}
-                  </span>
-                  <span className="block truncate text-[10px] text-gray-400">{config.subtitle}</span>
+                <div className="flex items-center gap-2 min-w-0">
+                  {previewSrc ? (
+                    <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg border border-(--theme)/40 shadow-xs">
+                      <img src={previewSrc} alt="" className="h-full w-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-(--theme)/10 text-(--theme) text-xs font-black">
+                      {index + 1}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <span className="block truncate text-xs font-black text-gray-800 dark:text-gray-100">
+                      {config.title} {config.required && <span className="text-red-500">*</span>}
+                    </span>
+                    <span className="block truncate text-[10px] text-gray-400">{config.subtitle}</span>
+                  </div>
                 </div>
 
                 {isUploaded && (
@@ -124,32 +136,56 @@ export default function MultiImageUpload({
               </div>
 
               {/* Preview or Pick Area */}
-              <div className="relative flex h-40 w-full items-center justify-center overflow-hidden rounded-xl border border-black/5 bg-white dark:border-white/10 dark:bg-[#16131f]">
-                {slot.preview ? (
-                  <div
-                    className="h-full w-full bg-cover bg-center transition-transform hover:scale-105"
-                    style={{ backgroundImage: `url("${slot.preview}")` }}
-                  />
+              <div className="group/preview relative flex h-48 w-full items-center justify-center overflow-hidden rounded-xl border border-black/5 bg-white dark:border-white/10 dark:bg-[#16131f]">
+                {previewSrc ? (
+                  <div className="relative h-full w-full">
+                    <img
+                      src={previewSrc}
+                      alt={config.title}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover/preview:scale-105"
+                    />
+                    {/* Hover actions overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 backdrop-blur-xs transition-opacity duration-200 group-hover/preview:opacity-100">
+                      <button
+                        type="button"
+                        disabled={disabled || isSlotUploading || isUploadingAll}
+                        onClick={() => fileInputRefs[index].current?.click()}
+                        className="rounded-lg bg-white/95 px-3 py-1.5 text-xs font-bold text-gray-800 shadow transition hover:bg-white hover:scale-105 cursor-pointer"
+                      >
+                        Change
+                      </button>
+                      <button
+                        type="button"
+                        disabled={disabled || isSlotUploading || isUploadingAll}
+                        onClick={() => onRemoveImage(index)}
+                        className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow transition hover:bg-red-700 hover:scale-105 cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <button
                     type="button"
                     disabled={disabled}
                     onClick={() => fileInputRefs[index].current?.click()}
-                    className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-1.5 p-3 text-center text-gray-400 transition hover:bg-gray-50 hover:text-(--theme) dark:hover:bg-white/5"
+                    className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-2 p-3 text-center transition hover:bg-gray-50/80 dark:hover:bg-white/5"
                   >
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--theme)/10 text-(--theme)">
-                      <ImagePlus size={20} />
-                    </span>
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-200">
-                      Choose {config.title}
-                    </span>
-                    <span className="text-[10px] text-gray-400">PNG, JPG up to 3MB</span>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-(--theme)/10 text-(--theme) transition-transform duration-200 hover:scale-110 shadow-xs">
+                      <ImagePlus size={24} />
+                    </div>
+                    <div>
+                      <span className="block text-xs font-bold text-gray-800 dark:text-gray-200">
+                        Upload {config.title}
+                      </span>
+                      <span className="block text-[10px] text-gray-400">Click to select photo</span>
+                    </div>
                   </button>
                 )}
 
                 {/* Slot-level uploading spinner */}
                 {isSlotUploading && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xs text-white">
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-xs text-white">
                     <RefreshCw size={22} className="animate-spin text-white mb-1" />
                     <span className="text-xs font-bold">Uploading...</span>
                   </div>
@@ -166,7 +202,7 @@ export default function MultiImageUpload({
               />
 
               {/* Card Footer Controls */}
-              {slot.preview && (
+              {previewSrc && (
                 <div className="mt-3 flex items-center justify-between gap-1.5 pt-1">
                   <div className="flex items-center gap-1.5">
                     <button
