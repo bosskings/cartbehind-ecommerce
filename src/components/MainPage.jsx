@@ -174,7 +174,7 @@ const MainPage = ({ category = 'All' }) => {
       groupProductsByCategory(products).map(({ category: categoryName, products: categoryProducts }) => ({
         id: categoryName,
         name: categoryName,
-        image: categoryProducts?.image || "/thumbnail.webp",
+        image: categoryProducts[0]?.image || "/thumbnail.webp",
       })),
     [products],
   )
