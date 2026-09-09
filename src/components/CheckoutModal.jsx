@@ -1,5 +1,6 @@
 "use client"
 
+import axios from "axios"
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { X, CheckCircle2, Package, MapPin, ArrowRight } from "lucide-react"
@@ -24,26 +25,26 @@ const selectClass =
 const formatNaira = (amount) => `₦${amount.toLocaleString("en-NG")}`
 
 const COUNTRIES = [
-  "Afghanistan","Albania","Algeria","Andorra","Angola","Antigua and Barbuda","Argentina","Armenia","Australia","Austria",
-  "Azerbaijan","Bahamas","Bahrain","Bangladesh","Barbados","Belarus","Belgium","Belize","Benin","Bhutan",
-  "Bolivia","Bosnia and Herzegovina","Botswana","Brazil","Brunei","Bulgaria","Burkina Faso","Burundi","Cabo Verde","Cambodia",
-  "Cameroon","Canada","Central African Republic","Chad","Chile","China","Colombia","Comoros","Congo (Brazzaville)","Congo (Kinshasa)",
-  "Costa Rica","Croatia","Cuba","Cyprus","Czech Republic","Denmark","Djibouti","Dominica","Dominican Republic","Ecuador",
-  "Egypt","El Salvador","Equatorial Guinea","Eritrea","Estonia","Eswatini","Ethiopia","Fiji","Finland","France",
-  "Gabon","Gambia","Georgia","Germany","Ghana","Greece","Grenada","Guatemala","Guinea","Guinea-Bissau",
-  "Guyana","Haiti","Honduras","Hungary","Iceland","India","Indonesia","Iran","Iraq","Ireland",
-  "Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya","Kiribati","Kuwait","Kyrgyzstan",
-  "Laos","Latvia","Lebanon","Lesotho","Liberia","Libya","Liechtenstein","Lithuania","Luxembourg","Madagascar",
-  "Malawi","Malaysia","Maldives","Mali","Malta","Marshall Islands","Mauritania","Mauritius","Mexico","Micronesia",
-  "Moldova","Monaco","Mongolia","Montenegro","Morocco","Mozambique","Myanmar","Namibia","Nauru","Nepal",
-  "Netherlands","New Zealand","Nicaragua","Niger","Nigeria","North Korea","North Macedonia","Norway","Oman","Pakistan",
-  "Palau","Palestine","Panama","Papua New Guinea","Paraguay","Peru","Philippines","Poland","Portugal","Qatar",
-  "Romania","Russia","Rwanda","Saint Kitts and Nevis","Saint Lucia","Saint Vincent and the Grenadines","Samoa","San Marino",
-  "Sao Tome and Principe","Saudi Arabia","Senegal","Serbia","Seychelles","Sierra Leone","Singapore","Slovakia","Slovenia",
-  "Solomon Islands","Somalia","South Africa","South Korea","South Sudan","Spain","Sri Lanka","Sudan","Suriname","Sweden",
-  "Switzerland","Syria","Taiwan","Tajikistan","Tanzania","Thailand","Timor-Leste","Togo","Tonga","Trinidad and Tobago",
-  "Tunisia","Turkey","Turkmenistan","Tuvalu","Uganda","Ukraine","United Arab Emirates","United Kingdom","United States",
-  "Uruguay","Uzbekistan","Vanuatu","Vatican City","Venezuela","Vietnam","Yemen","Zambia","Zimbabwe",
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
+  "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan",
+  "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cabo Verde", "Cambodia",
+  "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo (Brazzaville)", "Congo (Kinshasa)",
+  "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador",
+  "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France",
+  "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau",
+  "Guyana", "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland",
+  "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan",
+  "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Madagascar",
+  "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia",
+  "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal",
+  "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman", "Pakistan",
+  "Palau", "Palestine", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal", "Qatar",
+  "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino",
+  "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia",
+  "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden",
+  "Switzerland", "Syria", "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago",
+  "Tunisia", "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States",
+  "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe",
 ]
 
 function findMatchingOrder(orders, paymentInfo) {
@@ -87,13 +88,15 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
   const { isUserAuthenticated, userSession } = useAuth()
   const router = useRouter()
   const authToken = userSession?.authToken
-  const userId = userSession?.user?.id
+  const userId = userSession?.user?.id || userSession?.user?._id || userSession?.id || userSession?._id
 
   const [step, setStep] = useState("shipping")
   const [error, setError] = useState("")
   const [order, setOrder] = useState(null)
   const [checkout, setCheckout] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [completedOrderId, setCompletedOrderId] = useState(null)
+  const completedOrderIdRef = useRef(null)
 
   const [shipping, setShipping] = useState({
     addressLine1: "",
@@ -140,6 +143,20 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     void (async () => {
       try {
         const response = await completeUserCart({ authToken, userId })
+        console.log("Cart complete response in CheckoutModal:", response)
+        const extractedOrderId =
+          response?.order?._id ||
+          response?.order?.id ||
+          response?.data?.order?._id ||
+          response?.data?.order?.id ||
+          response?.data?._id ||
+          response?.data?.id ||
+          response?._id ||
+          response?.id
+        if (extractedOrderId) {
+          completedOrderIdRef.current = String(extractedOrderId)
+          setCompletedOrderId(String(extractedOrderId))
+        }
         if (response) {
           await clearCart()
         }
@@ -193,7 +210,50 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     try {
       setSubmitting(true)
       const refreshedOrders = await refreshOrders()
-      const matchedOrder = findMatchingOrder(refreshedOrders, paymentInfo)
+      console.log("Refreshed orders on submit:", refreshedOrders)
+
+      let matchedOrder = findMatchingOrder(refreshedOrders, paymentInfo)
+
+      const fallbackId = completedOrderIdRef.current || completedOrderId
+
+      if (!matchedOrder && fallbackId && refreshedOrders?.length) {
+        matchedOrder = refreshedOrders.find(
+          (o) => String(o.id || o._id) === String(fallbackId),
+        )
+      }
+
+      if (!matchedOrder && refreshedOrders?.length) {
+        // Fallback to order with pending status or no address, or the most recent order
+        matchedOrder =
+          refreshedOrders.find(
+            (o) => (o.deliveryStatus === "PENDING" || !o.destination?.address) && (o.id || o._id),
+          ) || refreshedOrders[0]
+      }
+
+      let orderIdToUpdate = matchedOrder?.id || matchedOrder?._id || fallbackId
+
+      if (!orderIdToUpdate && authToken && userId) {
+        try {
+          const compRes = await completeUserCart({ authToken, userId })
+          const compId =
+            compRes?.order?._id ||
+            compRes?.order?.id ||
+            compRes?.data?.order?._id ||
+            compRes?.data?.order?.id ||
+            compRes?.data?._id ||
+            compRes?.data?.id ||
+            compRes?._id ||
+            compRes?.id
+          if (compId) {
+            orderIdToUpdate = String(compId)
+            completedOrderIdRef.current = String(compId)
+            setCompletedOrderId(String(compId))
+          }
+        } catch (e) {
+          console.error("Attempted completeUserCart on submit:", e)
+        }
+      }
+
       const destination = {
         address: [shipping.addressLine1.trim(), shipping.addressLine2.trim()].filter(Boolean).join(", "),
         addressLine1: shipping.addressLine1.trim(),
@@ -206,7 +266,8 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
       const baseOrder =
         matchedOrder ||
         {
-          id: paymentInfo.tx_ref || "payment-confirmed",
+          id: orderIdToUpdate || paymentInfo.tx_ref || "payment-confirmed",
+          _id: orderIdToUpdate,
           status: "Processing",
           total: checkoutTotal,
           itemCount: checkoutItemCount,
@@ -222,8 +283,43 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
 
       const receiptOrder = withOrderDisplayFallbacks({
         ...baseOrder,
+        id: orderIdToUpdate || baseOrder.id,
         destination,
       })
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+      if (backendUrl && authToken) {
+        const deliveryPayload = {
+          deliveryDetails: {
+            country: destination.country,
+            city: destination.state,
+            address: destination.address,
+            stateOrProvince: destination.state,
+            postCode: destination.postcode,
+          },
+        }
+
+        console.log("Updating order ID:", orderIdToUpdate)
+        console.log("Delivery payload:", deliveryPayload)
+
+        if (orderIdToUpdate) {
+          try {
+            const updateRes = await axios.put(
+              `${backendUrl}/api/v1/users/orders/${orderIdToUpdate}`,
+              deliveryPayload,
+              { headers: { Authorization: `Bearer ${authToken}` } },
+            )
+            console.log("Order update response:", updateRes.data)
+          } catch (updateErr) {
+            console.error("Failed to update order delivery details:", updateErr)
+          }
+        } else {
+          console.error("Cannot call PUT /api/v1/users/orders/: orderId is undefined.", {
+            refreshedOrders,
+            completedOrderId: fallbackId,
+          })
+        }
+      }
 
       saveDeliveryLocation({
         orderId: receiptOrder.id,
