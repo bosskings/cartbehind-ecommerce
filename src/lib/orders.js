@@ -235,6 +235,7 @@ export async function fetchAdminTransit(authToken, orderId) {
     headers: { Authorization: `Bearer ${authToken}` },
   })
 
+  console.log("Entire raw response from GET /api/v1/admin/transit/" + orderId + ":", response.data)
   return response.data
 }
 

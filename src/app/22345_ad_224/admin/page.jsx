@@ -258,9 +258,21 @@ export default function AdminPage() {
     setProductsLoading(true)
     setProductsError("")
     try {
-      const backendProducts = await fetchProducts()
-      setProducts(backendProducts.map(normalizeProduct))
+      const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL
+      const response = await fetch(`${API_URL}/api/v1/users/products?page=1&limit=100`, { cache: "no-store" })
+      const rawData = await response.json()
+      console.log("Entire raw response from fetching products in Admin page:", rawData)
+
+      const rawList = Array.isArray(rawData)
+        ? rawData
+        : Array.isArray(rawData?.products)
+          ? rawData.products
+          : Array.isArray(rawData?.data)
+            ? rawData.data
+            : []
+      setProducts(rawList.map(normalizeProduct))
     } catch (error) {
+      console.error("Failed to load products in admin:", error)
       setProducts([])
       setProductsError(error.message || "Could not load products.")
     } finally {
@@ -1115,9 +1127,8 @@ export default function AdminPage() {
                     <article
                       key={stat.label}
                       onClick={isClickable ? () => setActiveSection("users") : undefined}
-                      className={`min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] max-[390px]:p-4 dark:border-white/10 dark:bg-[#16131f] ${
-                        isClickable ? "cursor-pointer transition hover:border-(--theme)/50" : ""
-                      }`}
+                      className={`min-w-0 max-w-full overflow-hidden rounded-2xl border border-white/80 bg-white p-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] max-[390px]:p-4 dark:border-white/10 dark:bg-[#16131f] ${isClickable ? "cursor-pointer transition hover:border-(--theme)/50" : ""
+                        }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
@@ -1526,6 +1537,7 @@ export default function AdminPage() {
                           <th className="px-4 py-4">Category</th>
                           <th className="px-4 py-4">Price</th>
                           <th className="px-4 py-4">Stock</th>
+                          <th className="px-4 py-4">Delivery Time</th>
                           <th className="px-4 py-4 text-right">Action</th>
                         </tr>
                       </thead>
@@ -1544,6 +1556,16 @@ export default function AdminPage() {
                             <td className="px-4 py-4 text-gray-600 dark:text-gray-300">{product.category}</td>
                             <td className="px-4 py-4 font-bold">{formatNaira(product.price)}</td>
                             <td className="px-4 py-4">{formatNumber(product.stock)}</td>
+                            <td className="px-4 py-4">
+                              <span
+                                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${String(product.deliveryTime) === "7"
+                                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                                  }`}
+                              >
+                                {String(product.deliveryTime) === "7" ? "7 days delivery" : "Same day delivery"}
+                              </span>
+                            </td>
 
                             <td className="px-4 py-4 text-right">
                               <div className="flex justify-end gap-2">
@@ -1580,7 +1602,17 @@ export default function AdminPage() {
                           <div className="min-w-0 flex-1">
                             <p className="truncate font-bold">{product.title}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">{product.brand} / {product.category}</p>
-                            <p className="mt-2 text-sm font-black">{formatNaira(product.price)}</p>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <span className="text-sm font-black">{formatNaira(product.price)}</span>
+                              <span
+                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${String(product.deliveryTime) === "7"
+                                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                                  }`}
+                              >
+                                {String(product.deliveryTime) === "7" ? "7 days delivery" : "Same day delivery"}
+                              </span>
+                            </div>
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             <button

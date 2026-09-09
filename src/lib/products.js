@@ -109,8 +109,14 @@ export function groupProductsByCategory(products) {
 }
 
 export function normalizeCategory(apiCategory) {
-  const name = apiCategory.name || apiCategory.category || "Untitled category"
-  const image = apiCategory.image?.url || apiCategory.image?.secure_url || apiCategory.image || "/thumbnail.webp"
+  const name = apiCategory.name || apiCategory.category || apiCategory.title || "Untitled category"
+  const image =
+    apiCategory.image?.url ||
+    apiCategory.image?.secure_url ||
+    (typeof apiCategory.image === "string" ? apiCategory.image : null) ||
+    apiCategory.url ||
+    apiCategory.imageUrl ||
+    "/thumbnail.webp"
 
   return {
     id: apiCategory._id || apiCategory.id || name,
@@ -128,10 +134,26 @@ export async function fetchProductCategories({ token } = {}) {
     throw new Error("NEXT_PUBLIC_BACKEND_URL is missing.")
   }
 
-  const response = await fetch(`${API_URL}/api/v1/admin/categories`, {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
+  let response = await fetch(`${API_URL}/api/v1/admin/categories`, {
     cache: "no-store",
-    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    headers,
   })
+
+  if (!response.ok && (response.status === 404 || response.status === 401)) {
+    try {
+      const userRes = await fetch(`${API_URL}/api/v1/users/categories`, {
+        cache: "no-store",
+        headers,
+      })
+      if (userRes.ok) {
+        response = userRes
+      }
+    } catch {
+      // keep original
+    }
+  }
 
   if (!response.ok) {
     const error = new Error("Failed to fetch categories.")
@@ -140,13 +162,16 @@ export async function fetchProductCategories({ token } = {}) {
   }
 
   const data = await response.json()
+  console.log("Entire raw categories response from backend:", data)
   const list = Array.isArray(data.categories)
     ? data.categories
     : Array.isArray(data.category)
       ? data.category
-      : Array.isArray(data)
-        ? data
-        : []
+      : Array.isArray(data.data)
+        ? data.data
+        : Array.isArray(data)
+          ? data
+          : []
 
   return list.map(normalizeCategory)
 }
