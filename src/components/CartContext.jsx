@@ -37,6 +37,13 @@ function readStoredCart() {
 function parseImage(image) {
   if (!image) return "/thumbnail.webp"
 
+  if (Array.isArray(image)) {
+    const first = image[0]
+    if (typeof first === "string") return first
+    if (first && typeof first === "object") return first.url || "/thumbnail.webp"
+    return "/thumbnail.webp"
+  }
+
   if (typeof image === "object") {
     return image.url || "/thumbnail.webp"
   }

@@ -6,6 +6,14 @@ export function normalizeProduct(apiProduct) {
     ? apiProduct.category.charAt(0).toUpperCase() + apiProduct.category.slice(1)
     : ""
 
+  const primaryImage =
+    apiProduct.images?.[0]?.url ||
+    (typeof apiProduct.images?.[0] === "string" ? apiProduct.images[0] : null) ||
+    apiProduct.image?.url ||
+    (typeof apiProduct.image === "string" ? apiProduct.image : null) ||
+    apiProduct.url ||
+    "/thumbnail.webp"
+
   return {
     id: apiProduct._id,
     title: apiProduct.name,
@@ -14,7 +22,8 @@ export function normalizeProduct(apiProduct) {
     category,
     brand: category,
     stock: apiProduct.stock ?? 0,
-    image: apiProduct.image?.url || "/thumbnail.webp",
+    image: primaryImage,
+    images: Array.isArray(apiProduct.images) ? apiProduct.images : [],
     createdAt: apiProduct.createdAt,
   }
 }

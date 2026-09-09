@@ -75,6 +75,14 @@ const sections = [
 const RECENT_PRODUCTS_LIMIT = 5
 
 function normalizeProduct(product, index = 0) {
+  const primaryImage =
+    product.images?.[0]?.url ||
+    (typeof product.images?.[0] === "string" ? product.images[0] : null) ||
+    product.image?.url ||
+    (typeof product.image === "string" ? product.image : null) ||
+    product.url ||
+    "/thumbnail.webp"
+
   return {
     id: product.id ?? product._id ?? Date.now() + index,
     brand: product.brand || product.category || "CartBehind",
@@ -82,7 +90,8 @@ function normalizeProduct(product, index = 0) {
     price: Number(product.price) || 0,
     originalPrice: Number(product.originalPrice) || 0,
     discountPercent: Number(product.discountPercent) || 0,
-    image: product.image?.url || product.image || product.url || "/thumbnail.webp",
+    image: primaryImage,
+    images: Array.isArray(product.images) ? product.images : [],
     category: product.category || "General",
     description: product.description || "",
     tags: product.tags || [],
