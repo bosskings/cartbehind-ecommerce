@@ -119,9 +119,9 @@ const testimonials = [
 
 const PRODUCTS_PER_CATEGORY = 5
 const navCategories = [
-  { id: 1, name: "All" },
-  { id: 2, name: "Same day delivery" },
-  { id: 3, name: "7 day delivery" },
+  { id: 1, name: "All", value: "All" },
+  { id: 2, name: "Same day delivery", value: "1" },
+  { id: 3, name: "7 day delivery", value: "7" },
 ]
 const getCategoryPath = (name) =>
   name === "All" ? "/" : `/category/${name.toLowerCase().replace(/\s+/g, "-")}`
@@ -152,17 +152,23 @@ const MainPage = ({ category = 'All' }) => {
 
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [testimonialIndex, setTestimonialIndex] = useState(0)
-
-
+  const [deliveryFilter, setDeliveryFilter] = useState("All")
   const [activeCategory, setActiveCategory] = useState(category)
   const navRef = useRef(null)
 
-  const filteredProducts =
-    activeCategory === 'All'
-      ? products
-      : products.filter(
-        (product) => product.category?.toLowerCase() === activeCategory.toLowerCase(),
-      )
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const matchesCategory =
+        !category ||
+        category === "All" ||
+        product.category?.toLowerCase() === category.toLowerCase()
+
+      if (!matchesCategory) return false
+
+      if (deliveryFilter === "All") return true
+      return String(product.deliveryTime || "1") === String(deliveryFilter)
+    })
+  }, [products, category, deliveryFilter])
 
   const categoryGroups = useMemo(
     () => groupProductsByCategory(filteredProducts),
@@ -225,23 +231,28 @@ const MainPage = ({ category = 'All' }) => {
           className="mx-auto flex w-[95%] gap-2 overflow-x-auto py-5 scrollbar-hide md:w-[88%] md:justify-center"
         >
           {navCategories.map((cat) => {
-            const isActive = activeCategory === "All" && cat.name === "All"
+            const isActive = deliveryFilter === cat.value
             return (
-              <span
+              <button
                 key={cat.id}
-                className={`relative rounded-full px-5 py-2.5 text-xs font-medium transition-colors ${isActive ? "text-white" : "bg-white text-gray-700"
-                  }`}
+                type="button"
+                onClick={() => setDeliveryFilter(cat.value)}
+                className={`relative cursor-pointer rounded-full px-5 py-2.5 text-xs font-semibold transition-all ${
+                  isActive
+                    ? "text-(--theme-second)"
+                    : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-[#16131f] dark:text-gray-200 dark:hover:bg-white/10"
+                }`}
               >
                 {isActive && (
                   <motion.span
-                    layoutId="activeCategoryPill"
+                    layoutId="activeDeliveryPill"
                     className="absolute inset-0 rounded-full bg-(--theme)"
                     style={{ zIndex: -1 }}
                     transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                   />
                 )}
                 {cat.name}
-              </span>
+              </button>
             )
           })}
         </nav>
@@ -289,9 +300,27 @@ const MainPage = ({ category = 'All' }) => {
         ) : error ? (
           <p className="mx-auto mt-12 w-[95%] text-sm text-red-500">{error}</p>
         ) : categoryGroups.length === 0 ? (
-          <p className="mx-auto mt-12 w-[95%] text-sm text-gray-500 dark:text-gray-400">
-            No products available yet.
-          </p>
+          <div className="mx-auto mt-12 w-[95%] rounded-2xl border border-dashed border-gray-200 py-12 text-center dark:border-white/10">
+            <p className="text-base font-semibold text-gray-700 dark:text-gray-200">
+              No products available
+            </p>
+            <p className="mt-1 text-sm text-gray-400">
+              There are currently no products matching{" "}
+              <span className="font-semibold text-(--theme)">
+                {navCategories.find((c) => c.value === deliveryFilter)?.name || "this option"}
+              </span>
+              .
+            </p>
+            {deliveryFilter !== "All" && (
+              <button
+                type="button"
+                onClick={() => setDeliveryFilter("All")}
+                className="mt-4 inline-flex cursor-pointer rounded-full bg-(--theme) px-5 py-2 text-xs font-bold text-(--theme-second) transition hover:opacity-90"
+              >
+                Show all products
+              </button>
+            )}
+          </div>
         ) : (
           categoryGroups.map(({ category: categoryName, products: categoryProducts }) => (
             <section key={categoryName} className="relative mx-auto mt-12 w-full">
@@ -299,14 +328,13 @@ const MainPage = ({ category = 'All' }) => {
                 <h2 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
                   {categoryName}
                 </h2>
-                {/* <button
-                  type="button"
-                  onClick={() => handleViewAll(categoryName)}
-                  className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.24em] text-gray-500 transition-colors hover:text-(--theme) dark:text-gray-400"
+                <Link
+                  href={`/category/${encodeURIComponent(categoryName.toLowerCase().replace(/\s+/g, "-"))}`}
+                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-(--theme) transition-all duration-300 hover:scale-105 hover:bg-(--theme)/10 dark:text-gray-200 dark:hover:bg-white/10"
                 >
-                  View all
+                  <span>View all</span>
                   <ChevronRight size={14} />
-                </button> */}
+                </Link>
               </div>
               <motion.div
                 variants={staggerContainer}

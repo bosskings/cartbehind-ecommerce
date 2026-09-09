@@ -1,5 +1,4 @@
-import Navbar from "@/components/Navbar";
-import MainPage from "@/components/MainPage";
+import CategoryView from "@/components/CategoryView";
 
 const formatCategoryName = (category) =>
   decodeURIComponent(category)
@@ -10,10 +9,5 @@ const formatCategoryName = (category) =>
 export default async function CategoryPage({ params }) {
   const { category } = await params;
 
-  return (
-    <>
-      <Navbar />
-      <MainPage category={formatCategoryName(category)} />
-    </>
-  );
+  return <CategoryView categoryName={formatCategoryName(category)} />;
 }
