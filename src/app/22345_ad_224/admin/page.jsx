@@ -28,6 +28,7 @@ import {
   UploadCloud,
   Users,
   X,
+  Zap,
 } from "lucide-react"
 import { useTheme } from "@/components/ThemeContext"
 import { useAuth } from "@/components/AuthContext"
@@ -36,6 +37,7 @@ import TransitDetailsModal from "@/components/admin/TransitDetailsModal"
 import OrderCartDetailsModal from "@/components/admin/OrderCartDetailsModal"
 import MultiImageUpload from "@/components/admin/MultiImageUpload"
 import UsersSection from "@/components/admin/UsersSection"
+import DealOfTheDaySection from "@/components/admin/DealOfTheDaySection"
 import { Field, inputClass } from "@/components/admin/formUi"
 import { formatOrderDate } from "@/components/admin/transitUtils"
 import { getAdminToken, uploadToCloudinary } from "@/lib/cloudinary"
@@ -68,6 +70,7 @@ const sections = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "orders", label: "Orders", icon: ClipboardList },
   { id: "upload", label: "Upload Product", icon: PackagePlus },
+  { id: "dealOfTheDay", label: "Deal of the Day", icon: Zap },
   { id: "categoryImages", label: "Category Images", icon: ImageIcon },
   { id: "products", label: "Products", icon: Boxes },
   { id: "users", label: "Users", icon: Users },
@@ -1499,6 +1502,10 @@ export default function AdminPage() {
                 </div>
               </form>
             </section>
+          )}
+
+          {activeSection === "dealOfTheDay" && (
+            <DealOfTheDaySection products={products} />
           )}
 
           {activeSection === "categoryImages" && (
