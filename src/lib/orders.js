@@ -360,6 +360,11 @@ export function normalizeCartDetailsResponse(data) {
       (typeof item?.image === "string" ? item.image : null) ||
       "/thumbnail.webp"
 
+    const deliveryNote =
+      (typeof item?.deliveryNote === "string" && item.deliveryNote.trim()) ||
+      (typeof product?.deliveryNote === "string" && product.deliveryNote.trim()) ||
+      ""
+
     return {
       id,
       itemId: item?._id || item?.id || id,
@@ -371,6 +376,7 @@ export function normalizeCartDetailsResponse(data) {
       category,
       description,
       stock,
+      deliveryNote,
       images,
       imageUrl,
       rawItem: item,

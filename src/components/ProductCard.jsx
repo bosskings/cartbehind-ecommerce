@@ -71,15 +71,16 @@ export default function ProductCard({
         <div className="relative aspect-[5/5] w-full bg-gray-100 overflow-hidden p-4">
 
           <motion.button
-            whileTap={{ scale: 0.6 }}
-            transition={{ type: "spring", stiffness: 500, damping: 25 }}
+            whileTap={{ scale: 0.92 }}
+            whileHover={{ scale: 1.04 }}
+            transition={{ type: "spring", stiffness: 400, damping: 17 }}
             type="button"
             aria-label="Add to cart"
-            className="absolute right-3 bottom-3 z-20 flex h-11 items-center justify-center gap-2 rounded-full bg-[var(--theme)] px-3 text-[var(--theme-second)] shadow-lg transition-all duration-300 hover:scale-105 hover:bg-[#280E89] md:inset-x-0 md:mx-auto md:bottom-2 md:w-[90%] md:rounded-xl md:px-5 md:translate-y-full md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 cursor-pointer"
+            className="absolute right-2.5 bottom-2.5 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-(--theme) text-(--theme-second) shadow-md ring-2 ring-white/90 transition-all duration-200 hover:bg-[#280E89] active:shadow-sm md:inset-x-0 md:mx-auto md:bottom-2 md:h-11 md:w-[90%] md:rounded-xl md:px-5 md:ring-0 md:translate-y-full md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100 cursor-pointer"
             onClick={handleAddToCart}
           >
-            <ShoppingBag size={16} />
-            <span className="hidden md:inline">Add to cart</span>
+            <ShoppingBag size={17} />
+            <span className="hidden md:inline font-bold text-xs tracking-wide">Add to cart</span>
           </motion.button>
 
           {discountPercent ? (
