@@ -33,6 +33,7 @@ import { useTheme } from "@/components/ThemeContext"
 import { useAuth } from "@/components/AuthContext"
 import TransitEditorModal from "@/components/admin/TransitEditorModal"
 import TransitDetailsModal from "@/components/admin/TransitDetailsModal"
+import OrderCartDetailsModal from "@/components/admin/OrderCartDetailsModal"
 import MultiImageUpload from "@/components/admin/MultiImageUpload"
 import UsersSection from "@/components/admin/UsersSection"
 import { Field, inputClass } from "@/components/admin/formUi"
@@ -187,6 +188,7 @@ export default function AdminPage() {
   const [overviewError, setOverviewError] = useState("")
   const [transitEditorOrder, setTransitEditorOrder] = useState(null)
   const [transitDetailsOrder, setTransitDetailsOrder] = useState(null)
+  const [cartDetailsOrder, setCartDetailsOrder] = useState(null)
   const [uploadingSlotIndex, setUploadingSlotIndex] = useState(null)
   const [isUploadingAllImages, setIsUploadingAllImages] = useState(false)
   const [isUploadingProduct, setIsUploadingProduct] = useState(false)
@@ -334,6 +336,7 @@ export default function AdminPage() {
 
   const closeTransitEditor = useCallback(() => setTransitEditorOrder(null), [])
   const closeTransitDetails = useCallback(() => setTransitDetailsOrder(null), [])
+  const closeCartDetails = useCallback(() => setCartDetailsOrder(null), [])
 
   useEffect(() => {
     if (activeSection !== "overview") return undefined
@@ -343,9 +346,12 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (activeSection !== "orders") return undefined
-    const timer = window.setTimeout(loadOrders, 0)
+    const timer = window.setTimeout(() => {
+      loadOrders()
+      loadUsers()
+    }, 0)
     return () => window.clearTimeout(timer)
-  }, [activeSection, loadOrders])
+  }, [activeSection, loadOrders, loadUsers])
 
   useEffect(() => {
     if (activeSection !== "overview" && activeSection !== "products") return undefined
@@ -466,7 +472,10 @@ export default function AdminPage() {
       const matchedUser = users.find((u) => String(u.id || u._id) === String(order.userId))
       if (matchedUser?.email) return matchedUser.email
     }
-    return order.userId || `Order #${order.id}`
+    if (usersLoading && users.length === 0) {
+      return "Loading customer..."
+    }
+    return order.userId ? `User: ${order.userId}` : `Order #${order.id}`
   }
 
   const updateForm = (field, value) => {
@@ -1234,7 +1243,10 @@ export default function AdminPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={loadOrders}
+                    onClick={() => {
+                      loadOrders()
+                      loadUsers()
+                    }}
                     disabled={ordersLoading}
                     aria-label="Refresh orders"
                     title="Refresh orders"
@@ -1249,7 +1261,7 @@ export default function AdminPage() {
               {ordersError && (
                 <div className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-600 sm:flex-row sm:items-center sm:justify-between">
                   <span>{ordersError}</span>
-                  <button type="button" onClick={loadOrders} className="font-bold underline">Try again</button>
+                  <button type="button" onClick={() => { loadOrders(); loadUsers(); }} className="font-bold underline">Try again</button>
                 </div>
               )}
               {!ordersLoading && !ordersError && !filteredOrders.length && (
@@ -1262,7 +1274,7 @@ export default function AdminPage() {
                     <table className="w-full min-w-[760px] text-left text-sm">
                       <thead className="bg-[#f7f5fb] text-xs uppercase tracking-[0.16em] text-gray-500 dark:bg-[#12101a] dark:text-gray-400">
                         <tr>
-                          <th className="px-4 py-4">Order</th>
+                          <th className="px-4 py-4">Customer / Order</th>
                           <th className="px-4 py-4">Purchase date</th>
                           <th className="px-4 py-4">Payment</th>
                           <th className="px-4 py-4">Delivery</th>
@@ -1271,21 +1283,51 @@ export default function AdminPage() {
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-white/10">
                         {filteredOrders.map((order) => (
-                          <tr key={order.id}>
+                          <tr
+                            key={order.id}
+                            onClick={() => setCartDetailsOrder(order)}
+                            className="group cursor-pointer transition hover:bg-gray-50/80 dark:hover:bg-white/[0.03]"
+                            title="Click to view order products overview"
+                          >
                             <td className="px-4 py-4">
-                              <p className="font-bold text-gray-900 dark:text-white truncate max-w-xs">{getOrderUserEmail(order)}</p>
-                              <p className="mt-1 text-xs text-gray-500 font-mono">Order #{order.id}</p>
+                              <div className="flex items-center gap-3">
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-(--theme)/10 text-(--theme) transition group-hover:scale-105">
+                                  <ShoppingBag size={16} />
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="font-bold text-gray-900 dark:text-white truncate max-w-xs">{getOrderUserEmail(order)}</p>
+                                  <p className="mt-0.5 text-xs text-gray-500 font-mono">Order #{order.id}</p>
+                                </div>
+                              </div>
                             </td>
                             <td className="px-4 py-4 text-gray-600 dark:text-gray-300">{formatOrderDate(order.datePurchased)}</td>
                             <td className="px-4 py-4 font-semibold">{order.paymentStatus || "Unknown"}</td>
                             <td className="px-4 py-4 font-semibold">{order.deliveryStatus || "PENDING"}</td>
-                            <td className="px-4 py-4 text-right"><div className="flex justify-end gap-2">
-                              <button type="button" onClick={() => setTransitEditorOrder(order)} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200">
-                                <Truck size={16} />Create transit
-                              </button>
-                              <button type="button" onClick={() => setTransitDetailsOrder(order)} className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-(--theme) px-3 text-sm font-bold text-(--theme-second) transition hover:opacity-90"><Search size={16} />View transit details
-                              </button>
-                            </div>
+                            <td className="px-4 py-4 text-right">
+                              <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  onClick={() => setCartDetailsOrder(order)}
+                                  title="View order products overview"
+                                  className="inline-flex h-10 cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200"
+                                >
+                                  <ShoppingBag size={15} />Products
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setTransitEditorOrder(order)}
+                                  className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-3 text-sm font-bold text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200"
+                                >
+                                  <Truck size={16} />Create transit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setTransitDetailsOrder(order)}
+                                  className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl bg-(--theme) px-3 text-sm font-bold text-(--theme-second) transition hover:opacity-90"
+                                >
+                                  <Search size={16} />View transit details
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -1294,16 +1336,48 @@ export default function AdminPage() {
                   </div>
                   <div className="grid gap-3 p-3 lg:hidden">
                     {filteredOrders.map((order) => (
-                      <article key={order.id} className="rounded-xl border border-gray-100 bg-[#f7f5fb] p-4 dark:border-white/10 dark:bg-[#12101a]">
+                      <article
+                        key={order.id}
+                        onClick={() => setCartDetailsOrder(order)}
+                        className="group cursor-pointer rounded-xl border border-gray-100 bg-[#f7f5fb] p-4 transition hover:border-(--theme)/30 dark:border-white/10 dark:bg-[#12101a]"
+                        title="Click to view order products overview"
+                      >
                         <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate font-bold text-gray-900 dark:text-white">{getOrderUserEmail(order)}</p>
-                            <p className="mt-1 text-xs text-gray-500 font-mono">Order #{order.id}</p>
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-(--theme)/10 text-(--theme)">
+                              <ShoppingBag size={16} />
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate font-bold text-gray-900 dark:text-white">{getOrderUserEmail(order)}</p>
+                              <p className="mt-0.5 text-xs text-gray-500 font-mono">Order #{order.id}</p>
+                            </div>
                           </div>
                           <span className="shrink-0 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-bold text-yellow-800">{order.deliveryStatus || "PENDING"}</span>
                         </div>
                         <p className="mt-3 text-xs text-gray-500">{formatOrderDate(order.datePurchased)}</p>
-                        <div className="mt-4 grid gap-2 sm:grid-cols-2"><button type="button" onClick={() => setTransitEditorOrder(order)} className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 dark:border-white/10 dark:text-gray-200"><Truck size={16} />Create transit</button><button type="button" onClick={() => setTransitDetailsOrder(order)} className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-(--theme) text-sm font-bold text-(--theme-second)"><Search size={16} />View details</button></div>
+                        <div className="mt-4 grid gap-2 sm:grid-cols-3" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            onClick={() => setCartDetailsOrder(order)}
+                            className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200"
+                          >
+                            <ShoppingBag size={15} />Products
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTransitEditorOrder(order)}
+                            className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 dark:border-white/10 dark:text-gray-200"
+                          >
+                            <Truck size={16} />Create transit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTransitDetailsOrder(order)}
+                            className="inline-flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-(--theme) text-sm font-bold text-(--theme-second)"
+                          >
+                            <Search size={16} />View details
+                          </button>
+                        </div>
                       </article>
                     ))}
                   </div>
@@ -1668,6 +1742,27 @@ export default function AdminPage() {
           order={transitDetailsOrder}
           onClose={closeTransitDetails}
           onAuthExpired={redirectToAdminLogin}
+          onOpenTransitEditor={(order) => {
+            closeTransitDetails()
+            setTransitEditorOrder(order)
+          }}
+        />
+      )}
+
+      {cartDetailsOrder && (
+        <OrderCartDetailsModal
+          order={cartDetailsOrder}
+          userEmail={getOrderUserEmail(cartDetailsOrder)}
+          onClose={closeCartDetails}
+          onAuthExpired={redirectToAdminLogin}
+          onOpenTransitEditor={(order) => {
+            closeCartDetails()
+            setTransitEditorOrder(order)
+          }}
+          onOpenTransitDetails={(order) => {
+            closeCartDetails()
+            setTransitDetailsOrder(order)
+          }}
         />
       )}
 

@@ -36,6 +36,7 @@ export function normalizeOrder(rawOrder) {
   if (!rawOrder || typeof rawOrder !== "object") return null
 
   const destination =
+    rawOrder.deliveryDetails ||
     rawOrder.destination ||
     rawOrder.shipping ||
     rawOrder.delivery ||
@@ -54,12 +55,21 @@ export function normalizeOrder(rawOrder) {
     ""
   const id = rawOrder.id || rawOrder._id || rawOrder.orderId || rawOrder.order_id || ""
 
+  const rawDeliveryDetails = rawOrder.deliveryDetails || {
+    address: destination.address || destination.street || rawOrder.address || "",
+    city: destination.city || rawOrder.city || "",
+    stateOrProvince: destination.stateOrProvince || destination.state || rawOrder.state || "",
+    country: destination.country || rawOrder.country || "",
+    postCode: destination.postCode || destination.postalCode || destination.zipCode || "",
+  }
+
   return {
     ...rawOrder,
     id,
     orderId: id,
     trackingCode,
     status: rawOrder.status || rawOrder.orderStatus || rawOrder.deliveryStatus || "Processing",
+    deliveryStatus: rawOrder.deliveryStatus || rawOrder.status || "PENDING",
     paymentStatus: rawOrder.paymentStatus || payment.status || payment.paymentStatus || "",
     total: Number(rawOrder.total ?? rawOrder.amount ?? rawOrder.grandTotal ?? 0) || 0,
     hasTotal,
@@ -80,9 +90,14 @@ export function normalizeOrder(rawOrder) {
     },
     destination: {
       address: destination.address || destination.street || rawOrder.address || "",
-      state: destination.state || rawOrder.state || "",
+      city: destination.city || rawOrder.city || "",
+      state: destination.state || destination.stateOrProvince || rawOrder.state || "",
       country: destination.country || rawOrder.country || "",
+      postCode: destination.postCode || destination.postalCode || destination.zipCode || "",
     },
+    deliveryDetails: rawDeliveryDetails,
+    deliveryNote: rawOrder.deliveryNote || "",
+    transit: rawOrder.transit || null,
   }
 }
 
@@ -119,6 +134,26 @@ export function normalizeAdminOrder(rawOrder) {
       .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
     : []
 
+  const userObj =
+    typeof rawOrder.userId === "object" && rawOrder.userId !== null
+      ? rawOrder.userId
+      : typeof rawOrder.user === "object" && rawOrder.user !== null
+        ? rawOrder.user
+        : null
+
+  const extractedEmail =
+    rawOrder.email ||
+    rawOrder.userEmail ||
+    rawOrder.customerEmail ||
+    userObj?.email ||
+    order.email ||
+    ""
+
+  const rawUserId =
+    typeof rawOrder.userId === "string"
+      ? rawOrder.userId
+      : userObj?._id || userObj?.id || order.userId || ""
+
   return {
     ...order,
     id: rawOrder._id || order.id,
@@ -129,7 +164,11 @@ export function normalizeAdminOrder(rawOrder) {
     currentLocation: rawOrder.currentLocation || rawOrder.location || "",
     timeline,
     datePurchased: rawOrder.datePurchased || order.createdAt || "",
-    userId: rawOrder.userId || "",
+    userId: rawUserId,
+    email: extractedEmail,
+    deliveryDetails: rawOrder.deliveryDetails || order.deliveryDetails || null,
+    deliveryNote: rawOrder.deliveryNote || order.deliveryNote || "",
+    transit: rawOrder.transit || order.transit || null,
   }
 }
 
@@ -183,6 +222,8 @@ export async function fetchAdminOrders(authToken) {
   const response = await axios.get(`${backendUrl}/api/v1/admin/orders`, {
     headers: { Authorization: `Bearer ${authToken}` },
   })
+
+  console.log(response)
 
   return normalizeAdminOrdersResponse(response.data)
 }
@@ -253,4 +294,89 @@ export async function updateAdminTransit(authToken, currentLocationId, payload) 
   return response.data
 }
 
+export async function fetchAdminCartDetails(authToken, orderId) {
+  const backendUrl = getBackendUrlOrThrow()
+  if (!authToken) throw new Error("Admin authentication is required to view cart details.")
+  if (!orderId) throw new Error("Order ID is required.")
+
+  const url = `${backendUrl}/api/v1/admin/cart-details/${encodeURIComponent(orderId)}`
+  console.log(`[fetchAdminCartDetails] Fetching: ${url}`)
+
+  const response = await axios.get(url, {
+    headers: { Authorization: `Bearer ${authToken}` },
+  })
+
+  console.group(`%c[fetchAdminCartDetails] Full Backend Response for Order: ${orderId}`, "color: #3b82f6; font-weight: bold; font-size: 13px;")
+  console.log("Request URL:", url)
+  console.log("HTTP Status:", response.status, response.statusText)
+  console.log("Response Headers:", response.headers)
+  console.log("Full response.data (Object):", response.data)
+  try {
+    console.log("Full response.data (Formatted JSON):\n" + JSON.stringify(response.data, null, 2))
+  } catch (e) {
+    console.warn("Could not JSON.stringify response.data:", e)
+  }
+  console.groupEnd()
+
+  return response.data
+}
+
+export function normalizeCartDetailsResponse(data) {
+  if (!data) return []
+
+  const rawItems =
+    (Array.isArray(data) && data) ||
+    (Array.isArray(data?.cart) && data.cart) ||
+    (Array.isArray(data?.items) && data.items) ||
+    (Array.isArray(data?.products) && data.products) ||
+    (Array.isArray(data?.data?.cart) && data.data.cart) ||
+    (Array.isArray(data?.data?.items) && data.data.items) ||
+    (Array.isArray(data?.data?.products) && data.data.products) ||
+    (Array.isArray(data?.data) && data.data) ||
+    (Array.isArray(data?.cartDetails) && data.cartDetails) ||
+    []
+
+  return rawItems.map((item, index) => {
+    const product = item?.product && typeof item.product === "object" ? item.product : {}
+    const id = item?._id || item?.id || product?._id || product?.id || `item-${index}`
+    const name = item?.name || product?.name || product?.title || "Unnamed Product"
+    const price = Number(item?.price ?? product?.price ?? 0) || 0
+    const quantity = Number(item?.quantity ?? item?.count ?? item?.qty ?? 1) || 1
+    const category = product?.category || item?.category || "General"
+    const description = product?.description || item?.description || ""
+    const stock = product?.stock != null ? Number(product.stock) : null
+
+    const images = Array.isArray(product?.images)
+      ? product.images
+      : Array.isArray(item?.images)
+        ? item.images
+        : []
+    const firstImg = images[0]
+    const imageUrl =
+      (typeof firstImg === "string" ? firstImg : firstImg?.url) ||
+      product?.image?.url ||
+      (typeof product?.image === "string" ? product.image : null) ||
+      item?.image?.url ||
+      (typeof item?.image === "string" ? item.image : null) ||
+      "/thumbnail.webp"
+
+    return {
+      id,
+      itemId: item?._id || item?.id || id,
+      productId: product?._id || product?.id || "",
+      name,
+      price,
+      quantity,
+      subtotal: price * quantity,
+      category,
+      description,
+      stock,
+      images,
+      imageUrl,
+      rawItem: item,
+    }
+  })
+}
+
 export { getApiErrorMessage, isAdminAuthError }
+
