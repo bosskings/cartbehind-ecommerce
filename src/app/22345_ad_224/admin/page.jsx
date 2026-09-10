@@ -103,6 +103,7 @@ function normalizeProduct(product, index = 0) {
     stock: Number(product.stock) || 0,
     deliveryTime: product.deliveryTime != null ? String(product.deliveryTime) : "1",
     createdAt: product.createdAt || product.created_at || "",
+    hotDeal: product.hotDeal || { status: false, percentage: 0 },
   }
 }
 
@@ -1505,7 +1506,18 @@ export default function AdminPage() {
           )}
 
           {activeSection === "dealOfTheDay" && (
-            <DealOfTheDaySection products={products} />
+            <DealOfTheDaySection
+              products={products}
+              onProductUpdated={(productId, payload) => {
+                setProducts((current) =>
+                  current.map((product) =>
+                    String(product.id) === String(productId)
+                      ? { ...product, ...payload }
+                      : product
+                  )
+                )
+              }}
+            />
           )}
 
           {activeSection === "categoryImages" && (

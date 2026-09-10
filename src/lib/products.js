@@ -26,6 +26,7 @@ export function normalizeProduct(apiProduct) {
     image: primaryImage,
     images: Array.isArray(apiProduct.images) ? apiProduct.images : [],
     createdAt: apiProduct.createdAt,
+    hotDeal: apiProduct.hotDeal || { status: false, percentage: 0 },
   }
 }
 

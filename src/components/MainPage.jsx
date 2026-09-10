@@ -185,7 +185,9 @@ const MainPage = ({ category = 'All' }) => {
     [products],
   )
 
-  const dealProduct = filteredProducts[0]
+  const dealProduct = useMemo(() => {
+    return products.find((p) => p.hotDeal?.status === true) || filteredProducts[0]
+  }, [products, filteredProducts])
 
 
   const handleCategorySelect = useCallback((name) => {
@@ -260,7 +262,7 @@ const MainPage = ({ category = 'All' }) => {
         <motion.section
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
+          viewport={{ once: true }}
           variants={fadeUp}
           className="relative w-full"
         >
@@ -368,7 +370,18 @@ const MainPage = ({ category = 'All' }) => {
           {dealProduct ? (
             <DealOfTheDay
               productName={dealProduct.title}
-              price={dealProduct.price}
+              discountPercent={
+                dealProduct.hotDeal?.percentage ||
+                dealProduct.percentage ||
+                dealProduct.discountPercent ||
+                2
+              }
+              price={
+                dealProduct.hotDeal?.percentage
+                  ? Math.round(dealProduct.price * (1 - dealProduct.hotDeal.percentage / 100))
+                  : dealProduct.price
+              }
+              originalPrice={dealProduct.price}
               image={dealProduct.image}
             />
           ) : (
