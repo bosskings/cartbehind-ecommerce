@@ -185,7 +185,9 @@ const MainPage = ({ category = 'All' }) => {
     [products],
   )
 
-  const dealProduct = filteredProducts[0]
+  const dealProduct = useMemo(() => {
+    return products.find((p) => p.hotDeal?.status === true) || filteredProducts[0]
+  }, [products, filteredProducts])
 
 
   const handleCategorySelect = useCallback((name) => {
@@ -237,11 +239,10 @@ const MainPage = ({ category = 'All' }) => {
                 key={cat.id}
                 type="button"
                 onClick={() => setDeliveryFilter(cat.value)}
-                className={`relative cursor-pointer rounded-full px-5 py-2.5 text-xs font-semibold transition-all ${
-                  isActive
+                className={`relative cursor-pointer rounded-full px-5 py-2.5 text-xs font-semibold transition-all ${isActive
                     ? "text-(--theme-second)"
                     : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-[#16131f] dark:text-gray-200 dark:hover:bg-white/10"
-                }`}
+                  }`}
               >
                 {isActive && (
                   <motion.span
@@ -260,7 +261,7 @@ const MainPage = ({ category = 'All' }) => {
         <motion.section
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
+          viewport={{ once: true }}
           variants={fadeUp}
           className="relative w-full"
         >
@@ -368,7 +369,18 @@ const MainPage = ({ category = 'All' }) => {
           {dealProduct ? (
             <DealOfTheDay
               productName={dealProduct.title}
-              price={dealProduct.price}
+              discountPercent={
+                dealProduct.hotDeal?.percentage ||
+                dealProduct.percentage ||
+                dealProduct.discountPercent ||
+                2
+              }
+              price={
+                dealProduct.hotDeal?.percentage
+                  ? Math.round(dealProduct.price * (1 - dealProduct.hotDeal.percentage / 100))
+                  : dealProduct.price
+              }
+              originalPrice={dealProduct.price}
               image={dealProduct.image}
             />
           ) : (

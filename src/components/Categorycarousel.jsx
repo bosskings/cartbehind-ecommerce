@@ -56,51 +56,63 @@ const itemReveal = {
   show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
 };
 
-export default function CategoryCarousel() {
+export default function CategoryCarousel({ categories: propCategories = [] }) {
   const prevRef = useRef(null);
   const nextRef = useRef(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState(
+    Array.isArray(propCategories) && propCategories.length > 0 ? propCategories : []
+  );
+  const [loading, setLoading] = useState(!propCategories || propCategories.length === 0);
   const [fetchError, setFetchError] = useState(null);
 
+  // Sync propCategories when available
   useEffect(() => {
+    if (Array.isArray(propCategories) && propCategories.length > 0) {
+      setCategories(propCategories);
+      setLoading(false);
+    }
+  }, [propCategories]);
+
+  useEffect(() => {
+    let isMounted = true;
     async function fetchCategories() {
       try {
-        setLoading(true);
+        if (!categories.length) setLoading(true);
         setFetchError(null);
         const res = await axios.get(`${BACKEND_URL}/api/v1/users/categories`);
-        console.log("[CategoryCarousel] /users/categories response:", res);
+        if (!isMounted) return;
         const data = res.data;
         const list = Array.isArray(data) ? data : data?.categories ?? data?.data ?? [];
-        setCategories(list);
+        if (list.length > 0) {
+          setCategories(list);
+        }
       } catch (err) {
-        console.error("[CategoryCarousel] Error fetching categories:", err);
-        setFetchError(err.message);
+        if (isMounted) {
+          console.error("[CategoryCarousel] Error fetching categories:", err);
+          setFetchError(err.message);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
 
     fetchCategories();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
     <section className="w-[95%] md:w-full mx-auto py-8">
       {/* Header */}
-      <motion.div
-        variants={headerReveal}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.4 }}
-        className="mb-6 flex items-center justify-between gap-4"
-      >
+      <div className="mb-6 flex items-center justify-between gap-4">
         <h2 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
           Explore Categories
         </h2>
 
-        <div className="flex shrink-0 items-center ">
+        <div className="flex shrink-0 items-center gap-1.5">
           <motion.button
             ref={prevRef}
             type="button"
@@ -124,98 +136,106 @@ export default function CategoryCarousel() {
             <ChevronRight size={18} />
           </motion.button>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Carousel */}
-      <motion.div
-        variants={trackContainer}
-        initial="hidden"
-        whileInView="show"
-        viewport={{ once: true, amount: 0.1 }}
-        className="relative mask-[linear-gradient(to_right,transparent,black_2%,black_98%,transparent)]"
-      >
-        <Swiper
-          modules={[FreeMode, Navigation]}
-
-          onBeforeInit={(swiper) => {
-            swiper.params.navigation.prevEl = prevRef.current;
-            swiper.params.navigation.nextEl = nextRef.current;
-          }}
-          navigation
-          onSlideChange={(swiper) => {
-            setAtStart(swiper.isBeginning);
-            setAtEnd(swiper.isEnd);
-          }}
-          onReachBeginning={() => setAtStart(true)}
-          onReachEnd={() => setAtEnd(true)}
-          onFromEdge={() => {
-            setAtStart(false);
-            setAtEnd(false);
-          }}
-          spaceBetween={8}
-          freeMode={{
-            enabled: true,
-            momentum: true,
-            momentumRatio: 0.65,
-            momentumVelocityRatio: 0.65,
-          }}
-          resistanceRatio={0.6}
-          grabCursor
-          slidesPerView={4}
-          breakpoints={{
-            360: { slidesPerView: 4, spaceBetween: 8 },
-            480: { slidesPerView: 4, spaceBetween: 12 },
-            640: { slidesPerView: 4.5, spaceBetween: 12 },
-            768: { slidesPerView: 6, spaceBetween: 5 },
-            1024: { slidesPerView: 7.5, spaceBetween: 12 },
-            1280: { slidesPerView: 9.3, spaceBetween: 14 },
-            1500: { slidesPerView: 10.2, spaceBetween: 5 },
-            1750: { slidesPerView: 10.5, spaceBetween: 5 },
-          }}
-          className="py-2!"
+      {/* Loading Skeleton */}
+      {loading && categories.length === 0 ? (
+        <div className="flex gap-4 overflow-hidden py-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex flex-col items-center gap-2 animate-pulse">
+              <div className="h-16 w-16 min-[360px]:h-[72px] min-[360px]:w-[72px] sm:h-28 sm:w-28 rounded-full bg-gray-200 dark:bg-white/10" />
+              <div className="h-3 w-16 rounded bg-gray-200 dark:bg-white/10" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* Carousel */
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35 }}
+          className="relative [mask-image:linear-gradient(to_right,transparent,black_2%,black_98%,transparent)] [-webkit-mask-image:linear-gradient(to_right,transparent,black_2%,black_98%,transparent)]"
         >
-          {categories.map((category) => {
-            // Backend may return plain strings or objects with a .name field
-            const catName = typeof category === "string" ? category : (category?.name || "");
-            const fallbackImg = FALLBACK_IMAGES[catName.toLowerCase()] ?? null;
-            const catImage = (typeof category === "object" && category?.image?.url) ? category.image.url : fallbackImg;
-            const catInitial = catName.trim().charAt(0).toUpperCase();
+          <Swiper
+            modules={[FreeMode, Navigation]}
+            onBeforeInit={(swiper) => {
+              swiper.params.navigation.prevEl = prevRef.current;
+              swiper.params.navigation.nextEl = nextRef.current;
+            }}
+            navigation
+            onSlideChange={(swiper) => {
+              setAtStart(swiper.isBeginning);
+              setAtEnd(swiper.isEnd);
+            }}
+            onReachBeginning={() => setAtStart(true)}
+            onReachEnd={() => setAtEnd(true)}
+            onFromEdge={() => {
+              setAtStart(false);
+              setAtEnd(false);
+            }}
+            spaceBetween={8}
+            freeMode={{
+              enabled: true,
+              momentum: true,
+              momentumRatio: 0.65,
+              momentumVelocityRatio: 0.65,
+            }}
+            resistanceRatio={0.6}
+            grabCursor
+            slidesPerView={4}
+            breakpoints={{
+              360: { slidesPerView: 4, spaceBetween: 8 },
+              480: { slidesPerView: 4, spaceBetween: 12 },
+              640: { slidesPerView: 4.5, spaceBetween: 12 },
+              768: { slidesPerView: 6, spaceBetween: 5 },
+              1024: { slidesPerView: 7.5, spaceBetween: 12 },
+              1280: { slidesPerView: 9.3, spaceBetween: 14 },
+              1500: { slidesPerView: 10.2, spaceBetween: 5 },
+              1750: { slidesPerView: 10.5, spaceBetween: 5 },
+            }}
+            className="py-2!"
+          >
+            {categories.map((category) => {
+              const catName = typeof category === "string" ? category : (category?.name || "");
+              const fallbackImg = FALLBACK_IMAGES[catName.toLowerCase()] ?? null;
+              const catImage = (typeof category === "object" && category?.image?.url) ? category.image.url : fallbackImg;
+              const catInitial = catName.trim().charAt(0).toUpperCase();
 
-            return (
-              <SwiperSlide key={catName}>
-                <MotionLink
-                  href={`/category/${toSlug(catName)}`}
-                  variants={itemReveal}
-                  whileHover={{ y: -4 }}
-                  aria-label={`Browse ${catName}`}
-                  className="group flex w-full flex-col items-center gap-2 rounded-2xl py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--theme) focus-visible:ring-offset-2"
-                >
-                  <span className="relative h-16 w-16 min-[360px]:h-[72px] min-[360px]:w-[72px] shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-(--theme)/40 sm:h-28 sm:w-28 md:h-30 md:w-30">
-                    {catImage ? (
-                      <Image
-                        src={catImage}
-                        alt={catName}
-                        fill
-                        sizes="112px"
-                        className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-                      />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#280E89]/80 to-[#6c47ff]/70 text-xl font-black text-white sm:text-2xl">
-                        {catInitial}
-                      </span>
-                    )}
-                    {/* Glowing ring on hover */}
-                    <span className="absolute inset-0 rounded-full ring-2 ring-transparent transition-all duration-300 group-hover:ring-(--theme)/30" />
-                  </span>
-                  <span className="flex h-10 items-center text-center text-sm font-medium leading-tight text-gray-600 transition-colors group-hover:text-(--theme) line-clamp-2 dark:text-gray-300">
-                    {catName}
-                  </span>
-                </MotionLink>
-              </SwiperSlide>
-            );
-          })}
-        </Swiper>
-      </motion.div>
+              return (
+                <SwiperSlide key={catName}>
+                  <MotionLink
+                    href={`/category/${toSlug(catName)}`}
+                    whileHover={{ y: -4 }}
+                    aria-label={`Browse ${catName}`}
+                    className="group flex w-full flex-col items-center gap-2 rounded-2xl py-1 opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--theme) focus-visible:ring-offset-2"
+                  >
+                    <span className="relative h-16 w-16 min-[360px]:h-[72px] min-[360px]:w-[72px] shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-(--theme)/40 sm:h-28 sm:w-28 md:h-30 md:w-30">
+                      {catImage ? (
+                        <Image
+                          src={catImage}
+                          alt={catName}
+                          fill
+                          sizes="112px"
+                          className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+                        />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#280E89]/80 to-[#6c47ff]/70 text-xl font-black text-white sm:text-2xl">
+                          {catInitial}
+                        </span>
+                      )}
+                      {/* Glowing ring on hover */}
+                      <span className="absolute inset-0 rounded-full ring-2 ring-transparent transition-all duration-300 group-hover:ring-(--theme)/30" />
+                    </span>
+                    <span className="flex h-10 items-center text-center text-sm font-medium leading-tight text-gray-600 transition-colors group-hover:text-(--theme) line-clamp-2 dark:text-gray-300">
+                      {catName}
+                    </span>
+                  </MotionLink>
+                </SwiperSlide>
+              );
+            })}
+          </Swiper>
+        </motion.div>
+      )}
     </section>
   );
 }
