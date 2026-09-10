@@ -1,4 +1,7 @@
+"use client";
+
 import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { Zap, ShoppingBag, Clock } from "lucide-react";
 
 function formatNaira(amount) {
@@ -41,18 +44,19 @@ function TimeBox({ value, label }) {
 }
 
 export default function DealOfTheDay({
+  id,
+  productId,
   discountPercent = 2,
   productName = "Calvin Klein CK One",
   price = 78472,
   originalPrice = 79984,
   image = "https://cdn.dummyjson.com/products/images/fragrances/Calvin%20Klein%20CK%20One/1.png",
   // Pass an actual Date/timestamp for the deal's real end time in production.
-  // If omitted, falls back to "23h 47m 28s from mount" — computed ONCE via
-  // lazy useState init, not as a default param (default params re-run on
-  // every render, which was the bug: it kept resetting to "now + offset").
   endTime,
   onGrabDeal,
 }) {
+  const targetId = id || productId;
+
   const [fallbackEndTime] = useState(
     () => Date.now() + (23 * 3600 + 47 * 60 + 28) * 1000
   );
@@ -79,7 +83,15 @@ export default function DealOfTheDay({
             Up to <span className="text-[var(--theme)]">{discountPercent}% Off</span>
           </h2>
 
-          <p className="mb-6 text-lg text-gray-500">{productName}</p>
+          {targetId ? (
+            <Link href={`/product/${targetId}`}>
+              <p className="mb-6 text-lg text-gray-600 hover:text-[var(--theme)] transition-colors cursor-pointer font-medium">
+                {productName}
+              </p>
+            </Link>
+          ) : (
+            <p className="mb-6 text-lg text-gray-500">{productName}</p>
+          )}
 
           <div className="mb-6 flex gap-4">
             <TimeBox value={hrs} label="HRS" />
@@ -90,7 +102,7 @@ export default function DealOfTheDay({
           <div className="mb-4 flex flex-wrap items-center gap-4">
             <button
               onClick={handleGrabDeal}
-              className="flex items-center gap-2 rounded-full bg-[var(--theme)] px-6 py-3 font-semibold text-[var(--theme-second)] transition-all duration-300 hover:scale-105 hover:bg-[#280E89] cursor-pointer"
+              className="flex items-center gap-2 rounded-full bg-[var(--theme)] px-6 py-3 font-semibold text-[var(--theme-second)] transition-all duration-300 hover:scale-105 hover:bg-[#280E89] cursor-pointer shadow-md"
             >
               <ShoppingBag size={18} />
               Grab the Deal
@@ -114,12 +126,23 @@ export default function DealOfTheDay({
 
         {/* Right: product image */}
         <div className="flex items-center justify-center">
-          <img
-            src={image}
-            alt={productName}
-            className="h-72 w-auto object-contain drop-shadow-xl md:h-96"
-            loading="lazy"
-          />
+          {targetId ? (
+            <Link href={`/product/${targetId}`} className="group block cursor-pointer">
+              <img
+                src={image}
+                alt={productName}
+                className="h-72 w-auto object-contain drop-shadow-xl md:h-96 transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
+            </Link>
+          ) : (
+            <img
+              src={image}
+              alt={productName}
+              className="h-72 w-auto object-contain drop-shadow-xl md:h-96"
+              loading="lazy"
+            />
+          )}
         </div>
       </div>
     </div>

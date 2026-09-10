@@ -1,5 +1,8 @@
+"use client";
+
 import { useEffect, useState } from "react";
-import { ArrowRight, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Sparkles, Truck } from "lucide-react";
 
 const slides = [
   {
@@ -10,6 +13,7 @@ const slides = [
     subtitle:
       "The intersection of high-performance design and essential luxury. Curated for those who demand excellence in every detail.",
     cta: "Shop collection",
+    href: "#products-section",
     image: "/hero.jpg",
     alt: "Model wearing curated streetwear against a violet backdrop",
   },
@@ -20,7 +24,8 @@ const slides = [
     highlight: "outlast trends",
     subtitle:
       "Beauty, fragrance, furniture and tech — selected by our editors and stress-tested before it ever reaches your cart.",
-    cta: "Explore Now",
+    cta: "Explore Categories",
+    href: "#categories-section",
     image: "/hero-1.jpg",
     alt: "Premium curated products arranged on a violet surface",
   },
@@ -32,12 +37,11 @@ const slides = [
     subtitle:
       "A rotating daily drop of our most-wanted pieces, priced for a single sunrise. When it's gone, it's gone.",
     cta: "See the deal",
+    href: "#deal-of-the-day",
     image: "/deal.jpg",
     alt: "Featured deal of the day product on a dark violet set",
   },
 ];
-
-
 
 const DURATION = 6000;
 
@@ -50,6 +54,16 @@ export default function Hero() {
   }, []);
 
   const slide = slides[index];
+
+  const handleScrollToSection = (e, targetHref) => {
+    if (targetHref?.startsWith("#")) {
+      e.preventDefault();
+      const el = document.querySelector(targetHref);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
 
   return (
     <section className="relative flex min-h-screen w-full items-center overflow-hidden bg-primary">
@@ -96,18 +110,20 @@ export default function Hero() {
 
         <div className="mt-12 flex flex-col gap-4 sm:flex-row">
           <a
-            href="#trending"
-            className="group inline-flex items-center justify-center gap-2 rounded-full bg-[var(--theme)] px-10 py-5 text-xs font-bold uppercase tracking-[0.2em] text-white transition-all duration-300 hover:scale-105 hover:bg-[#280E89]"
+            href={slide.href}
+            onClick={(e) => handleScrollToSection(e, slide.href)}
+            className="group inline-flex items-center justify-center gap-2 rounded-full bg-[var(--theme)] px-10 py-5 text-xs font-bold uppercase tracking-[0.2em] text-white transition-all duration-300 hover:scale-105 hover:bg-[#280E89] cursor-pointer"
           >
             {slide.cta}
             <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
           </a>
-          <a
-            href="#editorial"
-            className="inline-flex items-center justify-center rounded-full bg-[var(--theme-second)] px-10 py-5 text-xs font-bold uppercase tracking-[0.2em] text-[var(--theme)] transition-colors hover:bg-white"
+          <Link
+            href="/track"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--theme-second)] px-10 py-5 text-xs font-bold uppercase tracking-[0.2em] text-[var(--theme)] transition-all duration-300 hover:scale-105 hover:bg-white cursor-pointer shadow-md"
           >
-            View lookbook
-          </a>
+            <Truck size={15} />
+            Track Order
+          </Link>
         </div>
       </div>
 
