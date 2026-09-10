@@ -31,6 +31,8 @@ import DealOfTheDay from './Dealoftheday'
 import Hero from './Hero'
 import { useProducts } from '@/hooks/useProducts'
 import { groupProductsByCategory } from '@/lib/products'
+import { useCart } from '@/components/CartContext'
+import toast from 'react-hot-toast'
 
 // ——— Motion variants ———
 const fadeUp = {
@@ -143,6 +145,7 @@ function ProductCardSkeleton() {
 const MainPage = ({ category = 'All' }) => {
   const prefersReducedMotion = useReducedMotion()
   const { products, loading, error } = useProducts()
+  const { addToCart } = useCart()
 
   useEffect(() => {
     if (products) {
@@ -185,9 +188,25 @@ const MainPage = ({ category = 'All' }) => {
     [products],
   )
 
+  // Only display deal product when hotDeal.status is true
   const dealProduct = useMemo(() => {
-    return products.find((p) => p.hotDeal?.status === true) || filteredProducts[0]
-  }, [products, filteredProducts])
+    return products.find((p) => p.hotDeal?.status === true) || null
+  }, [products])
+
+  const handleGrabDeal = useCallback(() => {
+    if (!dealProduct) return
+    const pct = Number(dealProduct.hotDeal?.percentage || dealProduct.percentage || dealProduct.discountPercent) || 0
+    const dealPrice = pct > 0
+      ? Math.round(dealProduct.price * (1 - pct / 100))
+      : dealProduct.price
+
+    addToCart({
+      ...dealProduct,
+      price: dealPrice,
+      originalPrice: dealProduct.price,
+      discountPercent: pct,
+    })
+  }, [dealProduct, addToCart])
 
 
   const handleCategorySelect = useCallback((name) => {
@@ -259,11 +278,12 @@ const MainPage = ({ category = 'All' }) => {
         </nav>
 
         <motion.section
+          id="categories-section"
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
           variants={fadeUp}
-          className="relative w-full"
+          className="relative w-full scroll-mt-24"
         >
           <div className="mx-auto w-full">
             <CategoryCarousel categories={exploreCategories} activeCategory={activeCategory} onCategorySelect={handleCategorySelect} />
@@ -294,99 +314,102 @@ const MainPage = ({ category = 'All' }) => {
           </div>
         </div>
 
-        {loading ? (
-          <div className="mx-auto mt-12 grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5">
-            {Array.from({ length: 10 }, (_, index) => <ProductCardSkeleton key={index} />)}
-          </div>
-        ) : error ? (
-          <p className="mx-auto mt-12 w-[95%] text-sm text-red-500">{error}</p>
-        ) : categoryGroups.length === 0 ? (
-          <div className="mx-auto mt-12 w-[95%] rounded-2xl border border-dashed border-gray-200 py-12 text-center dark:border-white/10">
-            <p className="text-base font-semibold text-gray-700 dark:text-gray-200">
-              No products available
-            </p>
-            <p className="mt-1 text-sm text-gray-400">
-              There are currently no products matching{" "}
-              <span className="font-semibold text-(--theme)">
-                {navCategories.find((c) => c.value === deliveryFilter)?.name || "this option"}
-              </span>
-              .
-            </p>
-            {deliveryFilter !== "All" && (
-              <button
-                type="button"
-                onClick={() => setDeliveryFilter("All")}
-                className="mt-4 inline-flex cursor-pointer rounded-full bg-(--theme) px-5 py-2 text-xs font-bold text-(--theme-second) transition hover:opacity-90"
-              >
-                Show all products
-              </button>
-            )}
-          </div>
-        ) : (
-          categoryGroups.map(({ category: categoryName, products: categoryProducts }) => (
-            <section key={categoryName} className="relative mx-auto mt-12 w-full">
-              <div className="mb-4 ml-5 flex items-end justify-between gap-4 pr-5">
-                <h2 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
-                  {categoryName}
-                </h2>
-                <Link
-                  href={`/category/${encodeURIComponent(categoryName.toLowerCase().replace(/\s+/g, "-"))}`}
-                  className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-(--theme) transition-all duration-300 hover:scale-105 hover:bg-(--theme)/10 dark:text-gray-200 dark:hover:bg-white/10"
+        <div id="products-section" className="scroll-mt-24">
+          {loading ? (
+            <div className="mx-auto mt-12 grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5">
+              {Array.from({ length: 10 }, (_, index) => <ProductCardSkeleton key={index} />)}
+            </div>
+          ) : error ? (
+            <p className="mx-auto mt-12 w-[95%] text-sm text-red-500">{error}</p>
+          ) : categoryGroups.length === 0 ? (
+            <div className="mx-auto mt-12 w-[95%] rounded-2xl border border-dashed border-gray-200 py-12 text-center dark:border-white/10">
+              <p className="text-base font-semibold text-gray-700 dark:text-gray-200">
+                No products available
+              </p>
+              <p className="mt-1 text-sm text-gray-400">
+                There are currently no products matching{" "}
+                <span className="font-semibold text-(--theme)">
+                  {navCategories.find((c) => c.value === deliveryFilter)?.name || "this option"}
+                </span>
+                .
+              </p>
+              {deliveryFilter !== "All" && (
+                <button
+                  type="button"
+                  onClick={() => setDeliveryFilter("All")}
+                  className="mt-4 inline-flex cursor-pointer rounded-full bg-(--theme) px-5 py-2 text-xs font-bold text-(--theme-second) transition hover:opacity-90"
                 >
-                  <span>View all</span>
-                  <ChevronRight size={14} />
-                </Link>
-              </div>
-              <motion.div
-                variants={staggerContainer}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true, margin: '-50px' }}
-                className="mx-auto grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5"
-              >
-                {categoryProducts.slice(0, PRODUCTS_PER_CATEGORY).map((product) => (
-                  <motion.div
-                    key={product.id}
-                    variants={fadeUp}
-                    whileHover={prefersReducedMotion ? {} : { scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)' }}
-                    className="rounded-2xl transition-shadow duration-300"
-                  >
-                    <ProductCard product={product} />
-                  </motion.div>
-                ))}
-              </motion.div>
-            </section>
-          ))
-        )}
-
-        <motion.section
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-50px' }}
-          variants={fadeUp}
-          className="relative mx-auto mt-12 w-[95%] sm:w-[98%]"
-        >
-          {dealProduct ? (
-            <DealOfTheDay
-              productName={dealProduct.title}
-              discountPercent={
-                dealProduct.hotDeal?.percentage ||
-                dealProduct.percentage ||
-                dealProduct.discountPercent ||
-                2
-              }
-              price={
-                dealProduct.hotDeal?.percentage
-                  ? Math.round(dealProduct.price * (1 - dealProduct.hotDeal.percentage / 100))
-                  : dealProduct.price
-              }
-              originalPrice={dealProduct.price}
-              image={dealProduct.image}
-            />
+                  Show all products
+                </button>
+              )}
+            </div>
           ) : (
-            <DealOfTheDay />
+            categoryGroups.map(({ category: categoryName, products: categoryProducts }) => (
+              <section key={categoryName} className="relative mx-auto mt-12 w-full">
+                <div className="mb-4 ml-5 flex items-end justify-between gap-4 pr-5">
+                  <h2 className="text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                    {categoryName}
+                  </h2>
+                  <Link
+                    href={`/category/${encodeURIComponent(categoryName.toLowerCase().replace(/\s+/g, "-"))}`}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-(--theme) transition-all duration-300 hover:scale-105 hover:bg-(--theme)/10 dark:text-gray-200 dark:hover:bg-white/10"
+                  >
+                    <span>View all</span>
+                    <ChevronRight size={14} />
+                  </Link>
+                </div>
+                <motion.div
+                  variants={staggerContainer}
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ once: true, margin: '-50px' }}
+                  className="mx-auto grid w-[95%] grid-cols-2 gap-5 md:grid-cols-4 xl:grid-cols-5"
+                >
+                  {categoryProducts.slice(0, PRODUCTS_PER_CATEGORY).map((product) => (
+                    <motion.div
+                      key={product.id}
+                      variants={fadeUp}
+                      whileHover={prefersReducedMotion ? {} : { scale: 1.02, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)' }}
+                      className="rounded-2xl transition-shadow duration-300"
+                    >
+                      <ProductCard product={product} />
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </section>
+            ))
           )}
-        </motion.section>
+        </div>
+
+        {dealProduct && (
+          <motion.section
+            id="deal-of-the-day"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-50px' }}
+            variants={fadeUp}
+            className="relative mx-auto mt-12 w-[95%] sm:w-[98%] scroll-mt-24"
+          >
+            {(() => {
+              const pct = Number(dealProduct.hotDeal?.percentage || dealProduct.percentage || dealProduct.discountPercent) || 0
+              const dealPrice = pct > 0
+                ? Math.round(dealProduct.price * (1 - pct / 100))
+                : dealProduct.price
+              return (
+                <DealOfTheDay
+                  id={dealProduct.id}
+                  productId={dealProduct.id}
+                  productName={dealProduct.title}
+                  discountPercent={pct}
+                  price={dealPrice}
+                  originalPrice={dealProduct.price}
+                  image={dealProduct.image}
+                  onGrabDeal={handleGrabDeal}
+                />
+              )
+            })()}
+          </motion.section>
+        )}
 
         {/* ───────── Testimonials Carousel ───────── */}
         <section className="mx-auto mt-16 w-full">
@@ -443,7 +466,10 @@ const MainPage = ({ category = 'All' }) => {
             <h2 className="text-3xl font-bold tracking-tight">Unlock 10% Off Your First Order</h2>
             <p className="mt-3 text-gray-300">Be the first to know about new drops, exclusive offers, and style inspiration.</p>
             <form
-              onSubmit={(e) => e.preventDefault()}
+              onSubmit={(e) => {
+                e.preventDefault()
+                toast.success("Thank you for subscribing to CartBehind!")
+              }}
               className="mx-auto mt-6 flex max-w-md flex-col gap-3 sm:flex-row"
             >
               <div className="relative flex-1">

@@ -1,11 +1,11 @@
-import React from "react";
-import { FaInstagram, FaTwitter, FaYoutube } from "react-icons/fa";
+"use client";
+
+import React, { useState } from "react";
+import { FaInstagram, FaYoutube } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 import { CiMail } from "react-icons/ci";
 import Image from "next/image";
-
-
-
+import toast from "react-hot-toast";
 
 const TERMS_PDF_PATH = "/Cart_Behind_Terms_and_Conditions.pdf"
 
@@ -13,43 +13,55 @@ const footerColumns = [
   {
     title: "Company",
     links: [
-      { label: "About Us", href: "#" },
-      { label: "Careers", href: "#" },
-      { label: "Press", href: "#" },
-      { label: "Blog", href: "#" },
+      { label: "About Us", href: "/" },
+      { label: "Explore Products", href: "/#products-section" },
+      { label: "Categories", href: "/#categories-section" },
+      { label: "Deal of the Day", href: "/#deal-of-the-day" },
     ],
   },
   {
-    title: "Help",
+    title: "Help & Orders",
     links: [
-      { label: "Help Center", href: "#" },
       { label: "Track Parcel", href: "/track" },
-      { label: "Shipping Info", href: "#" },
-      { label: "Returns & Refunds", href: "#" },
+      { label: "My Orders", href: "/orders" },
+      { label: "Shopping Cart", href: "/cart" },
+      { label: "Contact Support", href: "mailto:support@cartbehind.com" },
     ],
   },
   {
     title: "Legal",
     links: [
-      { label: "Privacy Policy", href: "#" },
+      { label: "Privacy Policy", href: TERMS_PDF_PATH, external: true },
       {
         label: "Terms & Conditions",
         href: TERMS_PDF_PATH,
         external: true,
       },
-      { label: "Cookie Policy", href: "#" },
+      { label: "Refund Policy", href: TERMS_PDF_PATH, external: true },
     ],
   },
 ];
 
 const socialLinks = [
-  { icon: FaInstagram, label: "Instagram", href: "#" },
-  { icon: FaXTwitter, label: "Twitter", href: "#" },
-  { icon: FaYoutube, label: "YouTube", href: "#" },
-  { icon: CiMail, label: "Email", href: "#" },
+  { icon: FaInstagram, label: "Instagram", href: "https://instagram.com", external: true },
+  { icon: FaXTwitter, label: "Twitter", href: "https://x.com", external: true },
+  { icon: FaYoutube, label: "YouTube", href: "https://youtube.com", external: true },
+  { icon: CiMail, label: "Email", href: "mailto:support@cartbehind.com" },
 ];
 
 export default function Footer() {
+  const [email, setEmail] = useState("");
+
+  const handleSubscribe = (e) => {
+    e.preventDefault();
+    if (!email) {
+      toast.error("Please enter your email address.");
+      return;
+    }
+    toast.success("Subscribed to exclusive CartBehind deals!");
+    setEmail("");
+  };
+
   return (
     <footer className="bg-black/80 mt-20 rounded-t-4xl">
       {/* Newsletter */}
@@ -64,16 +76,24 @@ export default function Footer() {
             </p>
           </div>
 
-          <div className="flex w-full max-w-md items-center gap-3 rounded-lg border border-gray-200 bg-gray-100 p-1.5 pl-5 focus-within:border-gray-500">
+          <form
+            onSubmit={handleSubscribe}
+            className="flex w-full max-w-md items-center gap-3 rounded-lg border border-gray-200 bg-gray-100 p-1.5 pl-5 focus-within:border-gray-500"
+          >
             <input
               type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
-              className="w-full bg-transparent text-sm placeholder-[#6E6E78] focus:outline-none"
+              className="w-full bg-transparent text-sm placeholder-[#6E6E78] focus:outline-none text-gray-900"
             />
-            <button className="flex shrink-0 items-center gap-1.5 bg-[var(--theme)] rounded-lg px-4 py-2.5 text-sm font-semibold text-[var(--theme-second)] transition-all duration-300 hover:scale-105 hover:bg-[#280E89] cursor-pointer">
+            <button
+              type="submit"
+              className="flex shrink-0 items-center gap-1.5 bg-[var(--theme)] rounded-lg px-4 py-2.5 text-sm font-semibold text-[var(--theme-second)] transition-all duration-300 hover:scale-105 hover:bg-[#280E89] cursor-pointer"
+            >
               Subscribe
             </button>
-          </div>
+          </form>
         </div>
       </div>
 
