@@ -44,8 +44,11 @@ function normalizeProductItem(product, index = 0) {
     Number(product.discountPercent) ||
     0
 
+  const realId = product._id ?? product.id ?? String(Date.now() + index)
+
   return {
-    id: product.id ?? product._id ?? Date.now() + index,
+    id: realId,
+    _id: product._id ?? product.id ?? realId,
     brand: product.brand || product.category || "CartBehind",
     title: product.title || product.name || "Untitled product",
     name: product.name || product.title || "Untitled product",
@@ -54,7 +57,7 @@ function normalizeProductItem(product, index = 0) {
     discountPercent: hotDealPercent,
     percentage: hotDealPercent,
     status: hasHotDealStatus,
-    hotDeal: product.hotDeal || { status: hasHotDealStatus, percentage: hotDealPercent },
+    hotDeal: product.hotDeal || { status: hasHotDealStatus, percentage: String(hotDealPercent) },
     image: primaryImage,
     category: product.category || "General",
     description: product.description || "",
@@ -224,7 +227,7 @@ export default function DealOfTheDaySection({
       stock: Number(selectedProduct?.stock || 0),
       hotDeal: {
         status: Boolean(status),
-        percentage: String(percentage),
+        percentage: String(percentage).trim(),
       },
     }
 

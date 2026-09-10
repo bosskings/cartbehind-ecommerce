@@ -239,11 +239,10 @@ const MainPage = ({ category = 'All' }) => {
                 key={cat.id}
                 type="button"
                 onClick={() => setDeliveryFilter(cat.value)}
-                className={`relative cursor-pointer rounded-full px-5 py-2.5 text-xs font-semibold transition-all ${
-                  isActive
+                className={`relative cursor-pointer rounded-full px-5 py-2.5 text-xs font-semibold transition-all ${isActive
                     ? "text-(--theme-second)"
                     : "bg-white text-gray-700 hover:bg-gray-50 dark:bg-[#16131f] dark:text-gray-200 dark:hover:bg-white/10"
-                }`}
+                  }`}
               >
                 {isActive && (
                   <motion.span
