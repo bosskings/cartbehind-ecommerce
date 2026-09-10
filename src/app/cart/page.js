@@ -149,6 +149,12 @@ export default function CartPage() {
                           <p className="mt-1 text-sm text-gray-500">
                             {formatNaira(item.price)} each
                           </p>
+                          {(item.deliveryNote || item.note) && (
+                            <p className="mt-1.5 inline-flex max-w-xs items-center gap-1 rounded-md bg-(--theme)/5 px-2 py-0.5 text-xs text-gray-600 dark:bg-white/5 dark:text-gray-300">
+                              <span className="font-bold text-(--theme)">Note:</span>{" "}
+                              <span className="truncate italic">{item.deliveryNote || item.note}</span>
+                            </p>
+                          )}
                         </div>
                       </div>
 

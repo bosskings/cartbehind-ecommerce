@@ -12,6 +12,7 @@ import {
 import axios from "axios"
 import toast from "react-hot-toast"
 import { useAuth, isUserAuthError } from "@/components/AuthContext"
+import AddCartNoteModal from "@/components/AddCartNoteModal"
 
 const CartContext = createContext(null)
 const CART_SYNC_DEBOUNCE_MS = 800
@@ -82,6 +83,8 @@ function normalizeServerCartItem(item) {
     image: parseImage(product?.image || item.image),
     createdAt: product?.createdAt || item.createdAt,
     quantity: Math.max(1, Number(item.quantity) || 1),
+    note: item.deliveryNote || item.note || "",
+    deliveryNote: item.deliveryNote || item.note || "",
   }
 }
 
@@ -152,17 +155,63 @@ export function CartProvider({ children }) {
   }, [authToken])
 
   const syncCartAdd = useCallback(
-    async (productId, quantity) => {
-      if (!canSyncCart) return
+    async (productId, quantity, deliveryNote = "") => {
+      const payload = {
+        productId: String(productId),
+        quantity: Math.max(1, Number(quantity) || 1),
+      }
+      if (deliveryNote && typeof deliveryNote === "string" && deliveryNote.trim()) {
+        payload.deliveryNote = deliveryNote.trim()
+      }
+
+      console.log(
+        "%c🛒 [ADD TO CART] REQUEST PAYLOAD:",
+        "background: #7c3aed; color: #fff; padding: 3px 8px; border-radius: 4px; font-weight: bold;",
+        payload,
+      )
+
+      if (!canSyncCart) {
+        console.warn(
+          "%c🛒 [ADD TO CART] User is not authenticated; item saved to local cart only.",
+          "color: #f59e0b; font-weight: bold;",
+        )
+        return
+      }
 
       try {
-        await axios.post(
-          `${getBackendUrl()}/api/v1/users/cart/add`,
-          { productId, quantity },
+        const url = `${getBackendUrl()}/api/v1/users/cart/add`
+        console.log("🛒 [ADD TO CART] Request URL:", url)
+
+        const response = await axios.post(
+          url,
+          payload,
           { headers: getHeaders() },
         )
+
+        console.log(
+          "%c🛒 [ADD TO CART] FULL RESPONSE OBJECT:",
+          "background: #10b981; color: #fff; padding: 3px 8px; border-radius: 4px; font-weight: bold;",
+          response,
+        )
+        console.log("🛒 [ADD TO CART] Response Status:", response.status, response.statusText)
+        console.log("🛒 [ADD TO CART] Response Data (Object):", response.data)
+        try {
+          console.log(
+            "🛒 [ADD TO CART] Response Data (Formatted JSON):\n" +
+              JSON.stringify(response.data, null, 2),
+          )
+        } catch (e) {
+          console.warn("Could not stringify response data:", e)
+        }
       } catch (error) {
-        console.error("Failed to sync cart add.", error)
+        console.error(
+          "%c🛒 [ADD TO CART] ERROR:",
+          "background: #ef4444; color: #fff; padding: 3px 8px; border-radius: 4px; font-weight: bold;",
+          error?.response || error,
+        )
+        if (error?.response?.data) {
+          console.error("🛒 [ADD TO CART] Error Response Data:", error.response.data)
+        }
       }
     },
     [canSyncCart, getHeaders],
@@ -324,21 +373,46 @@ export function CartProvider({ children }) {
     }
   }, [applyItems, canSyncCart, getHeaders, syncCartAdd, syncCartUpdate, handleUserAuthExpired])
 
-  const addToCart = (product) => {
-    const current = itemsRef.current
-    const existing = current.find((item) => item.id === product.id)
-    const nextQuantity = existing ? existing.quantity + 1 : 1
-    const nextItems = existing
-      ? current.map((item) =>
-        item.id === product.id
-          ? { ...item, quantity: nextQuantity }
-          : item,
-      )
-      : [...current, { ...product, quantity: nextQuantity }]
+  const [noteModalProduct, setNoteModalProduct] = useState(null)
 
-    applyItems(nextItems)
-    syncCartAdd(product.id, nextQuantity)
-  }
+  const commitAddToCart = useCallback(
+    (product, note = "") => {
+      const current = itemsRef.current
+      const existing = current.find((item) => item.id === product.id)
+      const addQuantity = Math.max(1, Number(product.quantity) || 1)
+      const nextQuantity = existing ? existing.quantity + addQuantity : addQuantity
+      const itemNote = (typeof note === "string" && note.trim()) || product.deliveryNote || product.note || existing?.deliveryNote || existing?.note || ""
+
+      const nextItems = existing
+        ? current.map((item) =>
+          item.id === product.id
+            ? { ...item, quantity: nextQuantity, note: itemNote, deliveryNote: itemNote }
+            : item,
+        )
+        : [...current, { ...product, quantity: nextQuantity, note: itemNote, deliveryNote: itemNote }]
+
+      applyItems(nextItems)
+      syncCartAdd(product.id || product._id, addQuantity, itemNote)
+      toast.success(
+        itemNote
+          ? `Added to cart with note!`
+          : `Added to cart!`
+      )
+    },
+    [applyItems, syncCartAdd],
+  )
+
+  const addToCart = useCallback(
+    (product, options = {}) => {
+      if (!product) return
+      if (options?.skipModal) {
+        commitAddToCart(product, options.note || "")
+        return
+      }
+      setNoteModalProduct(product)
+    },
+    [commitAddToCart],
+  )
 
   const updateQuantity = (id, quantity) => {
     const nextQuantity = Math.max(1, quantity)
@@ -390,6 +464,8 @@ export function CartProvider({ children }) {
       value={{
         items,
         addToCart,
+        commitAddToCart,
+        openNoteModal: setNoteModalProduct,
         removeFromCart,
         updateQuantity,
         clearCart,
@@ -398,6 +474,17 @@ export function CartProvider({ children }) {
       }}
     >
       {children}
+      {noteModalProduct && (
+        <AddCartNoteModal
+          product={noteModalProduct}
+          isOpen={Boolean(noteModalProduct)}
+          onClose={() => setNoteModalProduct(null)}
+          onConfirm={(product, note) => {
+            commitAddToCart(product, note)
+            setNoteModalProduct(null)
+          }}
+        />
+      )}
     </CartContext.Provider>
   )
 }

@@ -4,6 +4,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { use, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import { motion } from "framer-motion"
 import { ShoppingBag, ChevronLeft, ChevronRight, Minus, Plus, Truck, ShieldCheck, RotateCcw } from "lucide-react"
 import { useCart } from "@/components/CartContext"
 import { useProducts } from "@/hooks/useProducts"
@@ -152,7 +153,6 @@ export default function ProductDetailPage({ params }) {
   const handleAddToCart = () => {
     if (!product) return
     addToCart({ ...product, image: currentImage, quantity })
-    router.push("/cart")
   }
 
   if (loading) {
@@ -345,13 +345,17 @@ export default function ProductDetailPage({ params }) {
                   </button>
                 </div>
 
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  type="button"
                   onClick={handleAddToCart}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-full bg-(--theme) px-6 py-3.5 text-sm font-bold text-(--theme-second) transition-all duration-300 hover:scale-105 hover:bg-[#280E89] lg:max-w-xs lg:flex-none lg:px-8"
+                  className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-(--theme) px-6 py-3.5 text-sm font-bold text-(--theme-second) shadow-md transition-all duration-300 hover:bg-[#280E89] hover:shadow-lg lg:max-w-xs lg:flex-none lg:px-8"
                 >
                   <ShoppingBag size={18} />
                   Add to Cart
-                </button>
+                </motion.button>
               </div>
 
               <div className="grid gap-3 rounded-[24px] border border-gray-100 bg-white p-4 text-sm text-gray-600 sm:grid-cols-3 lg:p-5 dark:border-white/10 dark:bg-surface dark:text-gray-300">
