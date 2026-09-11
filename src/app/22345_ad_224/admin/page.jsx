@@ -66,6 +66,29 @@ const createEmptyForm = () => ({
 
 const emptyForm = createEmptyForm()
 
+export const PRODUCT_CATEGORIES = [
+  "Flowers",
+  "Necklace",
+  "Wristwatches",
+  "Military wears",
+  "Customized Gifts",
+  "Bags and Crossbody bags",
+  "Teddy bear",
+  "Sex toys",
+  "Clothings",
+  "Chocolates and cakes Wines",
+  "Fruits basket and box",
+  "Perfumes, Deodorants and creams",
+  "love packages",
+  "Car keys",
+  "House key",
+  "Greeting Cards",
+  "Supplements",
+  "Letter and Documents",
+  "Rings",
+  "Bracelets",
+]
+
 const sections = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "orders", label: "Orders", icon: ClipboardList },
@@ -1422,9 +1445,9 @@ export default function AdminPage() {
                     <option value="" disabled>
                       Select category
                     </option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.name}>
-                        {category.name}
+                    {PRODUCT_CATEGORIES.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
                       </option>
                     ))}
                   </select>
@@ -1848,6 +1871,20 @@ export default function AdminPage() {
               </Field>
               <Field label="Price">
                 <input type="number" min="0" className={inputClass()} value={editingProduct.price} onChange={(event) => updateEditingProduct("price", event.target.value)} />
+              </Field>
+              <Field label="Category">
+                <select
+                  className={inputClass()}
+                  value={editingProduct.category || ""}
+                  onChange={(event) => updateEditingProduct("category", event.target.value)}
+                >
+                  <option value="" disabled>Select category</option>
+                  {PRODUCT_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
               </Field>
               <div className="sm:col-span-2">
                 <Field label="Delivery Time">
