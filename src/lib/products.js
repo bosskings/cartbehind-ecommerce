@@ -92,6 +92,33 @@ export async function fetchProducts({ page, limit = DEFAULT_LIMIT } = {}) {
   return allProducts
 }
 
+export async function searchProducts(query) {
+  if (!API_URL) {
+    throw new Error("NEXT_PUBLIC_BACKEND_URL is missing.")
+  }
+
+  const response = await fetch(
+    `${API_URL}/api/v1/users/products/search?search=${encodeURIComponent(query)}`,
+    { cache: "no-store" },
+  )
+
+  if (!response.ok) {
+    throw new Error("Failed to search products.")
+  }
+
+  const data = await response.json()
+  console.log("Search API response:", data)
+  const list = Array.isArray(data.products)
+    ? data.products
+    : Array.isArray(data.data)
+      ? data.data
+      : Array.isArray(data)
+        ? data
+        : []
+
+  return list.map(normalizeProduct)
+}
+
 export function groupProductsByCategory(products) {
   const groups = new Map()
 

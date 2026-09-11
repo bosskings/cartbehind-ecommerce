@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef, useMemo, useCallback } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { FaRegMoon, FaRegSun } from "react-icons/fa"
 import { IoSearch } from "react-icons/io5"
 import { FiShoppingBag } from "react-icons/fi"
@@ -14,15 +14,16 @@ import toast from "react-hot-toast"
 import { useAuth } from "@/components/AuthContext"
 import { useCart } from "@/components/CartContext"
 import { useTheme } from "@/components/ThemeContext"
-import { fetchProducts } from "@/lib/products"
+import { searchProducts } from "@/lib/products"
 
 const Navbar = () => {
   const [searchTerm, setSearchTerm] = useState("")
-  const [allProducts, setAllProducts] = useState([])
+  const [searchResults, setSearchResults] = useState([])
   const [isLoadingProducts, setIsLoadingProducts] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const searchRef = useRef(null)
   const mobileSearchRef = useRef(null)
+  const debounceRef = useRef(null)
   const [showSearch, setShowSearch] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -78,37 +79,39 @@ const Navbar = () => {
     router.replace("/")
   }
 
-  const loadSearchProducts = useCallback(async () => {
-    if (allProducts.length > 0 || isLoadingProducts) return
+  const performSearch = useCallback(async (query) => {
+    const q = query.trim()
+    if (!q) {
+      setSearchResults([])
+      setIsLoadingProducts(false)
+      return
+    }
     setIsLoadingProducts(true)
     try {
-      const list = await fetchProducts()
-      setAllProducts(Array.isArray(list) ? list : [])
+      const results = await searchProducts(q)
+      setSearchResults(Array.isArray(results) ? results.slice(0, 8) : [])
     } catch (err) {
-      console.error("Failed to load products for search:", err)
+      console.error("Failed to search products:", err)
+      setSearchResults([])
     } finally {
       setIsLoadingProducts(false)
     }
-  }, [allProducts.length, isLoadingProducts])
+  }, [])
 
-  const searchResults = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase()
-    if (!q) return []
-    return allProducts
-      .filter((product) => {
-        const title = (product.title || product.name || "").toLowerCase()
-        const category = (product.category || "").toLowerCase()
-        const brand = (product.brand || "").toLowerCase()
-        const desc = (product.description || "").toLowerCase()
-        return (
-          title.includes(q) ||
-          category.includes(q) ||
-          brand.includes(q) ||
-          desc.includes(q)
-        )
-      })
-      .slice(0, 8)
-  }, [allProducts, searchTerm])
+  const handleSearchChange = useCallback((value) => {
+    setSearchTerm(value)
+    setIsSearchOpen(true)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!value.trim()) {
+      setSearchResults([])
+      setIsLoadingProducts(false)
+      return
+    }
+    setIsLoadingProducts(true)
+    debounceRef.current = setTimeout(() => {
+      performSearch(value)
+    }, 300)
+  }, [performSearch])
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -144,7 +147,7 @@ const Navbar = () => {
         style={{ top: "calc(100% + 8px)" }}
         className="absolute left-0 right-0 z-50 overflow-hidden rounded-2xl border border-gray-100 bg-white/95 backdrop-blur-xl shadow-2xl dark:border-white/10 dark:bg-[#16131f]/95"
       >
-        {isLoadingProducts && allProducts.length === 0 ? (
+        {isLoadingProducts ? (
           <div className="flex items-center justify-center gap-2 py-8 text-xs text-gray-500">
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-(--theme) border-t-transparent" />
             Searching catalog...
@@ -222,14 +225,10 @@ const Navbar = () => {
                 placeholder="Search for products, brands..."
                 className={`${inputBaseClass} ${searchTextClasses}`}
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value)
-                  setIsSearchOpen(true)
-                  loadSearchProducts()
-                }}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 onFocus={() => {
                   setIsSearchOpen(true)
-                  loadSearchProducts()
+                  if (searchTerm.trim()) performSearch(searchTerm)
                 }}
               />
               <button
@@ -339,14 +338,10 @@ const Navbar = () => {
                 placeholder="Search for products, brands..."
                 className={`${inputBaseClass} ${searchTextClasses}`}
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value)
-                  setIsSearchOpen(true)
-                  loadSearchProducts()
-                }}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 onFocus={() => {
                   setIsSearchOpen(true)
-                  loadSearchProducts()
+                  if (searchTerm.trim()) performSearch(searchTerm)
                 }}
               />
               <button
