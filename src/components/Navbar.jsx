@@ -63,7 +63,7 @@ const Navbar = () => {
     : "border-white/40 text-white placeholder:text-white/70"
   const searchTextClasses = isNavActive
     ? "text-gray-700 placeholder:text-gray-400 dark:text-gray-200 dark:placeholder:text-gray-500"
-    : "text-white placeholder:text-white/70"
+    : ""
   const inputBaseClass = "h-10 w-full rounded-full bg-transparent pl-4 pr-12 text-sm outline-none"
   const navTextClass = isNavActive ? "text-gray-900 dark:text-white" : "text-white"
   const iconButtonClass = isNavActive
