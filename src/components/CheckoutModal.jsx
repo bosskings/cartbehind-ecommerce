@@ -3,7 +3,7 @@
 import axios from "axios"
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { X, CheckCircle2, Package, MapPin, ArrowRight } from "lucide-react"
+import { X, CheckCircle2, Package, MapPin, ArrowRight, Loader2 } from "lucide-react"
 import { useCart } from "@/components/CartContext"
 import { useOrders } from "@/components/OrderContext"
 import { useAuth } from "@/components/AuthContext"
@@ -90,13 +90,18 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
   const authToken = userSession?.authToken
   const userId = userSession?.user?.id || userSession?.user?._id || userSession?.id || userSession?._id
 
-  const [step, setStep] = useState("shipping")
+  const [step, setStep] = useState("shipping") // "processing" | "shipping" | "done"
   const [error, setError] = useState("")
   const [order, setOrder] = useState(null)
   const [checkout, setCheckout] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [completedOrderId, setCompletedOrderId] = useState(null)
   const completedOrderIdRef = useRef(null)
+
+  const itemsRef = useRef(items)
+  itemsRef.current = items
+  const subtotalRef = useRef(subtotal)
+  subtotalRef.current = subtotal
 
   const [shipping, setShipping] = useState({
     addressLine1: "",
@@ -113,6 +118,144 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     router.push("/login?next=/cart")
   }, [isOpen, isUserAuthenticated, onClose, router])
 
+  const applyDeliveryDetails = async (shippingData, explicitOrderId = null) => {
+    console.log("==> [CheckoutModal] applyDeliveryDetails invoked with:", {
+      shippingData,
+      explicitOrderId,
+      completedOrderIdRef: completedOrderIdRef.current,
+      completedOrderId,
+    })
+
+    const refreshedOrders = await refreshOrders()
+    console.log("==> [CheckoutModal] Refreshed orders list:", refreshedOrders)
+
+    let matchedOrder = findMatchingOrder(refreshedOrders, paymentInfo)
+    const fallbackId = explicitOrderId || completedOrderIdRef.current || completedOrderId
+
+    if (!matchedOrder && fallbackId && refreshedOrders?.length) {
+      matchedOrder = refreshedOrders.find(
+        (o) => String(o.id || o._id) === String(fallbackId),
+      )
+    }
+
+    if (!matchedOrder && refreshedOrders?.length) {
+      matchedOrder =
+        refreshedOrders.find(
+          (o) => (o.deliveryStatus === "PENDING" || !o.destination?.address) && (o.id || o._id),
+        ) || refreshedOrders[0]
+    }
+
+    let orderIdToUpdate = matchedOrder?.id || matchedOrder?._id || fallbackId
+
+    if (!orderIdToUpdate && authToken && userId) {
+      try {
+        const compRes = await completeUserCart({ authToken, userId })
+        const compId =
+          compRes?.order?._id ||
+          compRes?.order?.id ||
+          compRes?.data?.order?._id ||
+          compRes?.data?.order?.id ||
+          compRes?.data?._id ||
+          compRes?.data?.id ||
+          compRes?._id ||
+          compRes?.id
+        if (compId) {
+          orderIdToUpdate = String(compId)
+          completedOrderIdRef.current = String(compId)
+          setCompletedOrderId(String(compId))
+        }
+      } catch (e) {
+        console.error("Attempted completeUserCart on applyDeliveryDetails:", e)
+      }
+    }
+
+    const destination = {
+      address: [shippingData.addressLine1?.trim(), shippingData.addressLine2?.trim()].filter(Boolean).join(", "),
+      addressLine1: (shippingData.addressLine1 || "").trim(),
+      addressLine2: (shippingData.addressLine2 || "").trim(),
+      country: (shippingData.country || "").trim(),
+      state: (shippingData.state || "").trim(),
+      postcode: (shippingData.postcode || "").trim(),
+    }
+
+    const currentCheckout = checkout || readPendingCheckout()
+    const activeItems = currentCheckout?.items?.length ? currentCheckout.items : itemsRef.current
+    const activeTotal = Number(currentCheckout?.total ?? subtotalRef.current) || 0
+    const activeItemCount = Number(currentCheckout?.itemCount ?? itemsRef.current.length) || 0
+
+    const baseOrder =
+      matchedOrder ||
+      {
+        id: orderIdToUpdate || paymentInfo.tx_ref || "payment-confirmed",
+        _id: orderIdToUpdate,
+        status: "Processing",
+        total: activeTotal,
+        itemCount: activeItemCount,
+        items: activeItems,
+        createdAt: new Date().toISOString(),
+        payment: {
+          provider: "flutterwave",
+          txRef: paymentInfo.tx_ref,
+          transactionId: paymentInfo.transaction_id,
+          status: "successful",
+        },
+      }
+
+    const receiptOrder = withOrderDisplayFallbacks({
+      ...baseOrder,
+      id: orderIdToUpdate || baseOrder.id,
+      destination,
+    })
+
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
+    if (backendUrl && authToken && orderIdToUpdate) {
+      const deliveryPayload = {
+        deliveryDetails: {
+          country: destination.country,
+          city: destination.state,
+          address: destination.address,
+          stateOrProvince: destination.state,
+          postCode: destination.postcode,
+        },
+      }
+
+      console.log("==> [CheckoutModal] Updating order ID:", orderIdToUpdate)
+      console.log("==> [CheckoutModal] Delivery payload:", deliveryPayload)
+
+      try {
+        const updateRes = await axios.put(
+          `${backendUrl}/api/v1/users/orders/${orderIdToUpdate}`,
+          deliveryPayload,
+          { headers: { Authorization: `Bearer ${authToken}` } },
+        )
+        console.log("==> [CheckoutModal] Order update response:", updateRes.data)
+      } catch (updateErr) {
+        console.error("==> [CheckoutModal] Failed to update order delivery details:", updateErr)
+      }
+    }
+
+    saveDeliveryLocation({
+      orderId: receiptOrder.id,
+      trackingCode: receiptOrder.trackingCode,
+      paymentReference: paymentInfo.tx_ref,
+      destination,
+    })
+
+    setOrder(receiptOrder)
+    clearPendingCheckout()
+    setStep("done")
+
+    try {
+      await clearCart()
+    } catch (e) {
+      console.error("==> [CheckoutModal] clearCart error:", e)
+    }
+
+    await refreshOrders()
+    onOrderSettled?.()
+    console.log("==> [CheckoutModal] Successfully completed order and transitioned to 'done'")
+  }
+
   useEffect(() => {
     if (!isOpen || !paymentInfo) {
       if (!isOpen) initializedPaymentRef.current = null
@@ -125,26 +268,50 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     if (initializedPaymentRef.current === sessionKey) return
 
     initializedPaymentRef.current = sessionKey
-    setStep("shipping")
     setError("")
     setOrder(null)
     setSubmitting(false)
 
     const pendingCheckout = readPendingCheckout()
-    setCheckout({
-      items: pendingCheckout?.items?.length ? pendingCheckout.items : items,
-      total: Number(pendingCheckout?.total ?? subtotal) || 0,
-      itemCount: Number(pendingCheckout?.itemCount ?? items.length) || 0,
-    })
-    setShipping({ addressLine1: "", addressLine2: "", country: "", state: "", postcode: "" })
+    console.log("==> [CheckoutModal] Read pendingCheckout from localStorage:", pendingCheckout)
 
-    let cancelled = false
+    const savedDelivery = pendingCheckout?.deliveryDetails
+    const hasValidSavedDelivery = Boolean(
+      savedDelivery?.addressLine1?.trim() &&
+      savedDelivery?.country?.trim() &&
+      savedDelivery?.state?.trim(),
+    )
+
+    console.log("==> [CheckoutModal] savedDelivery details:", savedDelivery)
+    console.log("==> [CheckoutModal] hasValidSavedDelivery:", hasValidSavedDelivery)
+
+    setCheckout({
+      items: pendingCheckout?.items?.length ? pendingCheckout.items : itemsRef.current,
+      total: Number(pendingCheckout?.total ?? subtotalRef.current) || 0,
+      itemCount: Number(pendingCheckout?.itemCount ?? itemsRef.current.length) || 0,
+    })
+
+    if (savedDelivery) {
+      setShipping({
+        addressLine1: savedDelivery.addressLine1 || "",
+        addressLine2: savedDelivery.addressLine2 || "",
+        country: savedDelivery.country || "",
+        state: savedDelivery.state || "",
+        postcode: savedDelivery.postcode || "",
+      })
+    } else {
+      setShipping({ addressLine1: "", addressLine2: "", country: "", state: "", postcode: "" })
+    }
+
+    setStep(hasValidSavedDelivery ? "processing" : "shipping")
 
     void (async () => {
+      let extractedOrderId = null
       try {
+        console.log("==> [CheckoutModal] Calling completeUserCart...")
         const response = await completeUserCart({ authToken, userId })
-        console.log("Cart complete response in CheckoutModal:", response)
-        const extractedOrderId =
+        console.log("==> [CheckoutModal] completeUserCart response:", response)
+        const id =
           response?.order?._id ||
           response?.order?.id ||
           response?.data?.order?._id ||
@@ -153,34 +320,34 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
           response?.data?.id ||
           response?._id ||
           response?.id
-        if (extractedOrderId) {
-          completedOrderIdRef.current = String(extractedOrderId)
-          setCompletedOrderId(String(extractedOrderId))
-        }
-        if (response) {
-          await clearCart()
+        if (id) {
+          extractedOrderId = String(id)
+          completedOrderIdRef.current = extractedOrderId
+          setCompletedOrderId(extractedOrderId)
         }
       } catch (err) {
-        if (isMissingActiveCartError(err)) {
-          return
+        if (!isMissingActiveCartError(err)) {
+          console.error("==> [CheckoutModal] Failed to complete paid cart:", err)
+        } else {
+          console.log("==> [CheckoutModal] Active cart already completed or missing.")
         }
+      }
 
-        console.error("Failed to complete paid cart.", err)
-        if (cancelled) return
-
-        setError(
-          getApiErrorMessage(
-            err,
-            "Payment received, but we could not complete your cart yet. You can still confirm your delivery location.",
-          ),
-        )
+      if (hasValidSavedDelivery && savedDelivery) {
+        try {
+          console.log("==> [CheckoutModal] Auto applying delivery details with orderId:", extractedOrderId)
+          await applyDeliveryDetails(savedDelivery, extractedOrderId)
+        } catch (err) {
+          console.error("==> [CheckoutModal] Auto apply delivery failed:", err)
+          setStep("shipping")
+          setError("Please verify and confirm your delivery location below.")
+        }
+      } else {
+        console.log("==> [CheckoutModal] No valid saved delivery details found, showing shipping form.")
+        setStep("shipping")
       }
     })()
-
-    return () => {
-      cancelled = true
-    }
-  }, [authToken, isOpen, items, paymentInfo, subtotal, userId])
+  }, [authToken, isOpen, paymentInfo?.tx_ref, paymentInfo?.transaction_id, userId])
 
   if (!isOpen || !isUserAuthenticated || !paymentInfo) return null
 
@@ -189,6 +356,7 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
   const checkoutItemCount = checkout?.itemCount ?? items.length
 
   const stepLabel = {
+    processing: "Finalizing order",
     shipping: "Delivery location",
     done: "Order confirmed",
   }[step]
@@ -209,129 +377,7 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
 
     try {
       setSubmitting(true)
-      const refreshedOrders = await refreshOrders()
-      console.log("Refreshed orders on submit:", refreshedOrders)
-
-      let matchedOrder = findMatchingOrder(refreshedOrders, paymentInfo)
-
-      const fallbackId = completedOrderIdRef.current || completedOrderId
-
-      if (!matchedOrder && fallbackId && refreshedOrders?.length) {
-        matchedOrder = refreshedOrders.find(
-          (o) => String(o.id || o._id) === String(fallbackId),
-        )
-      }
-
-      if (!matchedOrder && refreshedOrders?.length) {
-        // Fallback to order with pending status or no address, or the most recent order
-        matchedOrder =
-          refreshedOrders.find(
-            (o) => (o.deliveryStatus === "PENDING" || !o.destination?.address) && (o.id || o._id),
-          ) || refreshedOrders[0]
-      }
-
-      let orderIdToUpdate = matchedOrder?.id || matchedOrder?._id || fallbackId
-
-      if (!orderIdToUpdate && authToken && userId) {
-        try {
-          const compRes = await completeUserCart({ authToken, userId })
-          const compId =
-            compRes?.order?._id ||
-            compRes?.order?.id ||
-            compRes?.data?.order?._id ||
-            compRes?.data?.order?.id ||
-            compRes?.data?._id ||
-            compRes?.data?.id ||
-            compRes?._id ||
-            compRes?.id
-          if (compId) {
-            orderIdToUpdate = String(compId)
-            completedOrderIdRef.current = String(compId)
-            setCompletedOrderId(String(compId))
-          }
-        } catch (e) {
-          console.error("Attempted completeUserCart on submit:", e)
-        }
-      }
-
-      const destination = {
-        address: [shipping.addressLine1.trim(), shipping.addressLine2.trim()].filter(Boolean).join(", "),
-        addressLine1: shipping.addressLine1.trim(),
-        addressLine2: shipping.addressLine2.trim(),
-        country: shipping.country.trim(),
-        state: shipping.state.trim(),
-        postcode: shipping.postcode.trim(),
-      }
-
-      const baseOrder =
-        matchedOrder ||
-        {
-          id: orderIdToUpdate || paymentInfo.tx_ref || "payment-confirmed",
-          _id: orderIdToUpdate,
-          status: "Processing",
-          total: checkoutTotal,
-          itemCount: checkoutItemCount,
-          items: checkoutItems,
-          createdAt: new Date().toISOString(),
-          payment: {
-            provider: "flutterwave",
-            txRef: paymentInfo.tx_ref,
-            transactionId: paymentInfo.transaction_id,
-            status: "successful",
-          },
-        }
-
-      const receiptOrder = withOrderDisplayFallbacks({
-        ...baseOrder,
-        id: orderIdToUpdate || baseOrder.id,
-        destination,
-      })
-
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
-      if (backendUrl && authToken) {
-        const deliveryPayload = {
-          deliveryDetails: {
-            country: destination.country,
-            city: destination.state,
-            address: destination.address,
-            stateOrProvince: destination.state,
-            postCode: destination.postcode,
-          },
-        }
-
-        console.log("Updating order ID:", orderIdToUpdate)
-        console.log("Delivery payload:", deliveryPayload)
-
-        if (orderIdToUpdate) {
-          try {
-            const updateRes = await axios.put(
-              `${backendUrl}/api/v1/users/orders/${orderIdToUpdate}`,
-              deliveryPayload,
-              { headers: { Authorization: `Bearer ${authToken}` } },
-            )
-            console.log("Order update response:", updateRes.data)
-          } catch (updateErr) {
-            console.error("Failed to update order delivery details:", updateErr)
-          }
-        } else {
-          console.error("Cannot call PUT /api/v1/users/orders/: orderId is undefined.", {
-            refreshedOrders,
-            completedOrderId: fallbackId,
-          })
-        }
-      }
-
-      saveDeliveryLocation({
-        orderId: receiptOrder.id,
-        trackingCode: receiptOrder.trackingCode,
-        paymentReference: paymentInfo.tx_ref,
-        destination,
-      })
-      setOrder(receiptOrder)
-      clearPendingCheckout()
-      setStep("done")
-      await refreshOrders()
-      onOrderSettled?.()
+      await applyDeliveryDetails(shipping)
     } catch (err) {
       console.error(err)
       setError("Your payment was received, but we could not refresh your order yet. Please check purchase history.")
@@ -341,11 +387,11 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
   }
 
   const destinationText = [
-    order?.destination?.addressLine1,
-    order?.destination?.addressLine2,
-    order?.destination?.state,
-    order?.destination?.postcode,
-    order?.destination?.country,
+    order?.destination?.addressLine1 || shipping.addressLine1,
+    order?.destination?.addressLine2 || shipping.addressLine2,
+    order?.destination?.state || shipping.state,
+    order?.destination?.postcode || shipping.postcode,
+    order?.destination?.country || shipping.country,
   ]
     .filter(Boolean)
     .join(", ")
@@ -360,7 +406,13 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-black/5 bg-[#f4f4f4]/95 px-6 py-5 backdrop-blur dark:border-white/10 dark:bg-[#16131f]/95">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--theme)/10 text-(--theme)">
-              {step === "done" ? <CheckCircle2 size={20} /> : <MapPin size={20} />}
+              {step === "done" ? (
+                <CheckCircle2 size={20} />
+              ) : step === "processing" ? (
+                <Loader2 size={20} className="animate-spin" />
+              ) : (
+                <MapPin size={20} />
+              )}
             </div>
             <div>
               <h2 className="text-2xl font-black text-gray-900 dark:text-white">Checkout</h2>
@@ -370,7 +422,7 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
 
           <button
             onClick={onClose}
-            className="rounded-full p-2 text-gray-600 transition hover:bg-white hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/10"
+            className="rounded-full p-2 text-gray-600 transition hover:bg-white hover:text-gray-900 dark:text-gray-300 dark:hover:bg-white/10 cursor-pointer"
             aria-label="Close checkout"
           >
             <X size={22} />
@@ -379,6 +431,28 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
 
         <div className="space-y-5 p-6 md:p-8">
           <AnimatePresence mode="wait">
+            {step === "processing" && (
+              <motion.div
+                key="processing"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="py-10 text-center space-y-4"
+              >
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-(--theme)/10 text-(--theme)">
+                  <Loader2 size={32} className="animate-spin" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Finalizing your order…
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                    Registering your delivery details and setting up tracking.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
             {step === "shipping" && (
               <motion.form
                 key="shipping"
@@ -486,7 +560,7 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
               </motion.form>
             )}
 
-            {step === "done" && order && (
+            {step === "done" && (
               <motion.div
                 key="done"
                 initial={{ opacity: 0, y: 10 }}
@@ -539,4 +613,3 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     </div>
   )
 }
-
