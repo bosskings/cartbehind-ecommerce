@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useMemo, useCallback } from "react"
 import { FaRegMoon, FaRegSun } from "react-icons/fa"
 import { IoSearch } from "react-icons/io5"
 import { FiShoppingBag } from "react-icons/fi"
@@ -14,9 +14,15 @@ import toast from "react-hot-toast"
 import { useAuth } from "@/components/AuthContext"
 import { useCart } from "@/components/CartContext"
 import { useTheme } from "@/components/ThemeContext"
+import { fetchProducts } from "@/lib/products"
 
 const Navbar = () => {
   const [searchTerm, setSearchTerm] = useState("")
+  const [allProducts, setAllProducts] = useState([])
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const searchRef = useRef(null)
+  const mobileSearchRef = useRef(null)
   const [showSearch, setShowSearch] = useState(false)
   const [showMenu, setShowMenu] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -72,6 +78,122 @@ const Navbar = () => {
     router.replace("/")
   }
 
+  const loadSearchProducts = useCallback(async () => {
+    if (allProducts.length > 0 || isLoadingProducts) return
+    setIsLoadingProducts(true)
+    try {
+      const list = await fetchProducts()
+      setAllProducts(Array.isArray(list) ? list : [])
+    } catch (err) {
+      console.error("Failed to load products for search:", err)
+    } finally {
+      setIsLoadingProducts(false)
+    }
+  }, [allProducts.length, isLoadingProducts])
+
+  const searchResults = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase()
+    if (!q) return []
+    return allProducts
+      .filter((product) => {
+        const title = (product.title || product.name || "").toLowerCase()
+        const category = (product.category || "").toLowerCase()
+        const brand = (product.brand || "").toLowerCase()
+        const desc = (product.description || "").toLowerCase()
+        return (
+          title.includes(q) ||
+          category.includes(q) ||
+          brand.includes(q) ||
+          desc.includes(q)
+        )
+      })
+      .slice(0, 8)
+  }, [allProducts, searchTerm])
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        searchRef.current &&
+        !searchRef.current.contains(event.target) &&
+        mobileSearchRef.current &&
+        !mobileSearchRef.current.contains(event.target)
+      ) {
+        setIsSearchOpen(false)
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  const handleSearchSubmit = (e) => {
+    e?.preventDefault()
+    if (searchResults.length > 0) {
+      router.push(`/product/${searchResults[0].id}`)
+      setIsSearchOpen(false)
+      setShowSearch(false)
+      setSearchTerm("")
+    }
+  }
+
+  const renderSearchDropdown = () => {
+    if (!isSearchOpen || !searchTerm.trim()) return null
+
+    return (
+      <div
+        style={{ top: "calc(100% + 8px)" }}
+        className="absolute left-0 right-0 z-50 overflow-hidden rounded-2xl border border-gray-100 bg-white/95 backdrop-blur-xl shadow-2xl dark:border-white/10 dark:bg-[#16131f]/95"
+      >
+        {isLoadingProducts && allProducts.length === 0 ? (
+          <div className="flex items-center justify-center gap-2 py-8 text-xs text-gray-500">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-(--theme) border-t-transparent" />
+            Searching catalog...
+          </div>
+        ) : searchResults.length > 0 ? (
+          <div className="max-h-[360px] overflow-y-auto p-1.5 divide-y divide-gray-100/60 dark:divide-white/5">
+            <div className="flex items-center justify-between px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+              <span>Suggestions</span>
+              <span>{searchResults.length} found</span>
+            </div>
+            {searchResults.map((item) => (
+              <Link
+                key={item.id}
+                href={`/product/${item.id}`}
+                onClick={() => {
+                  setIsSearchOpen(false)
+                  setShowSearch(false)
+                  setSearchTerm("")
+                }}
+                className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-gray-100/80 dark:hover:bg-white/10 group"
+              >
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <IoSearch size={14} className="text-gray-400 shrink-0 group-hover:text-(--theme) transition-colors" />
+                  <span className="truncate text-sm font-medium text-gray-800 group-hover:text-(--theme) transition-colors dark:text-gray-200">
+                    {item.title}
+                  </span>
+                </div>
+                {item.category && (
+                  <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-gray-500 dark:bg-white/10 dark:text-gray-400">
+                    {item.category}
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="p-6 text-center">
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+              No products found matching &ldquo;<span className="font-bold text-(--theme)">{searchTerm}</span>&rdquo;
+            </p>
+            <p className="mt-1 text-[11px] text-gray-400">
+              Try searching by product name, category, or brand
+            </p>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div
       className={`fixed left-0 right-0 top-0 z-50 transition-all duration-300 ${isNavActive
@@ -90,19 +212,35 @@ const Navbar = () => {
             />
           </Link>
 
-          <div
-            className={`hidden md:flex w-[45%] items-center justify-between gap-4 rounded-full border pr-1 transition-all duration-200 ${searchInputClasses} focus-within:border-(--theme) focus-within:shadow-[0_0_8px_rgba(var(--theme-rgb),0.35)]`}
-          >
-            <input
-              type="text"
-              placeholder="Search for products, brands..."
-              className={`${inputBaseClass} ${searchTextClasses}`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <button className="cursor-pointer rounded-full bg-(--theme) p-2 text-(--theme-second) transition-all duration-300 hover:scale-110 hover:bg-[#280E89]">
-              <IoSearch />
-            </button>
+          <div ref={searchRef} className="relative hidden md:flex flex-col justify-center w-[45%]">
+            <form
+              onSubmit={handleSearchSubmit}
+              className={`flex w-full items-center justify-between gap-4 rounded-full border pr-1 transition-all duration-200 ${searchInputClasses} focus-within:border-(--theme) focus-within:shadow-[0_0_8px_rgba(var(--theme-rgb),0.35)]`}
+            >
+              <input
+                type="text"
+                placeholder="Search for products, brands..."
+                className={`${inputBaseClass} ${searchTextClasses}`}
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value)
+                  setIsSearchOpen(true)
+                  loadSearchProducts()
+                }}
+                onFocus={() => {
+                  setIsSearchOpen(true)
+                  loadSearchProducts()
+                }}
+              />
+              <button
+                type="submit"
+                className="cursor-pointer rounded-full bg-(--theme) p-2 text-(--theme-second) transition-all duration-300 hover:scale-110 hover:bg-[#280E89]"
+              >
+                <IoSearch />
+              </button>
+            </form>
+
+            {renderSearchDropdown()}
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4">
@@ -188,23 +326,39 @@ const Navbar = () => {
         </div>
 
         {showSearch && (
-          <motion.div
-            initial={{ opacity: 0, y: -25 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="mb-2 flex w-full items-center justify-between gap-4 rounded-full border border-gray-300 bg-[#F5F5F5] pr-1 md:hidden dark:border-white/15 dark:bg-[#16131f]"
-          >
-            <input
-              type="text"
-              placeholder="Search for products, brands..."
-              className={`${inputBaseClass} ${searchTextClasses}`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <button className="rounded-full cursor-pointer bg-(--theme) p-2 text-(--theme-second) transition-all duration-300 hover:scale-110 hover:bg-[#280E89]">
-              <IoSearch />
-            </button>
-          </motion.div>
+          <div ref={mobileSearchRef} className="relative mb-2 w-full md:hidden">
+            <motion.form
+              initial={{ opacity: 0, y: -25 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              onSubmit={handleSearchSubmit}
+              className="flex w-full items-center justify-between gap-4 rounded-full border border-gray-300 bg-[#F5F5F5] pr-1 dark:border-white/15 dark:bg-[#16131f]"
+            >
+              <input
+                type="text"
+                placeholder="Search for products, brands..."
+                className={`${inputBaseClass} ${searchTextClasses}`}
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value)
+                  setIsSearchOpen(true)
+                  loadSearchProducts()
+                }}
+                onFocus={() => {
+                  setIsSearchOpen(true)
+                  loadSearchProducts()
+                }}
+              />
+              <button
+                type="submit"
+                className="rounded-full cursor-pointer bg-(--theme) p-2 text-(--theme-second) transition-all duration-300 hover:scale-110 hover:bg-[#280E89]"
+              >
+                <IoSearch />
+              </button>
+            </motion.form>
+
+            {renderSearchDropdown()}
+          </div>
         )}
       </div>
 
