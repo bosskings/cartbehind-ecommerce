@@ -129,8 +129,6 @@ export async function completeUserCart({ authToken, userId }) {
     },
   )
 
-  console.log("Cart complete response:", response.data)
-
   return response.data
 }
 

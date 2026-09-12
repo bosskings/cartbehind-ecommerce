@@ -36,12 +36,10 @@ export default function AddCartNoteModal({
   if (!isOpen || !product) return null
 
   const handleConfirm = () => {
-    console.log("📝 [AddCartNoteModal] Submitting delivery note:", note.trim())
     onConfirm?.(product, note.trim())
   }
 
   const handleSkip = () => {
-    console.log("📝 [AddCartNoteModal] Skipped delivery note")
     onConfirm?.(product, "")
   }
 

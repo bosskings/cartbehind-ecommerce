@@ -190,7 +190,6 @@ export async function fetchUserOrders(authToken) {
     headers: getHeaders(authToken),
   })
 
-  console.log("Orders fetch response:", response.data)
   return normalizeOrdersResponse(response.data)
 }
 
@@ -200,7 +199,6 @@ export async function fetchUserOrder(authToken, orderId) {
     headers: getHeaders(authToken),
   })
 
-  console.log("Single order fetch response:", response.data)
   return normalizeSingleOrderResponse(response.data)
 }
 
@@ -211,7 +209,6 @@ export async function fetchUserTrackedParcel(authToken, trackingCode) {
     { headers: getHeaders(authToken) },
   )
 
-  console.log("User track-parcel endpoint response:", response.data)
   return response.data
 }
 
@@ -222,8 +219,6 @@ export async function fetchAdminOrders(authToken) {
   const response = await axios.get(`${backendUrl}/api/v1/admin/orders`, {
     headers: { Authorization: `Bearer ${authToken}` },
   })
-
-  console.log(response)
 
   return normalizeAdminOrdersResponse(response.data)
 }
@@ -236,7 +231,6 @@ export async function fetchAdminOverview(authToken) {
     headers: { Authorization: `Bearer ${authToken}` },
   })
 
-  console.log("Admin overview response:", response.data)
   return response.data
 }
 
@@ -276,7 +270,6 @@ export async function fetchAdminTransit(authToken, orderId) {
     headers: { Authorization: `Bearer ${authToken}` },
   })
 
-  console.log("Entire raw response from GET /api/v1/admin/transit/" + orderId + ":", response.data)
   return response.data
 }
 
@@ -300,23 +293,10 @@ export async function fetchAdminCartDetails(authToken, orderId) {
   if (!orderId) throw new Error("Order ID is required.")
 
   const url = `${backendUrl}/api/v1/admin/cart-details/${encodeURIComponent(orderId)}`
-  console.log(`[fetchAdminCartDetails] Fetching: ${url}`)
 
   const response = await axios.get(url, {
     headers: { Authorization: `Bearer ${authToken}` },
   })
-
-  console.group(`%c[fetchAdminCartDetails] Full Backend Response for Order: ${orderId}`, "color: #3b82f6; font-weight: bold; font-size: 13px;")
-  console.log("Request URL:", url)
-  console.log("HTTP Status:", response.status, response.statusText)
-  console.log("Response Headers:", response.headers)
-  console.log("Full response.data (Object):", response.data)
-  try {
-    console.log("Full response.data (Formatted JSON):\n" + JSON.stringify(response.data, null, 2))
-  } catch (e) {
-    console.warn("Could not JSON.stringify response.data:", e)
-  }
-  console.groupEnd()
 
   return response.data
 }

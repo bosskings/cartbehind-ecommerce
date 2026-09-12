@@ -164,45 +164,17 @@ export function CartProvider({ children }) {
         payload.deliveryNote = deliveryNote.trim()
       }
 
-      console.log(
-        "%c🛒 [ADD TO CART] REQUEST PAYLOAD:",
-        "background: #7c3aed; color: #fff; padding: 3px 8px; border-radius: 4px; font-weight: bold;",
-        payload,
-      )
-
       if (!canSyncCart) {
-        console.warn(
-          "%c🛒 [ADD TO CART] User is not authenticated; item saved to local cart only.",
-          "color: #f59e0b; font-weight: bold;",
-        )
         return
       }
 
       try {
         const url = `${getBackendUrl()}/api/v1/users/cart/add`
-        console.log("🛒 [ADD TO CART] Request URL:", url)
-
-        const response = await axios.post(
+        await axios.post(
           url,
           payload,
           { headers: getHeaders() },
         )
-
-        console.log(
-          "%c🛒 [ADD TO CART] FULL RESPONSE OBJECT:",
-          "background: #10b981; color: #fff; padding: 3px 8px; border-radius: 4px; font-weight: bold;",
-          response,
-        )
-        console.log("🛒 [ADD TO CART] Response Status:", response.status, response.statusText)
-        console.log("🛒 [ADD TO CART] Response Data (Object):", response.data)
-        try {
-          console.log(
-            "🛒 [ADD TO CART] Response Data (Formatted JSON):\n" +
-              JSON.stringify(response.data, null, 2),
-          )
-        } catch (e) {
-          console.warn("Could not stringify response data:", e)
-        }
       } catch (error) {
         console.error(
           "%c🛒 [ADD TO CART] ERROR:",
@@ -313,8 +285,6 @@ export function CartProvider({ children }) {
           headers: getHeaders(),
         })
 
-        console.log("User cart response:", response.data)
-
         if (cancelled || requestId !== cartRequestIdRef.current) return
 
         const serverItems = Array.isArray(response.data?.items)
@@ -347,7 +317,6 @@ export function CartProvider({ children }) {
         }
 
         if (isMissingActiveCartError(error)) {
-          console.log("User cart response: active cart not found on server, preserving local cart")
           const localItems = itemsRef.current?.length ? itemsRef.current : readStoredCart()
           if (localItems.length > 0) {
             applyItems(localItems)

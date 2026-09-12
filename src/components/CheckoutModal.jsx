@@ -119,15 +119,7 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
   }, [isOpen, isUserAuthenticated, onClose, router])
 
   const applyDeliveryDetails = async (shippingData, explicitOrderId = null) => {
-    console.log("==> [CheckoutModal] applyDeliveryDetails invoked with:", {
-      shippingData,
-      explicitOrderId,
-      completedOrderIdRef: completedOrderIdRef.current,
-      completedOrderId,
-    })
-
     const refreshedOrders = await refreshOrders()
-    console.log("==> [CheckoutModal] Refreshed orders list:", refreshedOrders)
 
     let matchedOrder = findMatchingOrder(refreshedOrders, paymentInfo)
     const fallbackId = explicitOrderId || completedOrderIdRef.current || completedOrderId
@@ -219,16 +211,12 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
         },
       }
 
-      console.log("==> [CheckoutModal] Updating order ID:", orderIdToUpdate)
-      console.log("==> [CheckoutModal] Delivery payload:", deliveryPayload)
-
       try {
-        const updateRes = await axios.put(
+        await axios.put(
           `${backendUrl}/api/v1/users/orders/${orderIdToUpdate}`,
           deliveryPayload,
           { headers: { Authorization: `Bearer ${authToken}` } },
         )
-        console.log("==> [CheckoutModal] Order update response:", updateRes.data)
       } catch (updateErr) {
         console.error("==> [CheckoutModal] Failed to update order delivery details:", updateErr)
       }
@@ -253,7 +241,6 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
 
     await refreshOrders()
     onOrderSettled?.()
-    console.log("==> [CheckoutModal] Successfully completed order and transitioned to 'done'")
   }
 
   useEffect(() => {
@@ -273,7 +260,6 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     setSubmitting(false)
 
     const pendingCheckout = readPendingCheckout()
-    console.log("==> [CheckoutModal] Read pendingCheckout from localStorage:", pendingCheckout)
 
     const savedDelivery = pendingCheckout?.deliveryDetails
     const hasValidSavedDelivery = Boolean(
@@ -281,9 +267,6 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
       savedDelivery?.country?.trim() &&
       savedDelivery?.state?.trim(),
     )
-
-    console.log("==> [CheckoutModal] savedDelivery details:", savedDelivery)
-    console.log("==> [CheckoutModal] hasValidSavedDelivery:", hasValidSavedDelivery)
 
     setCheckout({
       items: pendingCheckout?.items?.length ? pendingCheckout.items : itemsRef.current,
@@ -308,9 +291,7 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     void (async () => {
       let extractedOrderId = null
       try {
-        console.log("==> [CheckoutModal] Calling completeUserCart...")
         const response = await completeUserCart({ authToken, userId })
-        console.log("==> [CheckoutModal] completeUserCart response:", response)
         const id =
           response?.order?._id ||
           response?.order?.id ||
@@ -328,14 +309,11 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
       } catch (err) {
         if (!isMissingActiveCartError(err)) {
           console.error("==> [CheckoutModal] Failed to complete paid cart:", err)
-        } else {
-          console.log("==> [CheckoutModal] Active cart already completed or missing.")
         }
       }
 
       if (hasValidSavedDelivery && savedDelivery) {
         try {
-          console.log("==> [CheckoutModal] Auto applying delivery details with orderId:", extractedOrderId)
           await applyDeliveryDetails(savedDelivery, extractedOrderId)
         } catch (err) {
           console.error("==> [CheckoutModal] Auto apply delivery failed:", err)
@@ -343,7 +321,6 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
           setError("Please verify and confirm your delivery location below.")
         }
       } else {
-        console.log("==> [CheckoutModal] No valid saved delivery details found, showing shipping form.")
         setStep("shipping")
       }
     })()

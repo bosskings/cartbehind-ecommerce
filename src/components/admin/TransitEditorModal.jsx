@@ -59,11 +59,8 @@ export default function TransitEditorModal({ order, onClose, onSuccess, onAuthEx
       })
 
       try {
-        console.log("TransitEditorModal opening for order:", order)
         const response = await fetchAdminTransit(token, order.id)
         if (cancelled) return
-
-        console.log("Entire response from GET /api/v1/admin/transit/" + order.id + ":", response)
 
         // Matches: { status, message, transit: { currentLocation: [...] } }
         const transit = getTransitFromResponse(response)
@@ -188,23 +185,13 @@ export default function TransitEditorModal({ order, onClose, onSuccess, onAuthEx
             description: location.description,
           }
           const transitId = editingOrder.transitId
-          console.log("Admin transit PATCH payload:", {
-            endpoint: `/api/v1/admin/transit/${transitId}`,
-            orderId: editingOrder.id,
-            transitId,
-            ...stepPayload,
-          })
           response = await addAdminTransitStep(token, transitId, stepPayload)
         }
-        console.log("Admin transit PATCH response:", response)
       } else {
-        console.log("Admin transit POST payload:", createPayload)
         response = await createAdminTransit(token, createPayload)
-        console.log("Admin transit POST response:", response)
       }
 
       const refreshed = await fetchAdminTransit(token, editingOrder.id)
-      console.log("Admin transit GET after save:", refreshed)
       const transit = getTransitFromResponse(refreshed)
 
       setEditingOrder((current) => ({

@@ -147,12 +147,6 @@ const MainPage = ({ category = 'All' }) => {
   const { products, loading, error } = useProducts()
   const { addToCart } = useCart()
 
-  useEffect(() => {
-    if (products) {
-      console.log('Products fetched in MainPage:', products)
-    }
-  }, [products])
-
   const [showBackToTop, setShowBackToTop] = useState(false)
   const [testimonialIndex, setTestimonialIndex] = useState(0)
   const [deliveryFilter, setDeliveryFilter] = useState("All")

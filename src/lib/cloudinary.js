@@ -35,7 +35,6 @@ export async function uploadToCloudinary(file) {
   })
 
   const signature = await signatureRes.json()
-  console.log(signature)
 
   if (!signatureRes.ok) {
     const error = new Error(signature?.message || "Failed to get Cloudinary signature.")
@@ -59,7 +58,6 @@ export async function uploadToCloudinary(file) {
   )
 
   const uploaded = await cloudinaryRes.json()
-  console.log(uploaded)
 
   if (!cloudinaryRes.ok) {
     throw new Error(uploaded?.error?.message || "Cloudinary upload failed.")
