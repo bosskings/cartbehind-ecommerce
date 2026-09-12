@@ -2,7 +2,7 @@
 
 import axios from "axios";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -40,6 +40,67 @@ const FALLBACK_IMAGES = {
   "clothings": "/ct-1.jpg",
 };
 
+function getCategoryImageUrl(category, catName) {
+  if (category && typeof category === "object") {
+    // 1. Direct string URL on category.image
+    if (typeof category.image === "string" && category.image.trim()) {
+      return category.image.trim();
+    }
+    // 2. Object with url or secure_url
+    if (category.image && typeof category.image === "object") {
+      if (typeof category.image.url === "string" && category.image.url.trim()) {
+        return category.image.url.trim();
+      }
+      if (typeof category.image.secure_url === "string" && category.image.secure_url.trim()) {
+        return category.image.secure_url.trim();
+      }
+    }
+    // 3. Direct url, secure_url, or imageUrl on category object
+    if (typeof category.url === "string" && category.url.trim()) {
+      return category.url.trim();
+    }
+    if (typeof category.secure_url === "string" && category.secure_url.trim()) {
+      return category.secure_url.trim();
+    }
+    if (typeof category.imageUrl === "string" && category.imageUrl.trim()) {
+      return category.imageUrl.trim();
+    }
+  }
+
+  // 4. Fallback images map
+  if (catName && typeof catName === "string") {
+    const fallback = FALLBACK_IMAGES[catName.trim().toLowerCase()];
+    if (fallback) return fallback;
+  }
+
+  return null;
+}
+
+function CategoryItemImage({ src, alt, initial }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (!src || hasError) {
+    return (
+      <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#280E89]/80 to-[#6c47ff]/70 text-xl font-black text-white sm:text-2xl">
+        {initial}
+      </span>
+    );
+  }
+
+  const isRemote = typeof src === "string" && /^https?:\/\//.test(src);
+
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      fill
+      sizes="112px"
+      unoptimized={isRemote}
+      onError={() => setHasError(true)}
+      className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
+    />
+  );
+}
 
 const headerReveal = {
   hidden: { opacity: 0, y: 16 },
@@ -61,32 +122,24 @@ export default function CategoryCarousel({ categories: propCategories = [] }) {
   const nextRef = useRef(null);
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
-  const [categories, setCategories] = useState(
-    Array.isArray(propCategories) && propCategories.length > 0 ? propCategories : []
-  );
+  const [backendCategories, setBackendCategories] = useState([]);
   const [loading, setLoading] = useState(!propCategories || propCategories.length === 0);
   const [fetchError, setFetchError] = useState(null);
-
-  // Sync propCategories when available
-  useEffect(() => {
-    if (Array.isArray(propCategories) && propCategories.length > 0) {
-      setCategories(propCategories);
-      setLoading(false);
-    }
-  }, [propCategories]);
 
   useEffect(() => {
     let isMounted = true;
     async function fetchCategories() {
       try {
-        if (!categories.length) setLoading(true);
+        if (!backendCategories.length && (!propCategories || !propCategories.length)) {
+          setLoading(true);
+        }
         setFetchError(null);
         const res = await axios.get(`${BACKEND_URL}/api/v1/users/categories`);
         if (!isMounted) return;
         const data = res.data;
         const list = Array.isArray(data) ? data : data?.categories ?? data?.data ?? [];
         if (list.length > 0) {
-          setCategories(list);
+          setBackendCategories(list);
         }
       } catch (err) {
         if (isMounted) {
@@ -103,6 +156,59 @@ export default function CategoryCarousel({ categories: propCategories = [] }) {
       isMounted = false;
     };
   }, []);
+
+  // Merge backend categories (which have admin-uploaded images) with propCategories
+  const categories = useMemo(() => {
+    if (backendCategories.length > 0) {
+      const propMap = new Map();
+      if (Array.isArray(propCategories)) {
+        propCategories.forEach((cat) => {
+          const name = typeof cat === "string" ? cat : cat?.name;
+          if (name) propMap.set(name.trim().toLowerCase(), cat);
+        });
+      }
+
+      const merged = backendCategories.map((cat) => {
+        const catName = typeof cat === "string" ? cat : (cat?.name || "");
+        const propMatch = propMap.get(catName.trim().toLowerCase());
+        const existingImg = getCategoryImageUrl(cat, catName);
+
+        // If backend category has no explicit image, fall back to product image if available
+        if ((!existingImg || existingImg === "/thumbnail.webp") && propMatch) {
+          const propImg = getCategoryImageUrl(propMatch, catName);
+          if (propImg && propImg !== "/thumbnail.webp") {
+            return {
+              ...cat,
+              name: catName,
+              image: propImg,
+            };
+          }
+        }
+        return cat;
+      });
+
+      // Include any prop categories not in backend categories
+      if (Array.isArray(propCategories)) {
+        const backendNames = new Set(
+          backendCategories.map((c) => (typeof c === "string" ? c : c?.name || "").trim().toLowerCase())
+        );
+        propCategories.forEach((pCat) => {
+          const pName = (typeof pCat === "string" ? pCat : pCat?.name || "").trim().toLowerCase();
+          if (pName && !backendNames.has(pName)) {
+            merged.push(pCat);
+          }
+        });
+      }
+
+      return merged;
+    }
+
+    if (Array.isArray(propCategories) && propCategories.length > 0) {
+      return propCategories;
+    }
+
+    return [];
+  }, [backendCategories, propCategories]);
 
   return (
     <section className="w-[95%] md:w-full mx-auto py-8">
@@ -195,14 +301,16 @@ export default function CategoryCarousel({ categories: propCategories = [] }) {
             }}
             className="py-2!"
           >
-            {categories.map((category) => {
+            {categories.map((category, index) => {
               const catName = typeof category === "string" ? category : (category?.name || "");
-              const fallbackImg = FALLBACK_IMAGES[catName.toLowerCase()] ?? null;
-              const catImage = (typeof category === "object" && category?.image?.url) ? category.image.url : fallbackImg;
+              const catImage = getCategoryImageUrl(category, catName);
               const catInitial = catName.trim().charAt(0).toUpperCase();
+              const slideKey = (typeof category === "object" && (category?._id || category?.id))
+                ? String(category._id || category.id)
+                : `${catName}-${index}`;
 
               return (
-                <SwiperSlide key={catName}>
+                <SwiperSlide key={slideKey}>
                   <MotionLink
                     href={`/category/${toSlug(catName)}`}
                     whileHover={{ y: -4 }}
@@ -210,19 +318,11 @@ export default function CategoryCarousel({ categories: propCategories = [] }) {
                     className="group flex w-full flex-col items-center gap-2 rounded-2xl py-1 opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-(--theme) focus-visible:ring-offset-2"
                   >
                     <span className="relative h-16 w-16 min-[360px]:h-[72px] min-[360px]:w-[72px] shrink-0 overflow-hidden rounded-full border-2 border-gray-100/80 shadow-sm transition-shadow duration-300 group-hover:shadow-md group-hover:border-(--theme)/40 sm:h-28 sm:w-28 md:h-30 md:w-30">
-                      {catImage ? (
-                        <Image
-                          src={catImage}
-                          alt={catName}
-                          fill
-                          sizes="112px"
-                          className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
-                        />
-                      ) : (
-                        <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#280E89]/80 to-[#6c47ff]/70 text-xl font-black text-white sm:text-2xl">
-                          {catInitial}
-                        </span>
-                      )}
+                      <CategoryItemImage
+                        src={catImage}
+                        alt={catName}
+                        initial={catInitial}
+                      />
                       {/* Glowing ring on hover */}
                       <span className="absolute inset-0 rounded-full ring-2 ring-transparent transition-all duration-300 group-hover:ring-(--theme)/30" />
                     </span>
