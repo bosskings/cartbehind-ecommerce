@@ -231,12 +231,6 @@ export default function DealOfTheDaySection({
       },
     }
 
-    console.log("🚀 [Deal of the Day] Sending payload to /admin/update-item:", {
-      productId: selectedProductId,
-      endpoint: `${API_URL}/api/v1/admin/update-item/${encodeURIComponent(selectedProductId)}`,
-      payload,
-    })
-
     try {
       const response = await fetch(
         `${API_URL}/api/v1/admin/update-item/${encodeURIComponent(selectedProductId)}`,
@@ -251,12 +245,6 @@ export default function DealOfTheDaySection({
       )
 
       const data = await response.json().catch(() => ({}))
-
-      console.log("📥 [Deal of the Day] Server response:", {
-        status: response.status,
-        ok: response.ok,
-        data,
-      })
 
       if (!response.ok) {
         throw new Error(data?.message || `Update failed with status ${response.status}`)

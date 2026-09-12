@@ -126,8 +126,6 @@ export function AuthProvider({ children }) {
         password,
       })
 
-      console.log(response.data)
-
       return {
         ok: true,
         message: response.data?.message || "Account created. Please verify your email.",
@@ -153,8 +151,6 @@ export function AuthProvider({ children }) {
         email,
         otp,
       })
-
-      console.log(response.data)
 
       if (response.data?.status === "ERROR") {
         return {
@@ -188,8 +184,6 @@ export function AuthProvider({ children }) {
         email,
         password,
       })
-
-      console.log(response.data)
 
       const session = {
         email: response.data?.user?.email || email,
@@ -230,8 +224,6 @@ export function AuthProvider({ children }) {
         accessId,
         password,
       })
-
-      console.log(response.data)
 
       const session = {
         role: "admin",

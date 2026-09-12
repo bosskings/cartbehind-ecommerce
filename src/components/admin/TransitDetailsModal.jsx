@@ -64,7 +64,6 @@ export default function TransitDetailsModal({
       try {
         const response = await fetchAdminTransit(token, order.id)
         if (cancelled) return
-        console.log("Admin transit details response:", response)
         const transit = getTransitFromResponse(response)
         if (transit) {
           setTransitDetails(transit)
@@ -133,7 +132,6 @@ export default function TransitDetailsModal({
         carrier: transitDetails.carrier,
         status: transitDetails.status || "IN_TRANSIT",
       })
-      console.log("Admin transit update response:", response)
       const updatedTransit = getTransitFromResponse(response)
       if (updatedTransit) {
         setTransitDetails(updatedTransit)

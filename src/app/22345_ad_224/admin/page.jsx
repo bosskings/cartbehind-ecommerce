@@ -290,7 +290,6 @@ export default function AdminPage() {
       const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL
       const response = await fetch(`${API_URL}/api/v1/users/products?page=1&limit=100`, { cache: "no-store" })
       const rawData = await response.json()
-      console.log("Entire raw response from fetching products in Admin page:", rawData)
 
       const rawList = Array.isArray(rawData)
         ? rawData
@@ -695,8 +694,6 @@ export default function AdminPage() {
       fileType: primaryImage.fileType || "",
     }
 
-    console.log("Submitting /admin/upload-item payload:", requestBody)
-
     try {
       const response = await fetch(`${API_URL}/api/v1/admin/upload-item`, {
         method: "POST",
@@ -708,7 +705,6 @@ export default function AdminPage() {
       })
 
       const data = await response.json()
-      console.log("Response from /admin/upload-item:", data)
 
       if (!response.ok) {
         const error = new Error(data?.message || "Product upload failed.")

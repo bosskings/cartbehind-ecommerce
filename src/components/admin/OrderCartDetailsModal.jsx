@@ -74,23 +74,9 @@ export default function OrderCartDetailsModal({
     setError("")
 
     try {
-      console.log(`[OrderCartDetailsModal] Requesting /admin/cart-details/${orderId}...`)
       const data = await fetchAdminCartDetails(token, orderId)
-
-      console.log(
-        `%c[OrderCartDetailsModal] FULL BACKEND RESPONSE FOR ORDER: ${orderId}`,
-        "color: #10b981; font-weight: bold; font-size: 14px;",
-      )
-      console.log("Raw Response Object:", data)
-      try {
-        console.log("Full Formatted JSON:\n" + JSON.stringify(data, null, 2))
-      } catch (e) {
-        console.warn("Could not stringify data:", e)
-      }
-
       setRawResponse(data)
       const normalized = normalizeCartDetailsResponse(data)
-      console.log(`[OrderCartDetailsModal] Normalized ${normalized.length} cart items:`, normalized)
       setCartItems(normalized)
     } catch (err) {
       console.error(`[OrderCartDetailsModal] Failed to fetch cart details for order ${orderId}:`, err)

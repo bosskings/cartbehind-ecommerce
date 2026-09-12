@@ -45,7 +45,6 @@ async function fetchProductsPage(page = 1, limit = DEFAULT_LIMIT) {
   }
 
   const data = await response.json()
-  console.log("Entire products API response from backend:", data)
   const list = Array.isArray(data.products) ? data.products : []
 
   return {
@@ -107,7 +106,6 @@ export async function searchProducts(query) {
   }
 
   const data = await response.json()
-  console.log("Search API response:", data)
   const list = Array.isArray(data.products)
     ? data.products
     : Array.isArray(data.data)
@@ -190,7 +188,6 @@ export async function fetchProductCategories({ token } = {}) {
   }
 
   const data = await response.json()
-  console.log("Entire raw categories response from backend:", data)
   const list = Array.isArray(data.categories)
     ? data.categories
     : Array.isArray(data.category)

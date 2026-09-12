@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { X, CreditCard, Loader2 } from "lucide-react"
+import { X, MapPin, Loader2 } from "lucide-react"
 import toast from "react-hot-toast"
 import { useAuth } from "@/components/AuthContext"
 import { useCart } from "@/components/CartContext"
@@ -21,10 +21,6 @@ const selectClass =
   "h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none transition focus:border-(--theme) focus:bg-white dark:border-white/10 dark:bg-[#16131f] dark:text-gray-200 dark:focus:bg-[#1a1625] cursor-pointer"
 
 const formatNaira = (amount) => `₦${amount.toLocaleString("en-NG")}`
-
-function onlyDigits(value) {
-  return value.replace(/\D/g, "")
-}
 
 const COUNTRIES = [
   "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
@@ -52,8 +48,6 @@ const COUNTRIES = [
 function PayCustomerModalContent({ onClose, amount, itemCount }) {
   const { userSession } = useAuth()
   const { items } = useCart()
-  const [name, setName] = useState("")
-  const [phone, setPhone] = useState("")
   const [error, setError] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
@@ -69,19 +63,6 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
     event.preventDefault()
     setError("")
 
-    const trimmedName = name.trim()
-    const trimmedPhone = onlyDigits(phone)
-
-    if (!trimmedName) {
-      setError("Enter your full name.")
-      return
-    }
-
-    if (trimmedPhone.length < 10) {
-      setError("Enter a valid phone number.")
-      return
-    }
-
     if (!shipping.addressLine1.trim() || !shipping.country.trim() || !shipping.state.trim()) {
       setError("Please fill in country, address, and state/province.")
       return
@@ -95,6 +76,16 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
     try {
       setSubmitting(true)
 
+      const customerName =
+        userSession?.user?.name ||
+        userSession?.user?.fullName ||
+        userSession?.email?.split("@")[0] ||
+        "Customer"
+      const customerPhone =
+        userSession?.user?.phoneNumber ||
+        userSession?.user?.phone ||
+        ""
+
       const redirect_url = getPaymentCallbackUrl()
       const payload = {
         amount,
@@ -102,8 +93,8 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
         redirect_url,
         customer: {
           email: userSession?.email,
-          name: trimmedName,
-          phonenumber: trimmedPhone,
+          name: customerName,
+          phonenumber: customerPhone,
         },
         customizations: {
           title: "CartBehind",
@@ -115,8 +106,6 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
         authToken: userSession?.authToken,
         payload,
       })
-
-      console.log("Flutterwave pay response:", response)
 
       const paymentLink = extractPaymentLink(response)
       if (!paymentLink) {
@@ -163,11 +152,11 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-black/5 bg-[#f5f5f5]/95 px-6 py-5 backdrop-blur dark:border-white/10 dark:bg-[#12101a]/95">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--theme)/10 text-(--theme)">
-              <CreditCard size={20} />
+              <MapPin size={20} />
             </div>
             <div>
               <h2 className="text-2xl font-black text-gray-900 dark:text-white">Checkout</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Contact &amp; delivery details</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Delivery details</p>
             </div>
           </div>
 
@@ -193,38 +182,6 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
             <p className="mt-1 text-xs text-gray-400">
               {itemCount} {itemCount === 1 ? "item" : "items"} · Secure Flutterwave payment
             </p>
-          </div>
-
-          {/* Contact Details */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-4 dark:border-white/10 dark:bg-[#16131f]">
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              Contact information
-            </p>
-
-            <label className="block space-y-2 text-sm text-gray-700 dark:text-gray-300">
-              <span className="font-semibold">Full name <span className="text-red-500">*</span></span>
-              <input
-                className={fieldClass}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Alex Johnson"
-                autoComplete="name"
-                disabled={submitting}
-              />
-            </label>
-
-            <label className="block space-y-2 text-sm text-gray-700 dark:text-gray-300">
-              <span className="font-semibold">Phone number <span className="text-red-500">*</span></span>
-              <input
-                className={fieldClass}
-                value={phone}
-                onChange={(e) => setPhone(onlyDigits(e.target.value).slice(0, 15))}
-                placeholder="08012345678"
-                inputMode="tel"
-                autoComplete="tel"
-                disabled={submitting}
-              />
-            </label>
           </div>
 
           {/* Delivery Address */}

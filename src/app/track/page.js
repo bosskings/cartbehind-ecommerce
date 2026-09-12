@@ -136,15 +136,10 @@ function TrackParcelContent() {
       setTrackingLoading(true)
       setTrackingError("")
       setNotFound(false)
-      console.log("User track-parcel request:", {
-        endpoint: `/api/v1/users/track-parcel/${activeCode}`,
-        trackingCode: activeCode,
-      })
 
       fetchUserTrackedParcel(userSession.authToken, activeCode)
         .then((response) => {
           if (cancelled) return
-          console.log("User tracked parcel response:", response)
           const transit =
             response?.transit ||
             response?.data?.transit ||
