@@ -3,7 +3,7 @@
 import axios from "axios"
 import { useEffect, useRef, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { X, CheckCircle2, Package, MapPin, ArrowRight, Loader2 } from "lucide-react"
+import { X, CheckCircle2, Package, MapPin, ArrowRight, Loader2, Phone } from "lucide-react"
 import { useCart } from "@/components/CartContext"
 import { useOrders } from "@/components/OrderContext"
 import { useAuth } from "@/components/AuthContext"
@@ -109,6 +109,8 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     country: "",
     state: "",
     postcode: "",
+    phone: "",
+    zipcode: "",
   })
   const initializedPaymentRef = useRef(null)
 
@@ -168,6 +170,8 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
       country: (shippingData.country || "").trim(),
       state: (shippingData.state || "").trim(),
       postcode: (shippingData.postcode || "").trim(),
+      phone: (shippingData.phone || "").trim(),
+      zipcode: (shippingData.zipcode || "").trim(),
     }
 
     const currentCheckout = checkout || readPendingCheckout()
@@ -208,6 +212,8 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
           address: destination.address,
           stateOrProvince: destination.state,
           postCode: destination.postcode,
+          phone: destination.phone,
+          zipcode: destination.zipcode,
         },
       }
 
@@ -281,9 +287,11 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
         country: savedDelivery.country || "",
         state: savedDelivery.state || "",
         postcode: savedDelivery.postcode || "",
+        phone: savedDelivery.phone || "",
+        zipcode: savedDelivery.zipcode || "",
       })
     } else {
-      setShipping({ addressLine1: "", addressLine2: "", country: "", state: "", postcode: "" })
+      setShipping({ addressLine1: "", addressLine2: "", country: "", state: "", postcode: "", phone: "", zipcode: "" })
     }
 
     setStep(hasValidSavedDelivery ? "processing" : "shipping")
@@ -342,8 +350,8 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     event.preventDefault()
     setError("")
 
-    if (!shipping.addressLine1.trim() || !shipping.country.trim() || !shipping.state.trim()) {
-      setError("Please fill in country, address, and state/province.")
+    if (!shipping.addressLine1.trim() || !shipping.country.trim() || !shipping.state.trim() || !shipping.phone.trim()) {
+      setError("Please fill in country, address, state/province, and phone number.")
       return
     }
 
@@ -483,7 +491,7 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
                     className={fieldClass}
                     value={shipping.addressLine1}
                     onChange={(e) => setShipping((s) => ({ ...s, addressLine1: e.target.value }))}
-                    placeholder="12 Admiralty Way, Lekki"
+                    placeholder="742 Evergreen Terrace, Springfield"
                     disabled={submitting}
                   />
                 </label>
@@ -508,7 +516,7 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
                       className={fieldClass}
                       value={shipping.state}
                       onChange={(e) => setShipping((s) => ({ ...s, state: e.target.value }))}
-                      placeholder="Lagos"
+                      placeholder="California"
                       disabled={submitting}
                     />
                   </label>
@@ -518,7 +526,32 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
                       className={fieldClass}
                       value={shipping.postcode}
                       onChange={(e) => setShipping((s) => ({ ...s, postcode: e.target.value }))}
-                      placeholder="100001"
+                      placeholder="90210"
+                      disabled={submitting}
+                    />
+                  </label>
+                </div>
+
+                {/* Phone & Zipcode */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold">Phone number <span className="text-red-500">*</span></span>
+                    <input
+                      type="tel"
+                      className={fieldClass}
+                      value={shipping.phone}
+                      onChange={(e) => setShipping((s) => ({ ...s, phone: e.target.value }))}
+                      placeholder="+1 (555) 123-4567"
+                      disabled={submitting}
+                    />
+                  </label>
+                  <label className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold">Zipcode</span>
+                    <input
+                      className={fieldClass}
+                      value={shipping.zipcode}
+                      onChange={(e) => setShipping((s) => ({ ...s, zipcode: e.target.value }))}
+                      placeholder="90210"
                       disabled={submitting}
                     />
                   </label>

@@ -138,6 +138,11 @@ function formatNaira(value) {
   return `NGN ${formatNumber(Number(value) || 0)}`
 }
 
+function truncateName(name, max = 35) {
+  if (!name) return "Untitled"
+  return name.length > max ? name.slice(0, max) + "…" : name
+}
+
 function formatOverviewValue(value, overview, loading) {
   return loading ? "..." : overview ? formatNumber(value) : "--"
 }
@@ -759,6 +764,9 @@ export default function AdminPage() {
 
     setDeletingProductId(product.id)
 
+    console.log("[Admin] DELETE product:", { id: product.id, title: product.title })
+    console.log("[Admin] DELETE endpoint:", `${API_URL}/api/v1/admin/delete-item/${encodeURIComponent(product.id)}`)
+
     try {
       const response = await fetch(`${API_URL}/api/v1/admin/delete-item/${encodeURIComponent(product.id)}`, {
         method: "DELETE",
@@ -768,6 +776,7 @@ export default function AdminPage() {
       })
 
       const data = await response.json().catch(() => ({}))
+      console.log("[Admin] DELETE product response:", { status: response.status, ok: response.ok, data })
 
       if (!response.ok) {
         const error = new Error(data?.message || "Product delete failed.")
@@ -968,6 +977,21 @@ export default function AdminPage() {
         fileType = uploaded.format || fileType
       }
 
+      const updatePayload = {
+        name: editingProduct.title.trim(),
+        description: editingProduct.description || "",
+        price: Number(editingProduct.price),
+        category: editingProduct.category || "",
+        stock: Number(editingProduct.stock) || 0,
+        deliveryTime: String(editingProduct.deliveryTime || "1"),
+        url: imageUrl,
+        publicId,
+        fileType,
+      }
+
+      console.log("[Admin] UPDATE product payload:", updatePayload)
+      console.log("[Admin] UPDATE endpoint:", `${API_URL}/api/v1/admin/update-item/${encodeURIComponent(editingProduct.id)}`)
+
       const response = await fetch(
         `${API_URL}/api/v1/admin/update-item/${encodeURIComponent(editingProduct.id)}`,
         {
@@ -976,21 +1000,12 @@ export default function AdminPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            name: editingProduct.title.trim(),
-            description: editingProduct.description || "",
-            price: Number(editingProduct.price),
-            category: editingProduct.category || "",
-            stock: Number(editingProduct.stock) || 0,
-            deliveryTime: String(editingProduct.deliveryTime || "1"),
-            url: imageUrl,
-            publicId,
-            fileType,
-          }),
+          body: JSON.stringify(updatePayload),
         }
       )
 
       const data = await response.json().catch(() => ({}))
+      console.log("[Admin] UPDATE product response:", { status: response.status, ok: response.ok, data })
 
       if (!response.ok) {
         const error = new Error(data?.message || "Product update failed.")
@@ -1135,10 +1150,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            <div className="hidden items-center gap-2 rounded-full border border-white/80 bg-white px-4 py-2 text-sm font-semibold text-gray-500 shadow-sm dark:border-white/10 dark:bg-[#16131f] dark:text-gray-300 sm:flex">
-              <BarChart3 size={16} className="text-(--theme)" />
-              Mock admin workspace
-            </div>
           </div>
         </header>
 
@@ -1235,7 +1246,27 @@ export default function AdminPage() {
                             <p className="truncate text-sm font-bold">{product.title}</p>
                             <p className="truncate text-xs text-gray-500 dark:text-gray-400">{formatNaira(product.price)}</p>
                           </div>
-                          <CheckCircle2 size={17} className="shrink-0 text-emerald-500" />
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openEditProduct(product)}
+                              aria-label={`Edit ${product.title}`}
+                              title="Edit product"
+                              className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-white hover:text-(--theme) dark:hover:bg-white/10"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={deletingProductId === product.id}
+                              onClick={() => requestDeleteProduct(product)}
+                              aria-label={`Delete ${product.title}`}
+                              title="Delete product"
+                              className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-gray-500 transition hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </div>
                       ))
                     ) : (
@@ -1641,62 +1672,47 @@ export default function AdminPage() {
               )}
               {!productsLoading && !productsError && filteredProducts.length > 0 && (
                 <>
-                  <div className="hidden overflow-hidden rounded-xl border border-gray-100 dark:border-white/10 lg:block">
+                  {/* Desktop table */}
+                  <div className="hidden rounded-xl border border-gray-100 dark:border-white/10 lg:block">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-[#f7f5fb] text-xs uppercase tracking-[0.18em] text-gray-500 dark:bg-[#12101a] dark:text-gray-400">
                         <tr>
                           <th className="px-4 py-4">Product</th>
-                          <th className="px-4 py-4">Category</th>
-                          <th className="px-4 py-4">Price</th>
-                          <th className="px-4 py-4">Stock</th>
-                          <th className="px-4 py-4">Delivery Time</th>
-                          <th className="px-4 py-4 text-right">Action</th>
+                          <th className="px-4 py-4 w-[120px]">Price</th>
+                          <th className="px-4 py-4 w-[180px] text-right">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-white/10">
                         {filteredProducts.map((product) => (
-                          <tr key={product.id}>
-                            <td className="px-4 py-4">
-                              <div className="flex cursor-pointer items-center gap-3">
+                          <tr key={product.id} className="group transition hover:bg-gray-50/80 dark:hover:bg-white/[0.03]">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
                                 <ProductImage src={product.image} title={product.title} />
                                 <div className="min-w-0">
-                                  <p className="truncate font-bold">{product.title}</p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">{product.brand}</p>
+                                  <p className="font-bold">{truncateName(product.title)}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">{product.category}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-4 text-gray-600 dark:text-gray-300">{product.category}</td>
-                            <td className="px-4 py-4 font-bold">{formatNaira(product.price)}</td>
-                            <td className="px-4 py-4">{formatNumber(product.stock)}</td>
-                            <td className="px-4 py-4">
-                              <span
-                                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${String(product.deliveryTime) === "7"
-                                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-                                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                                  }`}
-                              >
-                                {String(product.deliveryTime) === "7" ? "7 days delivery" : "Same day delivery"}
-                              </span>
-                            </td>
-
-                            <td className="px-4 py-4 text-right">
+                            <td className="px-4 py-3 font-bold whitespace-nowrap">{formatNaira(product.price)}</td>
+                            <td className="px-4 py-3 text-right">
                               <div className="flex justify-end gap-2">
                                 <button
                                   type="button"
                                   onClick={() => openEditProduct(product)}
-                                  className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-gray-200 px-4 text-sm font-bold text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200"
+                                  className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-gray-200 px-3 text-xs font-bold text-gray-700 transition hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-200"
                                 >
-                                  <Edit3 size={16} />
+                                  <Edit3 size={14} />
                                   Edit
                                 </button>
                                 <button
                                   type="button"
                                   disabled={deletingProductId === product.id}
                                   onClick={() => requestDeleteProduct(product)}
-                                  className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-red-200 px-4 text-sm font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"
+                                  className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border border-red-200 px-3 text-xs font-bold text-red-600 transition hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-500/30 dark:text-red-300 dark:hover:bg-red-500/10"
                                 >
-                                  <Trash2 size={16} />
-                                  {deletingProductId === product.id ? "Deleting..." : "Delete"}
+                                  <Trash2 size={14} />
+                                  {deletingProductId === product.id ? "..." : "Delete"}
                                 </button>
                               </div>
                             </td>
@@ -1706,43 +1722,33 @@ export default function AdminPage() {
                     </table>
                   </div>
 
+                  {/* Mobile cards */}
                   <div className="grid gap-3 lg:hidden">
                     {filteredProducts.map((product) => (
-                      <article key={product.id} className="rounded-xl border border-gray-100 bg-[#f7f5fb] p-4 dark:border-white/10 dark:bg-[#12101a]">
-                        <div className="flex items-start gap-3">
+                      <article key={product.id} className="rounded-xl border border-gray-100 bg-[#f7f5fb] p-3 dark:border-white/10 dark:bg-[#12101a]">
+                        <div className="flex items-center gap-3">
                           <ProductImage src={product.image} title={product.title} />
                           <div className="min-w-0 flex-1">
-                            <p className="truncate font-bold">{product.title}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{product.brand} / {product.category}</p>
-                            <div className="mt-2 flex flex-wrap items-center gap-2">
-                              <span className="text-sm font-black">{formatNaira(product.price)}</span>
-                              <span
-                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-bold ${String(product.deliveryTime) === "7"
-                                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-                                    : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
-                                  }`}
-                              >
-                                {String(product.deliveryTime) === "7" ? "7 days delivery" : "Same day delivery"}
-                              </span>
-                            </div>
+                            <p className="truncate text-sm font-bold">{truncateName(product.title, 30)}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{formatNaira(product.price)}</p>
                           </div>
-                          <div className="flex shrink-0 items-center gap-2">
+                          <div className="flex shrink-0 items-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => openEditProduct(product)}
                               aria-label={`Edit ${product.title}`}
-                              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white text-gray-600 shadow-sm transition hover:bg-gray-100 dark:bg-[#16131f] dark:text-gray-300 dark:hover:bg-white/10"
+                              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl bg-white text-gray-600 shadow-sm transition hover:bg-gray-100 dark:bg-[#16131f] dark:text-gray-300 dark:hover:bg-white/10"
                             >
-                              <Edit3 size={16} />
+                              <Edit3 size={15} />
                             </button>
                             <button
                               type="button"
                               disabled={deletingProductId === product.id}
                               onClick={() => requestDeleteProduct(product)}
                               aria-label={`Delete ${product.title}`}
-                              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white text-red-600 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#16131f] dark:text-red-300 dark:hover:bg-red-500/10"
+                              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl bg-white text-red-600 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#16131f] dark:text-red-300 dark:hover:bg-red-500/10"
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={15} />
                             </button>
                           </div>
                         </div>
@@ -1882,6 +1888,9 @@ export default function AdminPage() {
                   ))}
                 </select>
               </Field>
+              <Field label="Stock">
+                <input type="number" min="0" className={inputClass()} value={editingProduct.stock} onChange={(event) => updateEditingProduct("stock", event.target.value)} placeholder="200" />
+              </Field>
               <div className="sm:col-span-2">
                 <Field label="Delivery Time">
                   <select
@@ -1892,6 +1901,16 @@ export default function AdminPage() {
                     <option value="1">Same day delivery</option>
                     <option value="7">7 days delivery</option>
                   </select>
+                </Field>
+              </div>
+              <div className="sm:col-span-2">
+                <Field label="Description">
+                  <textarea
+                    className={inputClass("min-h-28 resize-none py-4")}
+                    value={editingProduct.description || ""}
+                    onChange={(event) => updateEditingProduct("description", event.target.value)}
+                    placeholder="Product description"
+                  />
                 </Field>
               </div>
               <div className="sm:col-span-2">

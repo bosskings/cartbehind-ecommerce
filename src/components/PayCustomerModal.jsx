@@ -54,17 +54,19 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
   const [shipping, setShipping] = useState({
     addressLine1: "",
     addressLine2: "",
-    country: "Nigeria",
+    country: "",
     state: "",
     postcode: "",
+    phone: "",
+    zipcode: "",
   })
 
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError("")
 
-    if (!shipping.addressLine1.trim() || !shipping.country.trim() || !shipping.state.trim()) {
-      setError("Please fill in country, address, and state/province.")
+    if (!shipping.addressLine1.trim() || !shipping.country.trim() || !shipping.state.trim() || !shipping.phone.trim()) {
+      setError("Please fill in country, address, state/province, and phone number.")
       return
     }
 
@@ -122,6 +124,8 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
           country: shipping.country.trim(),
           state: shipping.state.trim(),
           postcode: shipping.postcode.trim(),
+          phone: shipping.phone.trim(),
+          zipcode: shipping.zipcode.trim(),
         },
       })
 
@@ -216,7 +220,7 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
                 className={fieldClass}
                 value={shipping.addressLine1}
                 onChange={(e) => setShipping((s) => ({ ...s, addressLine1: e.target.value }))}
-                placeholder="12 Admiralty Way, Lekki"
+                placeholder="742 Evergreen Terrace, Springfield"
                 disabled={submitting}
               />
             </label>
@@ -241,7 +245,7 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
                   className={fieldClass}
                   value={shipping.state}
                   onChange={(e) => setShipping((s) => ({ ...s, state: e.target.value }))}
-                  placeholder="Lagos"
+                  placeholder="California"
                   disabled={submitting}
                 />
               </label>
@@ -251,7 +255,32 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
                   className={fieldClass}
                   value={shipping.postcode}
                   onChange={(e) => setShipping((s) => ({ ...s, postcode: e.target.value }))}
-                  placeholder="100001"
+                  placeholder="90210"
+                  disabled={submitting}
+                />
+              </label>
+            </div>
+
+            {/* Phone & Zipcode */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                <span className="font-semibold">Phone number <span className="text-red-500">*</span></span>
+                <input
+                  type="tel"
+                  className={fieldClass}
+                  value={shipping.phone}
+                  onChange={(e) => setShipping((s) => ({ ...s, phone: e.target.value }))}
+                  placeholder="+1 (555) 123-4567"
+                  disabled={submitting}
+                />
+              </label>
+              <label className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                <span className="font-semibold">Zipcode</span>
+                <input
+                  className={fieldClass}
+                  value={shipping.zipcode}
+                  onChange={(e) => setShipping((s) => ({ ...s, zipcode: e.target.value }))}
+                  placeholder="90210"
                   disabled={submitting}
                 />
               </label>
