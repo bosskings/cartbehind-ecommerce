@@ -4,6 +4,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { ShoppingBag } from "lucide-react"
 import { useCart } from "@/components/CartContext"
+import { formatPrice } from "@/lib/currency"
 
 const sampleProduct = {
   id: 1,
@@ -13,10 +14,6 @@ const sampleProduct = {
   originalPrice: 15984,
   discountPercent: 10,
   image: "/thumbnail.webp",
-}
-
-function formatNaira(amount) {
-  return `₦${amount.toLocaleString("en-NG")}`
 }
 
 function isRemoteImage(src) {
@@ -111,11 +108,11 @@ export default function ProductCard({
           <div className="flex justify-between items-baseline gap-2 pt-1">
             <div>
               <span className="text-lg font-bold text-gray-900">
-                {formatNaira(price)}
+                {formatPrice(price)}
               </span>
               {originalPrice && (
                 <span className="ml-2 text-sm text-gray-400 line-through">
-                  {formatNaira(originalPrice)}
+                  {formatPrice(originalPrice)}
                 </span>
               )}
             </div>

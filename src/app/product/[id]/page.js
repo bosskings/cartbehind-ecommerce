@@ -10,10 +10,7 @@ import { useCart } from "@/components/CartContext"
 import { useProducts } from "@/hooks/useProducts"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
-
-function formatNaira(amount) {
-  return `₦${amount.toLocaleString("en-NG")}`
-}
+import { formatPrice } from "@/lib/currency"
 
 function isRemoteImage(src) {
   return typeof src === "string" && /^https?:\/\//.test(src)
@@ -305,11 +302,11 @@ export default function ProductDetailPage({ params }) {
               <div className="flex flex-wrap items-end gap-4 border-b border-gray-200/80 pb-6 dark:border-white/10">
                 <div>
                   <p className="text-3xl font-black tabular-nums text-gray-950 lg:text-4xl dark:text-white">
-                    {formatNaira(product.price)}
+                    {formatPrice(product.price)}
                   </p>
                   {product.originalPrice ? (
                     <p className="mt-1 text-sm text-gray-400 line-through dark:text-gray-500">
-                      {formatNaira(product.originalPrice)}
+                      {formatPrice(product.originalPrice)}
                     </p>
                   ) : null}
                 </div>

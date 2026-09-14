@@ -15,14 +15,13 @@ import {
   readPendingCheckout,
   saveDeliveryLocation,
 } from "@/lib/payments"
+import { formatPrice } from "@/lib/currency"
 
 const fieldClass =
   "h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none transition focus:border-(--theme) focus:bg-white dark:border-white/10 dark:bg-[#16131f] dark:text-gray-200 dark:focus:bg-[#1a1625]"
 
 const selectClass =
   "h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none transition focus:border-(--theme) focus:bg-white dark:border-white/10 dark:bg-[#16131f] dark:text-gray-200 dark:focus:bg-[#1a1625] cursor-pointer"
-
-const formatNaira = (amount) => `₦${amount.toLocaleString("en-NG")}`
 
 const COUNTRIES = [
   "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
@@ -453,7 +452,7 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
                       Payment received
                     </span>
                     <span className="text-lg font-black text-emerald-800 dark:text-emerald-300">
-                      {formatNaira(checkoutTotal)}
+                      {formatPrice(checkoutTotal)}
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-emerald-600/80 dark:text-emerald-400/80">

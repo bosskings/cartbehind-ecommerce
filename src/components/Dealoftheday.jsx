@@ -3,10 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Zap, ShoppingBag, Clock } from "lucide-react";
-
-function formatNaira(amount) {
-  return `₦${amount.toLocaleString("en-NG")}`;
-}
+import { formatPrice } from "@/lib/currency";
 
 function getTimeParts(msRemaining) {
   const totalSeconds = Math.max(0, Math.floor(msRemaining / 1000));
@@ -110,10 +107,10 @@ export default function DealOfTheDay({
 
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-extrabold text-gray-900">
-                {formatNaira(price)}
+                {formatPrice(price)}
               </span>
               <span className="text-base text-gray-400 line-through">
-                {formatNaira(originalPrice)}
+                {formatPrice(originalPrice)}
               </span>
             </div>
           </div>

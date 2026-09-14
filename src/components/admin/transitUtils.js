@@ -19,7 +19,7 @@ export const transitStatusOptions = [
 export function formatOrderDate(value) {
   if (!value) return "No purchase date"
   const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? "No purchase date" : date.toLocaleString("en-NG")
+  return Number.isNaN(date.getTime()) ? "No purchase date" : date.toLocaleString("en-US")
 }
 
 export function formatDateTimeInput(value) {

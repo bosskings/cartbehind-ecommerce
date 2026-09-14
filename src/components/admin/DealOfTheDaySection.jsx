@@ -20,6 +20,7 @@ import {
 import { Field, inputClass } from "./formUi"
 import DealOfTheDay from "../Dealoftheday"
 import { getAdminToken } from "@/lib/cloudinary"
+import { formatPrice } from "@/lib/currency"
 
 function normalizeProductItem(product, index = 0) {
   const primaryImage =
@@ -380,7 +381,7 @@ export default function DealOfTheDaySection({
                     >
                       {filteredProducts.map((prod) => (
                         <option key={prod.id} value={prod.id}>
-                          {prod.title} — ₦{prod.price.toLocaleString()} ({prod.category})
+                          {prod.title} — {formatPrice(prod.price)} ({prod.category})
                         </option>
                       ))}
                     </select>
@@ -410,7 +411,7 @@ export default function DealOfTheDaySection({
                           {selectedProduct.category} &bull; ID: #{selectedProduct.id}
                         </p>
                         <p className="mt-1 text-sm font-extrabold text-(--theme)">
-                          ₦{selectedProduct.price.toLocaleString()}
+                          {formatPrice(selectedProduct.price)}
                         </p>
                       </div>
                     </div>
@@ -523,19 +524,19 @@ export default function DealOfTheDaySection({
                     <div className="flex justify-between py-1 border-b border-gray-100 dark:border-white/5">
                       <span className="text-gray-500">Original Price:</span>
                       <span className="font-semibold text-gray-800 dark:text-gray-200">
-                        ₦{originalPrice.toLocaleString()}
+                        {formatPrice(originalPrice)}
                       </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-gray-100 dark:border-white/5">
                       <span className="text-gray-500">Discount ({discountVal}%):</span>
                       <span className="font-semibold text-emerald-600">
-                        -₦{savingsAmount.toLocaleString()}
+                        -{formatPrice(savingsAmount)}
                       </span>
                     </div>
                     <div className="flex justify-between pt-1.5 text-sm font-extrabold">
                       <span className="text-gray-700 dark:text-gray-300">New Deal Price:</span>
                       <span className="text-(--theme)">
-                        ₦{calculatedDealPrice.toLocaleString()}
+                        {formatPrice(calculatedDealPrice)}
                       </span>
                     </div>
                   </div>
