@@ -13,14 +13,13 @@ import {
   initiateFlutterwavePayment,
   savePendingCheckout,
 } from "@/lib/payments"
+import { formatPrice } from "@/lib/currency"
 
 const fieldClass =
   "h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none transition focus:border-(--theme) focus:bg-white dark:border-white/10 dark:bg-[#16131f] dark:text-gray-200 dark:focus:bg-[#1a1625]"
 
 const selectClass =
   "h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none transition focus:border-(--theme) focus:bg-white dark:border-white/10 dark:bg-[#16131f] dark:text-gray-200 dark:focus:bg-[#1a1625] cursor-pointer"
-
-const formatNaira = (amount) => `₦${amount.toLocaleString("en-NG")}`
 
 const COUNTRIES = [
   "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria",
@@ -91,7 +90,7 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
       const redirect_url = getPaymentCallbackUrl()
       const payload = {
         amount,
-        currency: "NGN",
+        currency: "USD",
         redirect_url,
         customer: {
           email: userSession?.email,
@@ -180,7 +179,7 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-500">Amount due</span>
               <span className="text-xl font-black text-gray-950 dark:text-white">
-                {formatNaira(amount)}
+                {formatPrice(amount)}
               </span>
             </div>
             <p className="mt-1 text-xs text-gray-400">

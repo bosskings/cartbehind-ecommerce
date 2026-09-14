@@ -10,8 +10,7 @@ import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import { motion, AnimatePresence } from "framer-motion"
 import { Minus, Plus, Trash2, ArrowRight, ShoppingBag, ArrowLeft } from "lucide-react"
-
-const formatNaira = (amount) => `₦${amount.toLocaleString("en-NG")}`
+import { formatPrice } from "@/lib/currency"
 
 export default function CartPage() {
   const { items, updateQuantity, removeFromCart, subtotal, cartCount } = useCart()
@@ -147,7 +146,7 @@ export default function CartPage() {
                             {item.title}
                           </h2>
                           <p className="mt-1 text-sm text-gray-500">
-                            {formatNaira(item.price)} each
+                            {formatPrice(item.price)} each
                           </p>
                           {(item.deliveryNote || item.note) && (
                             <p className="mt-1.5 inline-flex max-w-xs items-center gap-1 rounded-md bg-(--theme)/5 px-2 py-0.5 text-xs text-gray-600 dark:bg-white/5 dark:text-gray-300">
@@ -188,7 +187,7 @@ export default function CartPage() {
                           Total
                         </span>
                         <span className="text-lg font-black tabular-nums text-gray-950">
-                          {formatNaira(item.price * item.quantity)}
+                          {formatPrice(item.price * item.quantity)}
                         </span>
                       </div>
 
@@ -217,7 +216,7 @@ export default function CartPage() {
                   <div className="flex items-center justify-between">
                     <span>Subtotal ({cartCount})</span>
                     <span className="font-semibold tabular-nums text-gray-900">
-                      {formatNaira(subtotal)}
+                      {formatPrice(subtotal)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -230,7 +229,7 @@ export default function CartPage() {
                   <div className="flex items-end justify-between gap-3">
                     <span className="text-sm font-semibold text-gray-600">Total</span>
                     <span className="text-2xl font-black tabular-nums tracking-tight text-gray-950">
-                      {formatNaira(subtotal)}
+                      {formatPrice(subtotal)}
                     </span>
                   </div>
                 </div>

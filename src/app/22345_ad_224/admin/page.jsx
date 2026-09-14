@@ -131,11 +131,15 @@ function normalizeProduct(product, index = 0) {
 }
 
 function formatNumber(value) {
-  return new Intl.NumberFormat("en-NG").format(value)
+  return new Intl.NumberFormat("en-US").format(value)
 }
 
-function formatNaira(value) {
-  return `NGN ${formatNumber(Number(value) || 0)}`
+function formatPrice(value) {
+  const numeric = Number(value) || 0
+  return `$${numeric.toLocaleString("en-US", {
+    minimumFractionDigits: Number.isInteger(numeric) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`
 }
 
 function truncateName(name, max = 35) {
@@ -1244,7 +1248,7 @@ export default function AdminPage() {
                           <ProductImage src={product.image} title={product.title} />
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-bold">{product.title}</p>
-                            <p className="truncate text-xs text-gray-500 dark:text-gray-400">{formatNaira(product.price)}</p>
+                            <p className="truncate text-xs text-gray-500 dark:text-gray-400">{formatPrice(product.price)}</p>
                           </div>
                           <div className="flex shrink-0 items-center gap-1.5">
                             <button
@@ -1479,14 +1483,15 @@ export default function AdminPage() {
                     ))}
                   </select>
                 </Field>
-                <Field label="Price">
+                <Field label="Price ($)">
                   <input
                     type="number"
                     min="0"
+                    step="0.01"
                     className={inputClass()}
                     value={form.price}
                     onChange={(event) => updateForm("price", event.target.value)}
-                    placeholder="2500"
+                    placeholder="25.00"
                   />
                 </Field>
                 <Field label="Stock">
@@ -1694,7 +1699,7 @@ export default function AdminPage() {
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-3 font-bold whitespace-nowrap">{formatNaira(product.price)}</td>
+                            <td className="px-4 py-3 font-bold whitespace-nowrap">{formatPrice(product.price)}</td>
                             <td className="px-4 py-3 text-right">
                               <div className="flex justify-end gap-2">
                                 <button
@@ -1730,7 +1735,7 @@ export default function AdminPage() {
                           <ProductImage src={product.image} title={product.title} />
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-bold">{truncateName(product.title, 30)}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{formatNaira(product.price)}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">{formatPrice(product.price)}</p>
                           </div>
                           <div className="flex shrink-0 items-center gap-1.5">
                             <button
@@ -1871,8 +1876,8 @@ export default function AdminPage() {
               <Field label="Product name">
                 <input className={inputClass()} value={editingProduct.title} onChange={(event) => updateEditingProduct("title", event.target.value)} />
               </Field>
-              <Field label="Price">
-                <input type="number" min="0" className={inputClass()} value={editingProduct.price} onChange={(event) => updateEditingProduct("price", event.target.value)} />
+              <Field label="Price ($)">
+                <input type="number" min="0" step="0.01" className={inputClass()} value={editingProduct.price} onChange={(event) => updateEditingProduct("price", event.target.value)} placeholder="25.00" />
               </Field>
               <Field label="Category">
                 <select

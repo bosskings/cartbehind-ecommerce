@@ -3,10 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, FileText, Check } from "lucide-react"
-
-function formatNaira(amount) {
-  return `₦${Number(amount || 0).toLocaleString("en-NG")}`
-}
+import { formatPrice } from "@/lib/currency"
 
 const QUICK_NOTES = [
   "Call before delivery",
@@ -87,7 +84,7 @@ export default function AddCartNoteModal({
                 </h3>
               </div>
               <p className="mt-1 truncate text-xs font-medium text-gray-500 dark:text-gray-400">
-                {productName} &bull; {formatNaira(price)}
+                {productName} &bull; {formatPrice(price)}
               </p>
             </div>
 

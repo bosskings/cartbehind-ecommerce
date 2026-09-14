@@ -8,14 +8,13 @@ import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import { useAuth } from "@/components/AuthContext"
 import { useOrders } from "@/components/OrderContext"
-
-const formatNaira = (amount) => `₦${Number(amount || 0).toLocaleString("en-NG")}`
+import { formatPrice } from "@/lib/currency"
 
 function formatOrderDate(value) {
   if (!value) return "—"
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "—"
-  return date.toLocaleString("en-NG", {
+  return date.toLocaleString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -151,7 +150,7 @@ export default function OrderDetailPage() {
                 <div className="rounded-2xl border border-gray-100 bg-[#faf9fc] p-4 dark:border-white/10 dark:bg-[#12101a]">
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-gray-400">Total</p>
                   <p className="mt-2 text-2xl font-black text-gray-950 dark:text-white">
-                    {formatNaira(order.total)}
+                    {formatPrice(order.total)}
                   </p>
                   <p className="mt-1 text-sm text-gray-500">
                     {order.itemCount} {order.itemCount === 1 ? "item" : "items"}
@@ -206,7 +205,7 @@ export default function OrderDetailPage() {
                             <p className="text-xs text-gray-400">Qty {quantity}</p>
                           </div>
                           <p className="font-semibold tabular-nums text-gray-900 dark:text-white">
-                            {formatNaira(price * quantity)}
+                            {formatPrice(price * quantity)}
                           </p>
                         </li>
                       )

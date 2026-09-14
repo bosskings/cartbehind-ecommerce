@@ -31,11 +31,15 @@ import {
 import { formatOrderDate } from "@/components/admin/transitUtils"
 
 function formatNumber(value) {
-  return new Intl.NumberFormat("en-NG").format(Number(value) || 0)
+  return new Intl.NumberFormat("en-US").format(Number(value) || 0)
 }
 
-function formatNaira(value) {
-  return `₦${formatNumber(value)}`
+function formatPrice(value) {
+  const numeric = Number(value) || 0
+  return `$${numeric.toLocaleString("en-US", {
+    minimumFractionDigits: Number.isInteger(numeric) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`
 }
 
 export default function OrderCartDetailsModal({
@@ -344,7 +348,7 @@ export default function OrderCartDetailsModal({
                     <span className="text-xs font-semibold">Order Value</span>
                   </div>
                   <p className="mt-1.5 text-xl font-black text-(--theme)">
-                    {formatNaira(totals.displayTotal)}
+                    {formatPrice(totals.displayTotal)}
                   </p>
                 </div>
 
@@ -471,7 +475,7 @@ export default function OrderCartDetailsModal({
                     <div className="flex shrink-0 items-center justify-between border-t border-gray-100 pt-3 dark:border-white/5 sm:flex-col sm:items-end sm:border-0 sm:pt-0">
                       <div className="text-left sm:text-right">
                         <p className="text-xs text-gray-400">
-                          {formatNaira(item.price)} × {item.quantity}
+                          {formatPrice(item.price)} × {item.quantity}
                         </p>
                       </div>
                       <div className="text-right">
@@ -479,7 +483,7 @@ export default function OrderCartDetailsModal({
                           Item Total
                         </p>
                         <p className="text-lg font-black text-gray-950 dark:text-white">
-                          {formatNaira(item.subtotal)}
+                          {formatPrice(item.subtotal)}
                         </p>
                       </div>
                     </div>
@@ -496,7 +500,7 @@ export default function OrderCartDetailsModal({
             {cartItems.length > 0 && (
               <span>
                 Total: <strong className="text-gray-900 dark:text-white">{totals.totalQuantity} items</strong> worth{" "}
-                <strong className="text-(--theme)">{formatNaira(totals.displayTotal)}</strong>
+                <strong className="text-(--theme)">{formatPrice(totals.displayTotal)}</strong>
               </span>
             )}
           </div>

@@ -8,14 +8,13 @@ import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import { useAuth } from "@/components/AuthContext"
 import { useOrders } from "@/components/OrderContext"
-
-const formatNaira = (amount) => `₦${Number(amount || 0).toLocaleString("en-NG")}`
+import { formatPrice } from "@/lib/currency"
 
 function formatOrderDate(value) {
   if (!value) return "—"
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return "—"
-  return date.toLocaleString("en-NG", {
+  return date.toLocaleString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -185,7 +184,7 @@ export default function OrdersPage() {
                               <p>
                                 <span className="text-gray-400">Total:</span>{" "}
                                 <span className="font-semibold text-gray-900 dark:text-white">
-                                  {formatNaira(order.total)}
+                                  {formatPrice(order.total)}
                                 </span>
                               </p>
                             )}
