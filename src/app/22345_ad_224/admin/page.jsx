@@ -1900,7 +1900,7 @@ export default function AdminPage() {
                         <div className="flex items-center gap-3">
                           <ProductImage src={product.image} title={product.title} />
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-bold">{truncateName(product.title, 30)}</p>
+                            <p className="truncate text-sm font-bold" title={product.title}>{truncateName(product.title, 12)}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">{formatPrice(product.price)}</p>
                           </div>
                           <div className="flex shrink-0 items-center gap-1.5">
