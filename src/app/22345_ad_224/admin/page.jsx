@@ -9,11 +9,15 @@ import {
   Boxes,
   CheckCircle2,
   ClipboardList,
+  ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Edit3,
   Image as ImageIcon,
   ImagePlus,
   LayoutDashboard,
+  Loader2,
   LogOut,
   Menu,
   Moon,
@@ -42,7 +46,7 @@ import { Field, inputClass } from "@/components/admin/formUi"
 import { formatOrderDate } from "@/components/admin/transitUtils"
 import { getAdminToken, uploadToCloudinary } from "@/lib/cloudinary"
 import { fetchAdminOrders, fetchAdminOverview, getApiErrorMessage, isAdminAuthError } from "@/lib/orders"
-import { fetchProductCategories, fetchProducts, normalizeCategory } from "@/lib/products"
+import { fetchProductCategories, fetchProducts, normalizeCategory, searchProducts } from "@/lib/products"
 import { fetchAdminUsers } from "@/lib/adminUsers"
 import { ADMIN_LOGIN_PATH } from "@/lib/adminRoutes"
 
@@ -148,6 +152,22 @@ function truncateName(name, max = 35) {
   return name.length > max ? name.slice(0, max) + "…" : name
 }
 
+function getPageNumbers(currentPage, totalPages) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, i) => i + 1)
+  }
+
+  if (currentPage <= 4) {
+    return [1, 2, 3, 4, 5, "...", totalPages]
+  }
+
+  if (currentPage >= totalPages - 3) {
+    return [1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
+  }
+
+  return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages]
+}
+
 function formatOverviewValue(value, overview, loading) {
   return loading ? "..." : overview ? formatNumber(value) : "--"
 }
@@ -213,6 +233,13 @@ export default function AdminPage() {
   const [products, setProducts] = useState([])
   const [productsLoading, setProductsLoading] = useState(false)
   const [productsError, setProductsError] = useState("")
+  const [productsPage, setProductsPage] = useState(1)
+  const [productsLimit, setProductsLimit] = useState(20)
+  const [productsTotalPages, setProductsTotalPages] = useState(1)
+  const [productsTotal, setProductsTotal] = useState(0)
+  const [searchResults, setSearchResults] = useState(null)
+  const [isSearching, setIsSearching] = useState(false)
+  const [searchPage, setSearchPage] = useState(1)
   const [form, setForm] = useState(emptyForm)
   const [editingProduct, setEditingProduct] = useState(null)
   const [editingImageFile, setEditingImageFile] = useState(null)
@@ -293,12 +320,12 @@ export default function AdminPage() {
     }
   }, [redirectToAdminLogin])
 
-  const loadProducts = useCallback(async () => {
+  const loadProducts = useCallback(async (page = 1, limit = productsLimit) => {
     setProductsLoading(true)
     setProductsError("")
     try {
       const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL
-      const response = await fetch(`${API_URL}/api/v1/users/products?page=1&limit=100`, { cache: "no-store" })
+      const response = await fetch(`${API_URL}/api/v1/users/products?page=${page}&limit=${limit}`, { cache: "no-store" })
       const rawData = await response.json()
 
       const rawList = Array.isArray(rawData)
@@ -309,6 +336,12 @@ export default function AdminPage() {
             ? rawData.data
             : []
       setProducts(rawList.map(normalizeProduct))
+
+      const totalPages = Number(rawData?.totalPages ?? rawData?.pagination?.totalPages) || 1
+      const total = Number(rawData?.totalProducts ?? rawData?.total ?? rawData?.pagination?.total ?? rawData?.count) || rawList.length
+      setProductsTotalPages(totalPages)
+      setProductsTotal(total)
+      setProductsPage(page)
     } catch (error) {
       console.error("Failed to load products in admin:", error)
       setProducts([])
@@ -316,7 +349,7 @@ export default function AdminPage() {
     } finally {
       setProductsLoading(false)
     }
-  }, [])
+  }, [productsLimit])
 
   const loadCategories = useCallback(async () => {
     const token = getAdminToken()
@@ -391,9 +424,42 @@ export default function AdminPage() {
 
   useEffect(() => {
     if (activeSection !== "overview" && activeSection !== "products") return undefined
-    const timer = window.setTimeout(loadProducts, 0)
+    const timer = window.setTimeout(() => loadProducts(productsPage, productsLimit), 0)
     return () => window.clearTimeout(timer)
-  }, [activeSection, loadProducts])
+  }, [activeSection, loadProducts, productsPage, productsLimit])
+
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (!trimmed) {
+      setSearchResults(null)
+      setIsSearching(false)
+      setSearchPage(1)
+      return
+    }
+
+    setIsSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        const results = await searchProducts(trimmed)
+        setSearchResults(results)
+        setSearchPage(1)
+      } catch (err) {
+        console.error("Failed to search products via backend:", err)
+        const term = trimmed.toLowerCase()
+        const fallback = products.filter((product) =>
+          [product.title, product.brand, product.category]
+            .filter(Boolean)
+            .some((value) => value.toLowerCase().includes(term)),
+        )
+        setSearchResults(fallback)
+        setSearchPage(1)
+      } finally {
+        setIsSearching(false)
+      }
+    }, 350)
+
+    return () => clearTimeout(timer)
+  }, [query, products])
 
   useEffect(() => {
     if (activeSection !== "upload" && activeSection !== "categoryImages") return undefined
@@ -473,16 +539,43 @@ export default function AdminPage() {
 
     return Array.from(counts.entries()).map(([category, count]) => ({ category, count }))
   }, [products])
-  const filteredProducts = useMemo(() => {
-    const term = query.trim().toLowerCase()
-    if (!term) return products
+  const isSearchActive = Boolean(query.trim())
+  const displayedProducts = useMemo(() => {
+    if (isSearchActive) {
+      if (!searchResults) return []
+      const start = (searchPage - 1) * productsLimit
+      return searchResults.slice(start, start + productsLimit)
+    }
+    return products
+  }, [isSearchActive, searchResults, searchPage, productsLimit, products])
 
-    return products.filter((product) =>
-      [product.title, product.brand, product.category]
-        .filter(Boolean)
-        .some((value) => value.toLowerCase().includes(term)),
-    )
-  }, [products, query])
+  const filteredProducts = displayedProducts
+
+  const currentDisplayPage = isSearchActive ? searchPage : productsPage
+  const currentTotalPages = isSearchActive
+    ? Math.max(1, Math.ceil((searchResults?.length || 0) / productsLimit))
+    : productsTotalPages
+  const currentTotalCount = isSearchActive ? (searchResults?.length || 0) : productsTotal
+  const displayStartIndex = currentTotalCount === 0 ? 0 : (currentDisplayPage - 1) * productsLimit + 1
+  const displayEndIndex = Math.min(displayStartIndex + displayedProducts.length - 1, currentTotalCount)
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > currentTotalPages || newPage === currentDisplayPage) return
+    if (isSearchActive) {
+      setSearchPage(newPage)
+    } else {
+      loadProducts(newPage, productsLimit)
+    }
+  }
+
+  const handleLimitChange = (newLimit) => {
+    setProductsLimit(newLimit)
+    if (isSearchActive) {
+      setSearchPage(1)
+    } else {
+      loadProducts(1, newLimit)
+    }
+  }
 
   const filteredOrders = useMemo(() => {
     const term = query.trim().toLowerCase()
@@ -724,7 +817,9 @@ export default function AdminPage() {
 
       setForm(createEmptyForm())
       toast.success(data?.message || "Product uploaded successfully.")
-      await loadProducts()
+      setQuery("")
+      setSearchResults(null)
+      await loadProducts(1, productsLimit)
     } catch (error) {
       if (isAdminAuthError(error)) {
         redirectToAdminLogin()
@@ -737,7 +832,18 @@ export default function AdminPage() {
   }
 
   const handleRefreshProducts = () => {
-    loadProducts()
+    if (isSearchActive) {
+      const trimmed = query.trim()
+      if (trimmed) {
+        setIsSearching(true)
+        searchProducts(trimmed)
+          .then((results) => setSearchResults(results))
+          .catch((err) => console.error("Search refresh error:", err))
+          .finally(() => setIsSearching(false))
+      }
+    } else {
+      loadProducts(productsPage, productsLimit)
+    }
   }
 
   const requestDeleteProduct = (product) => {
@@ -790,6 +896,8 @@ export default function AdminPage() {
       }
 
       setProducts((current) => current.filter((item) => item.id !== product.id))
+      setProductsTotal((current) => Math.max(0, current - 1))
+      setSearchResults((current) => (current ? current.filter((item) => item.id !== product.id) : null))
       setProductPendingDelete(null)
       toast.success(data?.message || "Product deleted successfully.")
     } catch (error) {
@@ -1024,6 +1132,9 @@ export default function AdminPage() {
 
       setProducts((current) =>
         current.map((product) => (product.id === updatedProduct.id ? updatedProduct : product))
+      )
+      setSearchResults((current) =>
+        current ? current.map((product) => (product.id === updatedProduct.id ? updatedProduct : product)) : null
       )
       setEditingProduct(null)
       setEditingImageFile(null)
@@ -1652,31 +1763,85 @@ export default function AdminPage() {
               <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <h2 className="text-xl font-black">Products</h2>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Products fetched from the live store catalog.</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {isSearchActive
+                      ? `Found ${currentTotalCount} ${currentTotalCount === 1 ? "product" : "products"} for "${query}"`
+                      : currentTotalCount > 0
+                        ? `Showing ${displayStartIndex}–${displayEndIndex} of ${currentTotalCount} products`
+                        : "Products fetched from the live store catalog."}
+                  </p>
                 </div>
-                <div className="relative w-full lg:w-80">
-                  <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    value={query}
-                    onChange={(event) => setQuery(event.target.value)}
-                    placeholder="Search products..."
-                    className="h-11 w-full rounded-xl border border-gray-200 bg-[#f7f5fb] pl-10 pr-4 text-sm outline-none transition focus:border-(--theme) dark:border-white/10 dark:bg-[#12101a]"
-                  />
+                <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                  <div className="relative w-full sm:w-72 lg:w-80">
+                    <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      placeholder="Search products..."
+                      className="h-11 w-full rounded-xl border border-gray-200 bg-[#f7f5fb] pl-10 pr-9 text-sm outline-none transition focus:border-(--theme) dark:border-white/10 dark:bg-[#12101a]"
+                    />
+                    {query && (
+                      <button
+                        type="button"
+                        onClick={() => setQuery("")}
+                        aria-label="Clear search"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 cursor-pointer rounded-full p-1 text-gray-400 hover:bg-gray-200 hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-200"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                    {isSearching && (
+                      <Loader2 size={15} className="absolute right-8 top-1/2 -translate-y-1/2 animate-spin text-(--theme)" />
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRefreshProducts}
+                    title="Refresh products"
+                    disabled={productsLoading || isSearching}
+                    className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-gray-200 bg-[#f7f5fb] px-4 text-xs font-bold text-gray-700 transition hover:border-(--theme) hover:text-(--theme) disabled:opacity-50 dark:border-white/10 dark:bg-[#12101a] dark:text-gray-200"
+                  >
+                    <RefreshCw size={15} className={productsLoading || isSearching ? "animate-spin" : ""} />
+                    <span className="hidden sm:inline">Refresh</span>
+                  </button>
                 </div>
               </div>
 
-
-              {productsLoading && <p className="rounded-xl bg-[#f7f5fb] px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#12101a]">Loading products...</p>}
+              {productsLoading && (
+                <div className="flex flex-col items-center justify-center gap-2 rounded-xl bg-[#f7f5fb] px-4 py-12 text-center text-sm text-gray-500 dark:bg-[#12101a]">
+                  <Loader2 size={24} className="animate-spin text-(--theme)" />
+                  <p>Loading products...</p>
+                </div>
+              )}
+              {isSearching && !productsLoading && (
+                <div className="flex flex-col items-center justify-center gap-2 rounded-xl bg-[#f7f5fb] px-4 py-12 text-center text-sm text-gray-500 dark:bg-[#12101a]">
+                  <Loader2 size={24} className="animate-spin text-(--theme)" />
+                  <p>Searching products for &quot;{query}&quot;...</p>
+                </div>
+              )}
               {productsError && (
                 <div className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-600 sm:flex-row sm:items-center sm:justify-between">
                   <span>{productsError}</span>
                   <button type="button" onClick={handleRefreshProducts} className="font-bold underline">Try again</button>
                 </div>
               )}
-              {!productsLoading && !productsError && !filteredProducts.length && (
-                <p className="rounded-xl bg-[#f7f5fb] px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#12101a]">No products found.</p>
+              {!productsLoading && !isSearching && !productsError && !displayedProducts.length && (
+                <div className="rounded-xl bg-[#f7f5fb] px-4 py-10 text-center text-sm text-gray-500 dark:bg-[#12101a]">
+                  <p className="font-bold text-gray-700 dark:text-gray-300">
+                    {isSearchActive ? `No products found matching "${query}".` : "No products found."}
+                  </p>
+                  {isSearchActive && (
+                    <button
+                      type="button"
+                      onClick={() => setQuery("")}
+                      className="mt-3 inline-flex h-9 cursor-pointer items-center rounded-xl bg-(--theme) px-4 text-xs font-bold text-white transition hover:opacity-90"
+                    >
+                      Clear search
+                    </button>
+                  )}
+                </div>
               )}
-              {!productsLoading && !productsError && filteredProducts.length > 0 && (
+              {!productsLoading && !isSearching && !productsError && displayedProducts.length > 0 && (
                 <>
                   {/* Desktop table */}
                   <div className="hidden rounded-xl border border-gray-100 dark:border-white/10 lg:block">
@@ -1689,7 +1854,7 @@ export default function AdminPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-white/10">
-                        {filteredProducts.map((product) => (
+                        {displayedProducts.map((product) => (
                           <tr key={product.id} className="group transition hover:bg-gray-50/80 dark:hover:bg-white/[0.03]">
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-3">
@@ -1730,7 +1895,7 @@ export default function AdminPage() {
 
                   {/* Mobile cards */}
                   <div className="grid gap-3 lg:hidden">
-                    {filteredProducts.map((product) => (
+                    {displayedProducts.map((product) => (
                       <article key={product.id} className="rounded-xl border border-gray-100 bg-[#f7f5fb] p-3 dark:border-white/10 dark:bg-[#12101a]">
                         <div className="flex items-center gap-3">
                           <ProductImage src={product.image} title={product.title} />
@@ -1761,6 +1926,118 @@ export default function AdminPage() {
                       </article>
                     ))}
                   </div>
+
+                  {/* Pagination footer */}
+                  {(currentTotalPages > 1 || currentTotalCount > 10) && (
+                    <div className="mt-6 flex flex-col gap-4 border-t border-gray-100 pt-5 dark:border-white/10 sm:flex-row sm:items-center sm:justify-between">
+                      {/* Count & Per page */}
+                      <div className="flex flex-wrap items-center gap-4">
+                        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                          Showing <span className="font-bold text-gray-800 dark:text-gray-100">{displayStartIndex}</span> to{" "}
+                          <span className="font-bold text-gray-800 dark:text-gray-100">{displayEndIndex}</span> of{" "}
+                          <span className="font-bold text-gray-800 dark:text-gray-100">{currentTotalCount}</span> products
+                        </p>
+                        {/* <div className="flex items-center gap-2">
+                          <label htmlFor="products-per-page" className="text-xs text-gray-500 dark:text-gray-400">
+                            Per page:
+                          </label>
+                          <select
+                            id="products-per-page"
+                            value={productsLimit}
+                            onChange={(e) => handleLimitChange(Number(e.target.value))}
+                            className="h-8 rounded-lg border border-gray-200 bg-white px-2 text-xs font-bold text-gray-700 outline-none transition focus:border-(--theme) dark:border-white/10 dark:bg-[#12101a] dark:text-gray-200"
+                          >
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                            <option value={100}>100</option>
+                          </select>
+                        </div> */}
+                      </div>
+
+                      {/* Navigation buttons */}
+                      <div className="flex items-center gap-1.5 self-center sm:self-auto">
+                        {/* First page */}
+                        <button
+                          type="button"
+                          onClick={() => handlePageChange(1)}
+                          disabled={currentDisplayPage <= 1 || productsLoading || isSearching}
+                          title="First page"
+                          aria-label="First page"
+                          className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-(--theme) hover:text-(--theme) disabled:cursor-not-allowed disabled:opacity-30 dark:border-white/10 dark:bg-[#12101a] dark:text-gray-200"
+                        >
+                          <ChevronsLeft size={16} />
+                        </button>
+
+                        {/* Previous page */}
+                        <button
+                          type="button"
+                          onClick={() => handlePageChange(currentDisplayPage - 1)}
+                          disabled={currentDisplayPage <= 1 || productsLoading || isSearching}
+                          title="Previous page"
+                          aria-label="Previous page"
+                          className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-xl border border-gray-200 bg-white px-2.5 text-xs font-bold text-gray-700 shadow-sm transition hover:border-(--theme) hover:text-(--theme) disabled:cursor-not-allowed disabled:opacity-30 dark:border-white/10 dark:bg-[#12101a] dark:text-gray-200"
+                        >
+                          <ChevronLeft size={16} />
+                          <span className="hidden sm:inline">Prev</span>
+                        </button>
+
+                        {/* Page numbers */}
+                        <div className="flex items-center gap-1">
+                          {getPageNumbers(currentDisplayPage, currentTotalPages).map((item, idx) =>
+                            item === "..." ? (
+                              <span
+                                key={`ellipsis-${idx}`}
+                                className="inline-flex h-9 w-6 items-center justify-center text-xs font-bold text-gray-400"
+                              >
+                                …
+                              </span>
+                            ) : (
+                              <button
+                                key={`page-${item}`}
+                                type="button"
+                                onClick={() => handlePageChange(item)}
+                                disabled={productsLoading || isSearching}
+                                aria-label={`Page ${item}`}
+                                aria-current={item === currentDisplayPage ? "page" : undefined}
+                                className={`inline-flex h-9 min-w-9 cursor-pointer items-center justify-center rounded-xl px-2 text-xs font-bold transition ${item === currentDisplayPage
+                                    ? "bg-(--theme) text-white shadow-sm"
+                                    : "border border-gray-200 bg-white text-gray-700 shadow-sm hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:bg-[#12101a] dark:text-gray-200"
+                                  }`}
+                              >
+                                {item}
+                              </button>
+                            ),
+                          )}
+                        </div>
+
+                        {/* Next page */}
+                        <button
+                          type="button"
+                          onClick={() => handlePageChange(currentDisplayPage + 1)}
+                          disabled={currentDisplayPage >= currentTotalPages || productsLoading || isSearching}
+                          title="Next page"
+                          aria-label="Next page"
+                          className="inline-flex h-9 cursor-pointer items-center gap-1 rounded-xl border border-gray-200 bg-white px-2.5 text-xs font-bold text-gray-700 shadow-sm transition hover:border-(--theme) hover:text-(--theme) disabled:cursor-not-allowed disabled:opacity-30 dark:border-white/10 dark:bg-[#12101a] dark:text-gray-200"
+                        >
+                          <span className="hidden sm:inline">Next</span>
+                          <ChevronRight size={16} />
+                        </button>
+
+                        {/* Last page */}
+                        <button
+                          type="button"
+                          onClick={() => handlePageChange(currentTotalPages)}
+                          disabled={currentDisplayPage >= currentTotalPages || productsLoading || isSearching}
+                          title="Last page"
+                          aria-label="Last page"
+                          className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-700 shadow-sm transition hover:border-(--theme) hover:text-(--theme) disabled:cursor-not-allowed disabled:opacity-30 dark:border-white/10 dark:bg-[#12101a] dark:text-gray-200"
+                        >
+                          <ChevronsRight size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </section>
