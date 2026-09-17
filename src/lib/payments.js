@@ -39,6 +39,32 @@ export function extractPaymentLink(responseData) {
   )
 }
 
+export function extractBankTransfer(responseData) {
+  const bt =
+    responseData?.bankTransfer ||
+    responseData?.bank_transfer ||
+    responseData?.data?.bankTransfer ||
+    responseData?.data?.bank_transfer ||
+    responseData?.data?.data?.bankTransfer ||
+    null
+
+  if (!bt) return null
+
+  return {
+    bankName: bt.bankName || bt.bank_name || bt.bank || "Bank Transfer",
+    accountNumber: bt.accountNumber || bt.account_number || bt.account || "",
+    amount: bt.amount || bt.amountToPay || null,
+    transferReference:
+      bt.transferReference ||
+      bt.transfer_reference ||
+      bt.reference ||
+      bt.tx_ref ||
+      bt.flw_ref ||
+      "",
+    raw: bt,
+  }
+}
+
 export function savePendingCheckout(checkout) {
   if (typeof window === "undefined") return
 
