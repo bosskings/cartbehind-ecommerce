@@ -97,9 +97,11 @@ export default function DealOfTheDaySection({
     setLoadingProducts(true)
     setProductsError("")
     try {
+      const token = getAdminToken()
+      const headers = token ? { Authorization: `Bearer ${token}` } : {}
       const response = await fetch(
-        `${API_URL}/api/v1/users/products?page=1&limit=100`,
-        { cache: "no-store" }
+        `${API_URL}/api/v1/admin/products`,
+        { cache: "no-store", headers }
       )
       const rawData = await response.json()
       const rawList = Array.isArray(rawData)
