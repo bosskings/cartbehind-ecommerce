@@ -294,9 +294,15 @@ export async function fetchAdminCartDetails(authToken, orderId) {
 
   const url = `${backendUrl}/api/v1/admin/cart-details/${encodeURIComponent(orderId)}`
 
+  console.log("🛒 [fetchAdminCartDetails] Calling endpoint:", url)
+
   const response = await axios.get(url, {
     headers: { Authorization: `Bearer ${authToken}` },
   })
+
+  console.group(`%c🛒 [Admin Cart Details] Backend Response for Order #${orderId}`, "background: #2563eb; color: #fff; padding: 4px 8px; border-radius: 4px; font-weight: bold;")
+  console.log("Full response.data:", response.data)
+  console.groupEnd()
 
   return response.data
 }
@@ -320,7 +326,7 @@ export function normalizeCartDetailsResponse(data) {
     const product = item?.product && typeof item.product === "object" ? item.product : {}
     const id = item?._id || item?.id || product?._id || product?.id || `item-${index}`
     const name = item?.name || product?.name || product?.title || "Unnamed Product"
-    const price = Number(item?.price ?? product?.price ?? 0) || 0
+    const price = Number(product?.price ?? item?.price ?? 0) || 0
     const quantity = Number(item?.quantity ?? item?.count ?? item?.qty ?? 1) || 1
     const category = product?.category || item?.category || "General"
     const description = product?.description || item?.description || ""
