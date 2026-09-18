@@ -20,7 +20,7 @@ import {
 import { Field, inputClass } from "./formUi"
 import DealOfTheDay from "../Dealoftheday"
 import { getAdminToken } from "@/lib/cloudinary"
-import { formatDollar as formatPrice } from "@/lib/currency"
+import { formatNaira as formatPrice } from "@/lib/currency"
 
 function normalizeProductItem(product, index = 0) {
   const primaryImage =
