@@ -46,7 +46,7 @@ import { Field, inputClass } from "@/components/admin/formUi"
 import { formatOrderDate } from "@/components/admin/transitUtils"
 import { getAdminToken, uploadToCloudinary } from "@/lib/cloudinary"
 import { fetchAdminOrders, fetchAdminOverview, getApiErrorMessage, isAdminAuthError } from "@/lib/orders"
-import { fetchProductCategories, fetchProducts, normalizeCategory, searchProducts } from "@/lib/products"
+import { fetchAdminProducts, fetchProductCategories, normalizeCategory, searchAdminProducts } from "@/lib/products"
 import { fetchAdminUsers } from "@/lib/adminUsers"
 import { ADMIN_LOGIN_PATH } from "@/lib/adminRoutes"
 
@@ -321,35 +321,34 @@ export default function AdminPage() {
   }, [redirectToAdminLogin])
 
   const loadProducts = useCallback(async (page = 1, limit = productsLimit) => {
+    const token = getAdminToken()
+    if (!token) {
+      redirectToAdminLogin()
+      return
+    }
+
     setProductsLoading(true)
     setProductsError("")
     try {
-      const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL
-      const response = await fetch(`${API_URL}/api/v1/users/products?page=${page}&limit=${limit}`, { cache: "no-store" })
-      const rawData = await response.json()
+      const { products: fetchedProducts, totalPages: backendTotalPages, total } = await fetchAdminProducts({ token })
+      setProducts(fetchedProducts)
 
-      const rawList = Array.isArray(rawData)
-        ? rawData
-        : Array.isArray(rawData?.products)
-          ? rawData.products
-          : Array.isArray(rawData?.data)
-            ? rawData.data
-            : []
-      setProducts(rawList.map(normalizeProduct))
-
-      const totalPages = Number(rawData?.totalPages ?? rawData?.pagination?.totalPages) || 1
-      const total = Number(rawData?.totalProducts ?? rawData?.total ?? rawData?.pagination?.total ?? rawData?.count) || rawList.length
+      const totalPages = backendTotalPages || Math.max(1, Math.ceil(fetchedProducts.length / limit))
       setProductsTotalPages(totalPages)
       setProductsTotal(total)
       setProductsPage(page)
     } catch (error) {
+      if (isAdminAuthError(error)) {
+        redirectToAdminLogin()
+        return
+      }
       console.error("Failed to load products in admin:", error)
       setProducts([])
       setProductsError(error.message || "Could not load products.")
     } finally {
       setProductsLoading(false)
     }
-  }, [productsLimit])
+  }, [productsLimit, redirectToAdminLogin])
 
   const loadCategories = useCallback(async () => {
     const token = getAdminToken()
@@ -440,10 +439,15 @@ export default function AdminPage() {
     setIsSearching(true)
     const timer = setTimeout(async () => {
       try {
-        const results = await searchProducts(trimmed)
+        const token = getAdminToken()
+        const results = await searchAdminProducts(trimmed, { token })
         setSearchResults(results)
         setSearchPage(1)
       } catch (err) {
+        if (isAdminAuthError(err)) {
+          redirectToAdminLogin()
+          return
+        }
         console.error("Failed to search products via backend:", err)
         const term = trimmed.toLowerCase()
         const fallback = products.filter((product) =>
@@ -459,7 +463,7 @@ export default function AdminPage() {
     }, 350)
 
     return () => clearTimeout(timer)
-  }, [query, products])
+  }, [query, products, redirectToAdminLogin])
 
   useEffect(() => {
     if (activeSection !== "upload" && activeSection !== "categoryImages") return undefined
@@ -546,8 +550,12 @@ export default function AdminPage() {
       const start = (searchPage - 1) * productsLimit
       return searchResults.slice(start, start + productsLimit)
     }
+    if (products.length > productsLimit) {
+      const start = (productsPage - 1) * productsLimit
+      return products.slice(start, start + productsLimit)
+    }
     return products
-  }, [isSearchActive, searchResults, searchPage, productsLimit, products])
+  }, [isSearchActive, searchResults, searchPage, productsLimit, products, productsPage])
 
   const filteredProducts = displayedProducts
 
@@ -564,7 +572,7 @@ export default function AdminPage() {
     if (isSearchActive) {
       setSearchPage(newPage)
     } else {
-      loadProducts(newPage, productsLimit)
+      setProductsPage(newPage)
     }
   }
 
@@ -573,7 +581,8 @@ export default function AdminPage() {
     if (isSearchActive) {
       setSearchPage(1)
     } else {
-      loadProducts(1, newLimit)
+      setProductsPage(1)
+      setProductsTotalPages(Math.max(1, Math.ceil(products.length / newLimit)))
     }
   }
 
@@ -836,7 +845,8 @@ export default function AdminPage() {
       const trimmed = query.trim()
       if (trimmed) {
         setIsSearching(true)
-        searchProducts(trimmed)
+        const token = getAdminToken()
+        searchAdminProducts(trimmed, { token })
           .then((results) => setSearchResults(results))
           .catch((err) => console.error("Search refresh error:", err))
           .finally(() => setIsSearching(false))

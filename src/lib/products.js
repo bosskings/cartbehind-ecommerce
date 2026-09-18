@@ -200,3 +200,72 @@ export async function fetchProductCategories({ token } = {}) {
 
   return list.map(normalizeCategory)
 }
+
+export async function fetchAdminProducts({ token } = {}) {
+  if (!API_URL) {
+    throw new Error("NEXT_PUBLIC_BACKEND_URL is missing.")
+  }
+
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
+  const response = await fetch(`${API_URL}/api/v1/admin/products`, {
+    cache: "no-store",
+    headers,
+  })
+  console.log('Admin products response', response)
+
+  if (!response.ok) {
+    const error = new Error("Failed to fetch admin products.")
+    error.status = response.status
+    throw error
+  }
+
+  const data = await response.json()
+  const list = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.products)
+      ? data.products
+      : Array.isArray(data?.data)
+        ? data.data
+        : []
+
+  return {
+    products: list.map(normalizeProduct),
+    totalPages: data.totalPages ?? data.pagination?.totalPages ?? null,
+    total: data.total ?? data.pagination?.total ?? data.count ?? list.length,
+    raw: data,
+  }
+}
+
+export async function searchAdminProducts(query, { token } = {}) {
+  if (!API_URL) {
+    throw new Error("NEXT_PUBLIC_BACKEND_URL is missing.")
+  }
+
+  const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
+  const response = await fetch(
+    `${API_URL}/api/v1/admin/products/search?search=${encodeURIComponent(query)}`,
+    {
+      cache: "no-store",
+      headers,
+    },
+  )
+
+  if (!response.ok) {
+    const error = new Error("Failed to search admin products.")
+    error.status = response.status
+    throw error
+  }
+
+  const data = await response.json()
+  const list = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.products)
+      ? data.products
+      : Array.isArray(data?.data)
+        ? data.data
+        : []
+
+  return list.map(normalizeProduct)
+}
