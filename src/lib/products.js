@@ -208,11 +208,12 @@ export async function fetchAdminProducts({ token } = {}) {
 
   const headers = token ? { Authorization: `Bearer ${token}` } : {}
 
+  console.log("[Admin API] Fetching:", `${API_URL}/api/v1/admin/products`, { hasToken: Boolean(token) })
   const response = await fetch(`${API_URL}/api/v1/admin/products`, {
     cache: "no-store",
     headers,
   })
-  console.log('Admin products response', response)
+  console.log("[Admin API] GET /api/v1/admin/products response status:", response.status)
 
   if (!response.ok) {
     const error = new Error("Failed to fetch admin products.")
@@ -221,6 +222,8 @@ export async function fetchAdminProducts({ token } = {}) {
   }
 
   const data = await response.json()
+  console.log("[Admin API] GET /api/v1/admin/products payload:", data)
+
   const list = Array.isArray(data)
     ? data
     : Array.isArray(data?.products)
@@ -243,14 +246,14 @@ export async function searchAdminProducts(query, { token } = {}) {
   }
 
   const headers = token ? { Authorization: `Bearer ${token}` } : {}
+  const searchUrl = `${API_URL}/api/v1/admin/products/search?search=${encodeURIComponent(query)}`
 
-  const response = await fetch(
-    `${API_URL}/api/v1/admin/products/search?search=${encodeURIComponent(query)}`,
-    {
-      cache: "no-store",
-      headers,
-    },
-  )
+  console.log("[Admin API] Searching:", searchUrl, { hasToken: Boolean(token) })
+  const response = await fetch(searchUrl, {
+    cache: "no-store",
+    headers,
+  })
+  console.log(`[Admin API] GET /api/v1/admin/products/search?search=${query} status:`, response.status)
 
   if (!response.ok) {
     const error = new Error("Failed to search admin products.")
@@ -259,6 +262,8 @@ export async function searchAdminProducts(query, { token } = {}) {
   }
 
   const data = await response.json()
+  console.log(`[Admin API] GET /api/v1/admin/products/search?search=${query} payload:`, data)
+
   const list = Array.isArray(data)
     ? data
     : Array.isArray(data?.products)
