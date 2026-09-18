@@ -233,13 +233,13 @@ export default function OrdersPage() {
                               Track parcel
                             </Link>
                           )}
-                          <Link
+                          {/* <Link
                             href={`/orders/${encodeURIComponent(order.id)}`}
                             className="inline-flex items-center gap-2 rounded-full bg-(--theme) px-4 py-2.5 text-sm font-bold text-(--theme-second) transition hover:scale-105 hover:bg-[#280E89]"
                           >
                             View details
                             <ArrowRight size={16} />
-                          </Link>
+                          </Link> */}
                         </div>
                       </div>
                     </li>

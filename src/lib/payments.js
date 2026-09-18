@@ -32,9 +32,11 @@ export function isSuccessfulPayment(status) {
 
 export function extractPaymentLink(responseData) {
   return (
+    responseData?.paymentLink ||
+    responseData?.data?.paymentLink ||
+    responseData?.data?.data?.link ||
     responseData?.data?.link ||
     responseData?.link ||
-    responseData?.data?.data?.link ||
     null
   )
 }
@@ -168,17 +170,36 @@ export async function initiateFlutterwavePayment({ authToken, payload }) {
     throw new Error("You must be logged in to pay.")
   }
 
-  const response = await axios.post(
-    `${backendUrl}/api/v1/users/flutterwave/pay`,
-    payload,
-    {
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-      },
-    },
-  )
+  const url = `${backendUrl}/api/v1/users/flutterwave/pay`
 
-  return response.data
+  console.log("💳 [Flutterwave Pay] Calling endpoint:", url, {
+    payload,
+    hasToken: Boolean(authToken),
+  })
+
+  try {
+    const response = await axios.post(
+      url,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      },
+    )
+
+    console.log("💳 [Flutterwave Pay] Response status:", response.status)
+    console.log("💳 [Flutterwave Pay] Full response returned:", response.data)
+
+    return response.data
+  } catch (error) {
+    console.error("💳 [Flutterwave Pay] Error returned from endpoint:", {
+      status: error?.response?.status,
+      data: error?.response?.data,
+      message: error?.message,
+    })
+    throw error
+  }
 }
 
 export { getApiErrorMessage }

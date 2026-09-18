@@ -168,13 +168,12 @@ export default function OrderCartDetailsModal({
                 </button>
 
                 <span
-                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${
-                    isDelivered
+                  className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${isDelivered
                       ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300"
                       : isInTransit
                         ? "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300"
                         : "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
-                  }`}
+                    }`}
                 >
                   <Truck size={12} />
                   {deliveryStatus}
@@ -235,11 +234,10 @@ export default function OrderCartDetailsModal({
                   type="button"
                   onClick={() => setShowRawJson((prev) => !prev)}
                   title="Toggle raw response JSON"
-                  className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition ${
-                    showRawJson
+                  className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition ${showRawJson
                       ? "border-(--theme) bg-(--theme)/10 text-(--theme)"
                       : "border-gray-200 text-gray-600 hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-300"
-                  }`}
+                    }`}
                 >
                   <Code size={14} />
                   <span className="hidden sm:inline">{showRawJson ? "Hide JSON" : "Raw JSON"}</span>
@@ -358,13 +356,12 @@ export default function OrderCartDetailsModal({
                     <span className="text-xs font-semibold">Status</span>
                   </div>
                   <p
-                    className={`mt-1.5 text-sm font-black uppercase ${
-                      isDelivered
+                    className={`mt-1.5 text-sm font-black uppercase ${isDelivered
                         ? "text-emerald-600 dark:text-emerald-400"
                         : isInTransit
                           ? "text-blue-600 dark:text-blue-400"
                           : "text-amber-600 dark:text-amber-400"
-                    }`}
+                      }`}
                   >
                     {deliveryStatus}
                   </p>

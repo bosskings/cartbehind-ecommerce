@@ -145,9 +145,48 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
         payload,
       })
 
-      const bankTransfer = extractBankTransfer(response)
-      const paymentLink = extractPaymentLink(response)
+      console.log("[Flutterwave Modal] Payment response received:", response)
 
+      // Support paymentLink direct on response, response.data, or nested data.link
+      const paymentLink =
+        response?.paymentLink ||
+        response?.data?.paymentLink ||
+        response?.data?.data?.link ||
+        response?.data?.link ||
+        extractPaymentLink(response)
+
+      const isSuccess =
+        response?.status === "SUCCESS" ||
+        response?.data?.status === "SUCCESS" ||
+        response?.status === "success" ||
+        response?.data?.status === "success" ||
+        Boolean(paymentLink)
+
+      console.log("[Flutterwave Modal] Extracted payment link:", paymentLink, { isSuccess })
+
+      // If Flutterwave payment link returned, redirect user to hosted checkout
+      if (paymentLink && isSuccess) {
+        savePendingCheckout({
+          items,
+          total: amount,
+          itemCount,
+          deliveryDetails: {
+            addressLine1: shipping.addressLine1.trim(),
+            addressLine2: shipping.addressLine2.trim(),
+            country: shipping.country.trim(),
+            state: shipping.state.trim(),
+            postcode: shipping.postcode.trim(),
+            phone: shipping.phone.trim(),
+            zipcode: shipping.zipcode.trim(),
+          },
+        })
+
+        window.location.href = paymentLink
+        return
+      }
+
+      // Fallback: If bank transfer details are returned directly in response
+      const bankTransfer = extractBankTransfer(response)
       if (bankTransfer) {
         savePendingCheckout({
           items,
@@ -170,27 +209,7 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
         return
       }
 
-      if (paymentLink) {
-        savePendingCheckout({
-          items,
-          total: amount,
-          itemCount,
-          deliveryDetails: {
-            addressLine1: shipping.addressLine1.trim(),
-            addressLine2: shipping.addressLine2.trim(),
-            country: shipping.country.trim(),
-            state: shipping.state.trim(),
-            postcode: shipping.postcode.trim(),
-            phone: shipping.phone.trim(),
-            zipcode: shipping.zipcode.trim(),
-          },
-        })
-
-        window.location.href = paymentLink
-        return
-      }
-
-      throw new Error("Bank transfer details were not returned by the server.")
+      throw new Error(response?.message || response?.data?.message || "Payment link was not returned by the server.")
     } catch (err) {
       console.error("Flutterwave payment endpoint error:", {
         status: err?.response?.status,
@@ -250,13 +269,13 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
                     Amount to Transfer
                   </span>
                   <div className="mt-0.5 text-2xl font-black text-gray-950 dark:text-white">
-                    {formatPrice(bankTransferDetails.amount || amount)}
+                    {formatNaira(bankTransferDetails.amount || amount)}
                   </div>
                 </div>
-                {bankTransferDetails.amount && (
+                {(bankTransferDetails.amount || amount) && (
                   <button
                     type="button"
-                    onClick={() => handleCopy("amount", bankTransferDetails.amount)}
+                    onClick={() => handleCopy("amount", bankTransferDetails.amount || amount)}
                     className="flex items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition hover:bg-gray-50 dark:border-white/10 dark:bg-[#1f1b2b] dark:text-gray-200 cursor-pointer"
                   >
                     {copiedField === "amount" ? (
