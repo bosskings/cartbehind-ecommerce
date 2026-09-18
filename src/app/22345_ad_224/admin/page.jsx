@@ -141,7 +141,7 @@ function formatNumber(value) {
 
 function formatPrice(value) {
   const numeric = Number(value) || 0
-  return `$${numeric.toLocaleString("en-US", {
+  return `₦${numeric.toLocaleString("en-US", {
     minimumFractionDigits: Number.isInteger(numeric) ? 0 : 2,
     maximumFractionDigits: 2,
   })}`
@@ -1605,7 +1605,7 @@ export default function AdminPage() {
                     ))}
                   </select>
                 </Field>
-                <Field label="Price ($)">
+                <Field label="Price (₦)">
                   <input
                     type="number"
                     min="0"
@@ -1613,7 +1613,7 @@ export default function AdminPage() {
                     className={inputClass()}
                     value={form.price}
                     onChange={(event) => updateForm("price", event.target.value)}
-                    placeholder="25.00"
+                    placeholder="35000"
                   />
                 </Field>
                 <Field label="Stock">
@@ -2164,8 +2164,8 @@ export default function AdminPage() {
               <Field label="Product name">
                 <input className={inputClass()} value={editingProduct.title} onChange={(event) => updateEditingProduct("title", event.target.value)} />
               </Field>
-              <Field label="Price ($)">
-                <input type="number" min="0" step="0.01" className={inputClass()} value={editingProduct.price} onChange={(event) => updateEditingProduct("price", event.target.value)} placeholder="25.00" />
+              <Field label="Price (₦)">
+                <input type="number" min="0" step="0.01" className={inputClass()} value={editingProduct.price} onChange={(event) => updateEditingProduct("price", event.target.value)} placeholder="35000" />
               </Field>
               <Field label="Category">
                 <select

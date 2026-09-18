@@ -15,7 +15,7 @@ import {
   initiateFlutterwavePayment,
   savePendingCheckout,
 } from "@/lib/payments"
-import { formatPrice } from "@/lib/currency"
+import { formatNaira, formatPrice } from "@/lib/currency"
 
 const fieldClass =
   "h-12 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none transition focus:border-(--theme) focus:bg-white dark:border-white/10 dark:bg-[#16131f] dark:text-gray-200 dark:focus:bg-[#1a1625]"
@@ -124,9 +124,10 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
         ""
 
       const redirect_url = getPaymentCallbackUrl()
+      const nairaAmount = Math.round(Number(amount) || 0)
       const payload = {
-        amount,
-        currency: "USD",
+        amount: nairaAmount,
+        currency: "NGN",
         redirect_url,
         customer: {
           email: userSession?.email,

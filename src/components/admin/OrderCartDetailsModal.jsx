@@ -36,7 +36,7 @@ function formatNumber(value) {
 
 function formatPrice(value) {
   const numeric = Number(value) || 0
-  return `$${numeric.toLocaleString("en-US", {
+  return `₦${numeric.toLocaleString("en-US", {
     minimumFractionDigits: Number.isInteger(numeric) ? 0 : 2,
     maximumFractionDigits: 2,
   })}`
