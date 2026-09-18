@@ -145,6 +145,20 @@ export function CartProvider({ children }) {
   const applyItems = useCallback((nextItems) => {
     itemsRef.current = nextItems
     setItems(nextItems)
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem("cartbehind-cart", JSON.stringify(nextItems))
+      } catch (e) {
+        console.warn("Could not save cart to localStorage", e)
+      }
+    }
+    console.group("%c🛒 [User Cart Updated]", "background: #10b981; color: #fff; padding: 3px 8px; border-radius: 4px; font-weight: bold;")
+    console.log("Cart items:", nextItems)
+    console.log(
+      "Subtotal (sum of price * qty):",
+      nextItems.reduce((acc, i) => acc + (Number(i.price) || 0) * (Number(i.quantity) || 1), 0),
+    )
+    console.groupEnd()
   }, [])
 
   const getHeaders = useCallback(() => {
@@ -293,6 +307,12 @@ export function CartProvider({ children }) {
         const localItems = itemsRef.current?.length ? itemsRef.current : readStoredCart()
         const mergedItems = mergeCartItems(localItems, serverItems)
 
+        console.group("%c🛒 [Server Cart Loaded]", "background: #6366f1; color: #fff; padding: 3px 8px; border-radius: 4px; font-weight: bold;")
+        console.log("GET /api/v1/users/cart raw response:", response.data)
+        console.log("Normalized server items:", serverItems)
+        console.log("Merged cart items:", mergedItems)
+        console.groupEnd()
+
         if (requestId !== cartRequestIdRef.current) return
 
         applyItems(mergedItems)
@@ -346,6 +366,14 @@ export function CartProvider({ children }) {
 
   const commitAddToCart = useCallback(
     (product, note = "") => {
+      console.log("🛒 [addToCart] User adding product:", {
+        id: product?.id || product?._id,
+        title: product?.title || product?.name,
+        priceInProductObject: product?.price,
+        quantity: product?.quantity,
+        fullProduct: product,
+      })
+
       const current = itemsRef.current
       const existing = current.find((item) => item.id === product.id)
       const addQuantity = Math.max(1, Number(product.quantity) || 1)

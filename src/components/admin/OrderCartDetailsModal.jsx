@@ -81,6 +81,23 @@ export default function OrderCartDetailsModal({
       const data = await fetchAdminCartDetails(token, orderId)
       setRawResponse(data)
       const normalized = normalizeCartDetailsResponse(data)
+
+      console.group(`%c🛒 [OrderCartDetailsModal] Order #${orderId} Data & Totals`, "background: #7c3aed; color: #fff; padding: 4px 8px; border-radius: 4px; font-weight: bold;")
+      console.log("Order prop passed into modal:", order)
+      console.log("Order total from order list:", order?.total)
+      console.log("Raw items from backend (JSON string):\n" + JSON.stringify(data?.items || data?.cart || data, null, 2))
+      if (normalized.length > 0) {
+        console.table(normalized.map((i) => ({
+          name: i.name,
+          "unitPrice": i.price,
+          "quantity": i.quantity,
+          "subtotal": i.subtotal,
+          "raw.price": i.rawItem?.price,
+          "raw.product.price": i.rawItem?.product?.price,
+        })))
+      }
+      console.groupEnd()
+
       setCartItems(normalized)
     } catch (err) {
       console.error(`[OrderCartDetailsModal] Failed to fetch cart details for order ${orderId}:`, err)
@@ -169,10 +186,10 @@ export default function OrderCartDetailsModal({
 
                 <span
                   className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${isDelivered
-                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300"
-                      : isInTransit
-                        ? "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300"
-                        : "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
+                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300"
+                    : isInTransit
+                      ? "bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300"
+                      : "bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
                     }`}
                 >
                   <Truck size={12} />
@@ -235,8 +252,8 @@ export default function OrderCartDetailsModal({
                   onClick={() => setShowRawJson((prev) => !prev)}
                   title="Toggle raw response JSON"
                   className={`inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl border px-3 text-xs font-bold transition ${showRawJson
-                      ? "border-(--theme) bg-(--theme)/10 text-(--theme)"
-                      : "border-gray-200 text-gray-600 hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-300"
+                    ? "border-(--theme) bg-(--theme)/10 text-(--theme)"
+                    : "border-gray-200 text-gray-600 hover:border-(--theme) hover:text-(--theme) dark:border-white/10 dark:text-gray-300"
                     }`}
                 >
                   <Code size={14} />
@@ -357,10 +374,10 @@ export default function OrderCartDetailsModal({
                   </div>
                   <p
                     className={`mt-1.5 text-sm font-black uppercase ${isDelivered
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : isInTransit
-                          ? "text-blue-600 dark:text-blue-400"
-                          : "text-amber-600 dark:text-amber-400"
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : isInTransit
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-amber-600 dark:text-amber-400"
                       }`}
                   >
                     {deliveryStatus}
