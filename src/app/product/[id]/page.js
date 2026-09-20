@@ -11,18 +11,37 @@ import { useProducts } from "@/hooks/useProducts"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import { formatPrice } from "@/lib/currency"
+import { getOptimizedCloudinaryUrl, isCloudinaryUrl } from "@/lib/images"
 
 function isRemoteImage(src) {
   return typeof src === "string" && /^https?:\/\//.test(src)
 }
 
 function ProductImage({ src, alt, className, sizes, priority = false }) {
+  if (isCloudinaryUrl(src)) {
+    // If it's a small preview (based on sizes like "72px"), request small width
+    const targetWidth = sizes === "72px" ? 160 : 1000
+    const optimizedSrc = getOptimizedCloudinaryUrl(src, { width: targetWidth, quality: "auto", format: "auto" })
+
+    return (
+      <img
+        src={optimizedSrc}
+        alt={alt}
+        className={className}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+      />
+    )
+  }
+
   if (isRemoteImage(src)) {
     return (
       <img
         src={src}
         alt={alt}
         className={className}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
       />
     )
   }

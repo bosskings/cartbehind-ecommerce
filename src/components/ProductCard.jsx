@@ -6,6 +6,8 @@ import { ShoppingBag } from "lucide-react"
 import { useCart } from "@/components/CartContext"
 import { formatPrice } from "@/lib/currency"
 
+import { getOptimizedCloudinaryUrl, getCloudinarySrcSet, isCloudinaryUrl } from "@/lib/images"
+
 const sampleProduct = {
   id: 1,
   brand: "ESSENCE",
@@ -21,6 +23,23 @@ function isRemoteImage(src) {
 }
 
 function ProductImage({ src, alt, className }) {
+  if (isCloudinaryUrl(src)) {
+    const optimizedSrc = getOptimizedCloudinaryUrl(src, { width: 500, quality: "auto", format: "auto" })
+    const srcSet = getCloudinarySrcSet(src, [300, 500, 750])
+
+    return (
+      <img
+        src={optimizedSrc}
+        srcSet={srcSet || undefined}
+        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+        alt={alt}
+        className={className}
+        loading="lazy"
+        decoding="async"
+      />
+    )
+  }
+
   if (isRemoteImage(src)) {
     return (
       <img
@@ -28,6 +47,7 @@ function ProductImage({ src, alt, className }) {
         alt={alt}
         className={className}
         loading="lazy"
+        decoding="async"
       />
     )
   }

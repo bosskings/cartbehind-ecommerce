@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Zap, ShoppingBag, Clock } from "lucide-react";
 import { formatPrice } from "@/lib/currency";
+import { getOptimizedCloudinaryUrl } from "@/lib/images";
 
 function getTimeParts(msRemaining) {
   const totalSeconds = Math.max(0, Math.floor(msRemaining / 1000));
@@ -126,18 +127,20 @@ export default function DealOfTheDay({
           {targetId ? (
             <Link href={`/product/${targetId}`} className="group block cursor-pointer">
               <img
-                src={image}
+                src={getOptimizedCloudinaryUrl(image, { width: 800 })}
                 alt={productName}
                 className="h-72 w-auto object-contain drop-shadow-xl md:h-96 transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
+                decoding="async"
               />
             </Link>
           ) : (
             <img
-              src={image}
+              src={getOptimizedCloudinaryUrl(image, { width: 800 })}
               alt={productName}
               className="h-72 w-auto object-contain drop-shadow-xl md:h-96"
               loading="lazy"
+              decoding="async"
             />
           )}
         </div>

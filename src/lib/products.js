@@ -1,5 +1,32 @@
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL
-const DEFAULT_LIMIT = 10
+const DEFAULT_LIMIT = 50
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes cache TTL
+
+// In-memory cache state
+let cachedProducts = null
+let cacheTimestamp = 0
+let inFlightFetchPromise = null
+
+/**
+ * Returns currently cached products synchronously if still fresh, or null if none/expired.
+ */
+export function getCachedProducts() {
+  const isExpired = Date.now() - cacheTimestamp > CACHE_TTL_MS
+  if (cachedProducts && !isExpired) {
+    return cachedProducts
+  }
+  return null
+}
+
+/**
+ * Explicitly invalidate the in-memory product cache (e.g. on admin product create/update/delete).
+ */
+export function clearProductCache() {
+  console.log("[Products Cache] In-memory product cache cleared.")
+  cachedProducts = null
+  cacheTimestamp = 0
+  inFlightFetchPromise = null
+}
 
 export function normalizeProduct(apiProduct) {
   const category = apiProduct.category
@@ -56,39 +83,91 @@ async function fetchProductsPage(page = 1, limit = DEFAULT_LIMIT) {
   }
 }
 
-export async function fetchProducts({ page, limit = DEFAULT_LIMIT } = {}) {
+export async function fetchProducts({ page, limit = DEFAULT_LIMIT, forceRefresh = false } = {}) {
+  // If a specific page is requested, fetch and return directly without storing full catalog
   if (page !== undefined) {
     const result = await fetchProductsPage(page, limit)
     return result.products
   }
 
-  const allProducts = []
-  let currentPage = 1
-
-  while (true) {
-    const result = await fetchProductsPage(currentPage, limit)
-    allProducts.push(...result.products)
-
-    if (result.totalPages && currentPage >= result.totalPages) {
-      break
-    }
-
-    if (result.total && allProducts.length >= result.total) {
-      break
-    }
-
-    if (result.products.length < limit) {
-      break
-    }
-
-    if (result.products.length === 0) {
-      break
-    }
-
-    currentPage += 1
+  // 1. Check in-memory cache
+  const isCacheValid = cachedProducts && (Date.now() - cacheTimestamp < CACHE_TTL_MS)
+  if (isCacheValid && !forceRefresh) {
+    const ageSec = Math.round((Date.now() - cacheTimestamp) / 1000)
+    console.log(`[Products Cache] Cache HIT: returning ${cachedProducts.length} products (${ageSec}s old)`)
+    return cachedProducts
   }
 
-  return allProducts
+  // 2. Prevent duplicate concurrent fetches
+  if (inFlightFetchPromise) {
+    console.log("[Products Cache] In-flight request in progress. Awaiting existing promise...")
+    return inFlightFetchPromise
+  }
+
+  console.log(`[Products Cache] ${cachedProducts ? "Cache expired" : "Cache MISS"}. Fetching catalog (limit=${limit})...`)
+
+  inFlightFetchPromise = (async () => {
+    try {
+      const startTime = Date.now()
+      // First page with higher batch limit (50)
+      const firstPage = await fetchProductsPage(1, limit)
+      const allProducts = [...firstPage.products]
+      const totalPages = firstPage.totalPages || 1
+
+      // Parallelize any remaining pages instead of slow sequential while() loop
+      if (totalPages > 1) {
+        console.log(`[Products API] Catalog has ${totalPages} pages. Fetching pages 2..${totalPages} in parallel...`)
+        const pagePromises = []
+        for (let p = 2; p <= totalPages; p++) {
+          pagePromises.push(fetchProductsPage(p, limit))
+        }
+        const remainingPages = await Promise.all(pagePromises)
+        for (const pageRes of remainingPages) {
+          allProducts.push(...pageRes.products)
+        }
+      }
+
+      cachedProducts = allProducts
+      cacheTimestamp = Date.now()
+      const durationMs = Date.now() - startTime
+      console.log(`[Products Cache] Cache populated: ${allProducts.length} products fetched in ${durationMs}ms.`)
+
+      return allProducts
+    } catch (err) {
+      console.error("[Products API] Error loading products:", err)
+      if (cachedProducts) {
+        console.warn("[Products Cache] Fallback to stale cached products after network error.")
+        return cachedProducts
+      }
+      throw err
+    } finally {
+      inFlightFetchPromise = null
+    }
+  })()
+
+  return inFlightFetchPromise
+}
+
+/**
+ * Fast product lookup by ID.
+ * Returns immediately (0ms) if product is already cached in memory.
+ */
+export async function fetchProductById(id) {
+  if (!id) return null
+
+  // Check cache first
+  if (cachedProducts && cachedProducts.length > 0) {
+    const found = cachedProducts.find((p) => String(p.id) === String(id))
+    if (found) {
+      console.log(`[Products Cache] fetchProductById("${id}") resolved from in-memory cache instantly.`)
+      return found
+    }
+  }
+
+  // If not cached, fetch all and search
+  console.log(`[Products Cache] fetchProductById("${id}") cache miss, warming product catalog...`)
+  const products = await fetchProducts()
+  return products.find((p) => String(p.id) === String(id)) || null
 }
 
 export async function searchProducts(query) {
