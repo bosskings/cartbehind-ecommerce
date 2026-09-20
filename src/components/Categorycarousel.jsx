@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode, Navigation } from "swiper/modules";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { getOptimizedCloudinaryUrl } from "@/lib/images";
 // Swiper core styles (required)
 import "swiper/css";
 import "swiper/css/navigation";
@@ -87,11 +88,12 @@ function CategoryItemImage({ src, alt, initial }) {
     );
   }
 
-  const isRemote = typeof src === "string" && /^https?:\/\//.test(src);
+  const displaySrc = getOptimizedCloudinaryUrl(src, { width: 224 });
+  const isRemote = typeof displaySrc === "string" && /^https?:\/\//.test(displaySrc);
 
   return (
     <Image
-      src={src}
+      src={displaySrc}
       alt={alt}
       fill
       sizes="112px"

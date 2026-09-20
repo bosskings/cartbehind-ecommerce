@@ -46,7 +46,7 @@ import { Field, inputClass } from "@/components/admin/formUi"
 import { formatOrderDate } from "@/components/admin/transitUtils"
 import { getAdminToken, uploadToCloudinary } from "@/lib/cloudinary"
 import { fetchAdminOrders, fetchAdminOverview, getApiErrorMessage, isAdminAuthError } from "@/lib/orders"
-import { fetchAdminProducts, fetchProductCategories, normalizeCategory, searchAdminProducts } from "@/lib/products"
+import { clearProductCache, fetchAdminProducts, fetchProductCategories, normalizeCategory, searchAdminProducts } from "@/lib/products"
 import { fetchAdminUsers } from "@/lib/adminUsers"
 import { ADMIN_LOGIN_PATH } from "@/lib/adminRoutes"
 
@@ -825,6 +825,7 @@ export default function AdminPage() {
       }
 
       setForm(createEmptyForm())
+      clearProductCache()
       toast.success(data?.message || "Product uploaded successfully.")
       setQuery("")
       setSearchResults(null)
@@ -909,6 +910,7 @@ export default function AdminPage() {
       setProductsTotal((current) => Math.max(0, current - 1))
       setSearchResults((current) => (current ? current.filter((item) => item.id !== product.id) : null))
       setProductPendingDelete(null)
+      clearProductCache()
       toast.success(data?.message || "Product deleted successfully.")
     } catch (error) {
       if (isAdminAuthError(error)) {
@@ -1148,6 +1150,7 @@ export default function AdminPage() {
       )
       setEditingProduct(null)
       setEditingImageFile(null)
+      clearProductCache()
       toast.success(data?.message || "Product updated successfully.")
     } catch (error) {
       if (isAdminAuthError(error)) {

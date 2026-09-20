@@ -21,6 +21,7 @@ import { Field, inputClass } from "./formUi"
 import DealOfTheDay from "../Dealoftheday"
 import { getAdminToken } from "@/lib/cloudinary"
 import { formatNaira as formatPrice } from "@/lib/currency"
+import { clearProductCache } from "@/lib/products"
 
 function normalizeProductItem(product, index = 0) {
   const primaryImage =
@@ -254,6 +255,7 @@ export default function DealOfTheDaySection({
       }
 
       toast.success(data?.message || "Deal of the day updated successfully!")
+      clearProductCache()
 
       // Update local product state
       setProducts((prev) =>
