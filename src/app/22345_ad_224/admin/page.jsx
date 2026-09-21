@@ -1095,11 +1095,21 @@ export default function AdminPage() {
       let publicId = editingProduct.publicId || ""
       let fileType = editingProduct.fileType || ""
 
+      const existingImages = Array.isArray(editingProduct.images) ? [...editingProduct.images] : []
+      let updatedImages = existingImages
+
       if (editingImageFile) {
         const uploaded = await uploadToCloudinary(editingImageFile)
         imageUrl = uploaded.secure_url || uploaded.url || imageUrl
         publicId = uploaded.public_id || publicId
         fileType = uploaded.format || fileType
+
+        const newImageSlot = { url: imageUrl, publicId, fileType }
+        if (updatedImages.length > 0) {
+          updatedImages[0] = newImageSlot
+        } else {
+          updatedImages = [newImageSlot]
+        }
       }
 
       const updatePayload = {
@@ -1110,8 +1120,11 @@ export default function AdminPage() {
         stock: Number(editingProduct.stock) || 0,
         deliveryTime: String(editingProduct.deliveryTime || "1"),
         url: imageUrl,
+        image: imageUrl,
         publicId,
         fileType,
+        images: updatedImages,
+        hotDeal: editingProduct.hotDeal || { status: false, percentage: "0" },
       }
 
       console.log("[Admin] UPDATE product payload:", updatePayload)
@@ -1139,7 +1152,9 @@ export default function AdminPage() {
       }
 
       const updatedProduct = normalizeProduct(
-        data?.product ? data.product : { ...editingProduct, image: imageUrl, publicId, fileType }
+        data?.product
+          ? data.product
+          : { ...editingProduct, image: imageUrl, url: imageUrl, images: updatedImages, publicId, fileType }
       )
 
       setProducts((current) =>

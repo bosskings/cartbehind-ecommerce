@@ -18,32 +18,27 @@ export function useProducts({ forceRefresh = false } = {}) {
   useEffect(() => {
     let cancelled = false
 
-    async function loadProducts() {
+    async function loadProducts(shouldForce = false) {
       const cached = getCachedProducts()
       const hasValidCache = Boolean(cached && cached.length > 0)
 
-      console.log("[useProducts Hook] Initialized. In-memory cache status:", {
-        hasValidCache,
-        cachedCount: cached?.length || 0,
-        forceRefresh,
-      })
-
-      // Only show blocking loading skeleton if there is NO cached data to show
+      // Only show blocking loading skeleton if there is NO cached data to show at all
       if (!hasValidCache) {
         setLoading(true)
       }
       setError(null)
 
       try {
-        const data = await fetchProducts({ forceRefresh })
-        if (!cancelled) {
+        // Fetch products (background revalidation if cache already exists)
+        const data = await fetchProducts({ forceRefresh: shouldForce || forceRefresh })
+        if (!cancelled && data) {
           setProducts(data)
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err.message || "Failed to load products.")
-          // If no cache, clear products
+          console.error("[useProducts Hook] Fetch failed:", err)
           if (!hasValidCache) {
+            setError(err.message || "Failed to load products.")
             setProducts([])
           }
         }
@@ -54,10 +49,29 @@ export function useProducts({ forceRefresh = false } = {}) {
       }
     }
 
-    loadProducts()
+    // Always revalidate in background on mount so new uploads/deals show up
+    loadProducts(forceRefresh)
+
+    // Listen for local and cross-tab cache invalidations (e.g. admin uploads/edits)
+    const handleInvalidation = () => {
+      console.log("[useProducts Hook] Cache cleared event received. Fetching latest catalog...")
+      loadProducts(true)
+    }
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("cartbehind_products_cache_cleared", handleInvalidation)
+      window.addEventListener("storage", (e) => {
+        if (e.key === "cartbehind_cache_cleared") {
+          handleInvalidation()
+        }
+      })
+    }
 
     return () => {
       cancelled = true
+      if (typeof window !== "undefined") {
+        window.removeEventListener("cartbehind_products_cache_cleared", handleInvalidation)
+      }
     }
   }, [forceRefresh])
 

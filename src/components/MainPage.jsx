@@ -182,9 +182,11 @@ const MainPage = ({ category = 'All' }) => {
     [products],
   )
 
-  // Only display deal product when hotDeal.status is true
+  // Only display deal product when hotDeal.status is true (picks the most recently set deal)
   const dealProduct = useMemo(() => {
-    return products.find((p) => p.hotDeal?.status === true) || null
+    const deals = products.filter((p) => p.hotDeal?.status === true || p.status === true)
+    if (!deals.length) return null
+    return [...deals].sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0))[0]
   }, [products])
 
   const handleGrabDeal = useCallback(() => {
