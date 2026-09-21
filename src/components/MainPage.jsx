@@ -488,21 +488,7 @@ const MainPage = ({ category = 'All' }) => {
         </section>
       </div>
 
-      {/* ───────── Back to Top Button ───────── */}
-      <AnimatePresence>
-        {showBackToTop && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            onClick={scrollToTop}
-            className="fixed bottom-8 right-8 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-(--theme) text-white shadow-lg transition-all duration-300 hover:scale-110 hover:bg-[#280E89] hover:text-[var(--theme-second)] cursor-pointer"
-            aria-label="Back to top"
-          >
-            <ArrowUp size={20} />
-          </motion.button>
-        )}
-      </AnimatePresence>
+
 
       {/* ——— Global marquee animation + Swiper pagination polish ——— */}
       <style jsx global>{`
