@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/ThemeContext";
 import { OrderProvider } from "@/components/OrderContext";
 import { AuthProvider } from "@/components/AuthContext";
 import AuthRouteGuard from "@/components/AuthRouteGuard";
+import FloatingActions from "@/components/FloatingActions";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,7 +34,10 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <AuthRouteGuard>
               <CartProvider>
-                <OrderProvider>{children}</OrderProvider>
+                <OrderProvider>
+                  {children}
+                  <FloatingActions />
+                </OrderProvider>
               </CartProvider>
             </AuthRouteGuard>
           </AuthProvider>

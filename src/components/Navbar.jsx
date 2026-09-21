@@ -36,6 +36,7 @@ const Navbar = () => {
   const isHomePage = pathname === "/"
   const isNavActive = !isHomePage || isScrolled
   const isDark = mounted && theme === "dark"
+  const showDarkLogo = isDark || !isNavActive
 
   useEffect(() => {
     if (!isHomePage) return
@@ -208,10 +209,11 @@ const Navbar = () => {
         <div className="flex h-16 w-full items-center justify-between gap-4 md:h-20">
           <Link href="/" className={`text-lg font-black tracking-[0.35em] ${navTextClass}`}>
             <Image
-              src="/cart1.png"
+              src={showDarkLogo ? "/cart-behind-dark2.png" : "/cart1.png"}
               alt="CartBehind Logo"
               width={120}
               height={40}
+              priority
             />
           </Link>
 
