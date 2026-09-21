@@ -104,6 +104,7 @@ export default function DealOfTheDaySection({
         `${API_URL}/api/v1/admin/products`,
         { cache: "no-store", headers }
       )
+      console.log("response", response)
       const rawData = await response.json()
       const rawList = Array.isArray(rawData)
         ? rawData
@@ -223,12 +224,19 @@ export default function DealOfTheDaySection({
 
     setIsSubmitting(true)
 
-    // Pass name, description, price, stock, and hotDeal object with status and percentage as string
+    // Pass name, description, price, stock, images, and hotDeal object with status and percentage as string
     const payload = {
       name: (selectedProduct?.name || selectedProduct?.title || "").trim(),
       description: selectedProduct?.description || "",
       price: Number(selectedProduct?.price || 0),
       stock: Number(selectedProduct?.stock || 0),
+      category: selectedProduct?.category || "",
+      deliveryTime: String(selectedProduct?.deliveryTime || "1"),
+      url: selectedProduct?.image || selectedProduct?.url || "",
+      image: selectedProduct?.image || selectedProduct?.url || "",
+      images: Array.isArray(selectedProduct?.images) ? selectedProduct.images : [],
+      publicId: selectedProduct?.publicId || "",
+      fileType: selectedProduct?.fileType || "",
       hotDeal: {
         status: Boolean(status),
         percentage: String(percentage).trim(),
@@ -262,15 +270,15 @@ export default function DealOfTheDaySection({
         prev.map((p) =>
           String(p.id) === String(selectedProductId)
             ? {
-                ...p,
+              ...p,
+              status: Boolean(status),
+              percentage: String(percentage),
+              discountPercent: numPercentage,
+              hotDeal: {
                 status: Boolean(status),
                 percentage: String(percentage),
-                discountPercent: numPercentage,
-                hotDeal: {
-                  status: Boolean(status),
-                  percentage: String(percentage),
-                },
-              }
+              },
+            }
             : p
         )
       )

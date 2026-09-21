@@ -213,6 +213,7 @@ const Navbar = () => {
               alt="CartBehind Logo"
               width={120}
               height={40}
+              style={{ width: "auto", height: "auto" }}
               priority
             />
           </Link>

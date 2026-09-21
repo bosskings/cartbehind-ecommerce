@@ -15,7 +15,7 @@ import "swiper/css/navigation";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-const MotionLink = motion(Link);
+const MotionLink = motion.create ? motion.create(Link) : motion(Link);
 
 // Convert "Home Decorations" → "home-decorations"
 const toSlug = (name) => name.trim().toLowerCase().replace(/\s+/g, "-");

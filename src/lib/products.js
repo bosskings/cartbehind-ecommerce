@@ -1,6 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_URL
 const DEFAULT_LIMIT = 50
-const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes cache TTL
+const CACHE_TTL_MS = 30 * 1000 // 30 seconds fresh cache TTL
 
 // In-memory cache state
 let cachedProducts = null
@@ -26,6 +26,15 @@ export function clearProductCache() {
   cachedProducts = null
   cacheTimestamp = 0
   inFlightFetchPromise = null
+
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new Event("cartbehind_products_cache_cleared"))
+      window.localStorage.setItem("cartbehind_cache_cleared", String(Date.now()))
+    } catch {
+      // ignore
+    }
+  }
 }
 
 export function normalizeProduct(apiProduct) {
@@ -33,13 +42,43 @@ export function normalizeProduct(apiProduct) {
     ? apiProduct.category.charAt(0).toUpperCase() + apiProduct.category.slice(1)
     : ""
 
-  const primaryImage =
-    apiProduct.images?.[0]?.url ||
-    (typeof apiProduct.images?.[0] === "string" ? apiProduct.images[0] : null) ||
+  // Resolve primary image URL: prioritize explicitly set image/url over nested array
+  const rawUrl =
+    (typeof apiProduct.url === "string" && apiProduct.url.trim() ? apiProduct.url.trim() : null) ||
     apiProduct.image?.url ||
-    (typeof apiProduct.image === "string" ? apiProduct.image : null) ||
-    apiProduct.url ||
+    (typeof apiProduct.image === "string" && apiProduct.image.trim() ? apiProduct.image.trim() : null) ||
+    apiProduct.images?.[0]?.url ||
+    (typeof apiProduct.images?.[0] === "string" && apiProduct.images[0].trim() ? apiProduct.images[0].trim() : null) ||
     "/thumbnail.webp"
+
+  const primaryImage = rawUrl
+
+  // Ensure images array has primaryImage first so gallery and previews stay synchronized
+  const rawImages = Array.isArray(apiProduct.images) ? [...apiProduct.images] : []
+  let resolvedImages = rawImages
+  if (primaryImage && primaryImage !== "/thumbnail.webp") {
+    const firstUrl = rawImages[0]?.url || (typeof rawImages[0] === "string" ? rawImages[0] : null)
+    if (!firstUrl) {
+      resolvedImages = [{ url: primaryImage }]
+    } else if (firstUrl !== primaryImage) {
+      resolvedImages = [{ url: primaryImage }, ...rawImages.slice(1)]
+    }
+  }
+
+  // Robust hotDeal normalization (handling boolean, string "true", or root status)
+  const isHotDeal =
+    apiProduct.hotDeal?.status === true ||
+    apiProduct.hotDeal?.status === "true" ||
+    apiProduct.status === true ||
+    apiProduct.status === "true" ||
+    false
+
+  const hotDealPercent =
+    Number(apiProduct.hotDeal?.percentage) ||
+    Number(apiProduct.hotDeal?.discountPercent) ||
+    Number(apiProduct.percentage) ||
+    Number(apiProduct.discountPercent) ||
+    0
 
   return {
     id: apiProduct.id ?? apiProduct._id,
@@ -51,9 +90,16 @@ export function normalizeProduct(apiProduct) {
     stock: apiProduct.stock ?? 0,
     deliveryTime: apiProduct.deliveryTime != null ? String(apiProduct.deliveryTime) : "1",
     image: primaryImage,
-    images: Array.isArray(apiProduct.images) ? apiProduct.images : [],
+    url: primaryImage,
+    images: resolvedImages,
     createdAt: apiProduct.createdAt,
-    hotDeal: apiProduct.hotDeal || { status: false, percentage: 0 },
+    updatedAt: apiProduct.updatedAt || apiProduct.createdAt,
+    status: isHotDeal,
+    hotDeal: {
+      status: isHotDeal,
+      percentage: hotDealPercent,
+    },
+    discountPercent: hotDealPercent,
   }
 }
 
