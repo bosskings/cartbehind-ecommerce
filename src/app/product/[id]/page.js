@@ -275,11 +275,10 @@ export default function ProductDetailPage({ params }) {
                         key={`${imgUrl}-${index}`}
                         type="button"
                         onClick={() => setSelectedImageIndex(index)}
-                        className={`relative h-18 w-18 shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-200 cursor-pointer ${
-                          isSelected
+                        className={`relative h-18 w-18 shrink-0 overflow-hidden rounded-xl border-2 transition-all duration-200 cursor-pointer ${isSelected
                             ? "border-(--theme) ring-2 ring-(--theme)/30 scale-105 shadow-sm"
                             : "border-gray-200 opacity-70 hover:opacity-100 hover:border-gray-300 dark:border-white/15"
-                        }`}
+                          }`}
                         aria-label={`View product image ${index + 1}`}
                       >
                         <ProductImage
@@ -406,56 +405,7 @@ export default function ProductDetailPage({ params }) {
             </div>
           </div>
 
-          <div className="mt-10 space-y-6 lg:mt-16 lg:grid lg:grid-cols-2 lg:gap-8 lg:space-y-0">
-            <section className="rounded-[28px] border border-white/80 bg-white/95 p-6 shadow-[0_8px_40px_rgba(40,14,137,0.06)] lg:p-7 dark:border-white/10 dark:bg-surface dark:shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
-              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gray-400 dark:text-gray-500">
-                Details
-              </p>
-              <h2 className="mt-2 text-xl font-bold text-gray-900 lg:text-2xl dark:text-white">
-                Product details
-              </h2>
-              <div className="mt-5 space-y-3 text-sm leading-7 text-gray-600 lg:text-[15px] dark:text-gray-300">
-                <p>{product.description}</p>
-                <p>Ships in 3–5 business days.</p>
-              </div>
-              {product.category ? (
-                <div className="mt-6 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-medium text-gray-600 dark:border-white/10 dark:bg-surface-muted dark:text-gray-300">
-                    {product.category}
-                  </span>
-                </div>
-              ) : null}
-            </section>
 
-            {/* <section className="rounded-[28px] border border-white/80 bg-white/95 p-6 shadow-[0_8px_40px_rgba(40,14,137,0.06)] lg:p-7 dark:border-white/10 dark:bg-surface dark:shadow-[0_8px_40px_rgba(0,0,0,0.35)]">
-              <p className="text-xs font-bold uppercase tracking-[0.32em] text-gray-400 dark:text-gray-500">
-                Reviews
-              </p>
-              <h2 className="mt-2 text-xl font-bold text-gray-900 lg:text-2xl dark:text-white">
-                Customer reviews
-              </h2>
-              <div className="mt-5 space-y-4">
-                {reviews.map((review, idx) => (
-                  <div
-                    key={idx}
-                    className="rounded-2xl border border-gray-100 bg-[#f7f5fb] p-4 lg:p-5 dark:border-white/10 dark:bg-surface-muted"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="font-semibold text-gray-900 dark:text-white">{review.name}</p>
-                        <p className="text-[11px] uppercase tracking-[0.24em] text-gray-400 dark:text-gray-500">
-                          Verified buyer
-                        </p>
-                      </div>
-                    </div>
-                    <p className="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-                      {review.comment}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </section> */}
-          </div>
         </div>
       </main>
       <Footer />
