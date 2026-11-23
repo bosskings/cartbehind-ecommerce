@@ -6,7 +6,7 @@ import {
   Check,
   CheckCircle2,
   Copy,
-  Mail,
+  Phone,
   RefreshCw,
   Search,
   ShieldAlert,
@@ -50,6 +50,7 @@ export default function UsersSection({
       const matchesSearch =
         !query ||
         user.email?.toLowerCase().includes(query) ||
+        String(user.phone || "").toLowerCase().includes(query) ||
         user.id?.toLowerCase().includes(query)
 
       if (!matchesSearch) return false
@@ -279,8 +280,8 @@ export default function UsersSection({
                             <div className="min-w-0">
                               <p className="truncate font-bold text-gray-900 dark:text-gray-100">{user.email}</p>
                               <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                                <Mail size={12} />
-                                <span>Customer</span>
+                                <Phone size={12} />
+                                <span>{user.phone || "Phone not provided"}</span>
                               </div>
                             </div>
                           </div>
@@ -378,6 +379,10 @@ export default function UsersSection({
                         </span>
                         <div className="min-w-0">
                           <p className="truncate font-bold text-gray-900 dark:text-gray-100">{user.email}</p>
+                          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400">
+                            <Phone size={12} />
+                            <span className="truncate">{user.phone || "Phone not provided"}</span>
+                          </div>
                           <div className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-400">
                             <span className="font-mono">{user.id ? `${user.id.slice(0, 8)}...` : ""}</span>
                             <button

@@ -114,7 +114,7 @@ export function AuthProvider({ children }) {
     return () => axios.interceptors.response.eject(interceptor)
   }, [handleUserAuthExpired, userSession?.authToken])
 
-  const signupUser = async (email, password) => {
+  const signupUser = async (email, password, phone) => {
     try {
       const backendUrl = getBackendUrl()
       if (!backendUrl) {
@@ -124,6 +124,7 @@ export function AuthProvider({ children }) {
       const response = await axios.post(`${backendUrl}/api/v1/users/signup`, {
         email,
         password,
+        phone,
       })
 
       return {
