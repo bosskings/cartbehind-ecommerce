@@ -21,6 +21,7 @@ export function normalizeUser(rawUser) {
     id,
     _id: id,
     email: rawUser.email || "No email",
+    phone: rawUser.phone || rawUser.phoneNumber || "",
     active: rawUser.active !== false,
     isVerified: Boolean(rawUser.isVerified),
     verificationToken: rawUser.verificationToken || null,

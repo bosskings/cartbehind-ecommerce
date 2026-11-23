@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import toast from "react-hot-toast"
-import { LockKeyhole, LogIn, Mail, ShieldCheck, ShoppingBag, User, UserPlus, Eye, EyeOff } from "lucide-react"
+import { LockKeyhole, LogIn, Mail, Phone, ShieldCheck, ShoppingBag, User, UserPlus, Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/components/AuthContext"
 import { useTheme } from "@/components/ThemeContext"
 import { FaRegMoon, FaRegSun } from "react-icons/fa"
@@ -32,6 +32,7 @@ function getSafeNextPath(next) {
 
 export default function AuthPage({ mode }) {
   const [email, setEmail] = useState("")
+  const [phone, setPhone] = useState("")
   const [accessId, setAccessId] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -81,7 +82,7 @@ export default function AuthPage({ mode }) {
     const result = isAdmin
       ? await loginAdmin(accessId, password)
       : isSignup
-        ? await signupUser(email, password)
+        ? await signupUser(email, password, phone)
         : await loginUser(email, password)
 
     if (!result.ok) {
@@ -156,6 +157,20 @@ export default function AuthPage({ mode }) {
                 className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
               />
             </Field>
+
+            {isSignup && (
+              <Field label="Phone number" icon={Phone}>
+                <input
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  type="tel"
+                  autoComplete="tel"
+                  placeholder="Phone number"
+                  required
+                  className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                />
+              </Field>
+            )}
 
             <Field label="Password" icon={LockKeyhole}>
               <input
