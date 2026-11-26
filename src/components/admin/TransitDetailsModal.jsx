@@ -163,8 +163,25 @@ export default function TransitDetailsModal({
     transitDetails?.deliveryDetails ||
     order?.destination ||
     null
+  const senderName =
+    order?.senderName ||
+    delivery?.senderName ||
+    transitDetails?.senderName ||
+    ""
+  const receiverName =
+    order?.Reciever ||
+    order?.reciever ||
+    order?.receiverName ||
+    delivery?.Reciever ||
+    delivery?.reciever ||
+    delivery?.receiverName ||
+    transitDetails?.Reciever ||
+    transitDetails?.receiverName ||
+    ""
 
   const hasDeliveryDetails = Boolean(
+    senderName ||
+    receiverName ||
     delivery?.address ||
     delivery?.city ||
     delivery?.stateOrProvince ||
@@ -262,6 +279,24 @@ export default function TransitDetailsModal({
 
             {hasDeliveryDetails ? (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-xl border border-white/80 bg-white p-3.5 shadow-xs dark:border-white/5 dark:bg-[#16131f]">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                    Sender Name
+                  </span>
+                  <p className="mt-1 font-bold text-gray-900 dark:text-white">
+                    {senderName || "Not provided"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-white/80 bg-white p-3.5 shadow-xs dark:border-white/5 dark:bg-[#16131f]">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
+                    Receiver Name
+                  </span>
+                  <p className="mt-1 font-bold text-gray-900 dark:text-white">
+                    {receiverName || "Not provided"}
+                  </p>
+                </div>
+
                 <div className="rounded-xl border border-white/80 bg-white p-3.5 shadow-xs dark:border-white/5 dark:bg-[#16131f]">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400">
                     Street Address

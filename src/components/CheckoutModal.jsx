@@ -103,6 +103,8 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
   subtotalRef.current = subtotal
 
   const [shipping, setShipping] = useState({
+    senderName: "",
+    receiverName: "",
     addressLine1: "",
     addressLine2: "",
     country: "",
@@ -163,6 +165,8 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     }
 
     const destination = {
+      senderName: (shippingData.senderName || "").trim(),
+      receiverName: (shippingData.receiverName || "").trim(),
       address: [shippingData.addressLine1?.trim(), shippingData.addressLine2?.trim()].filter(Boolean).join(", "),
       addressLine1: (shippingData.addressLine1 || "").trim(),
       addressLine2: (shippingData.addressLine2 || "").trim(),
@@ -205,6 +209,8 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL
     if (backendUrl && authToken && orderIdToUpdate) {
       const deliveryPayload = {
+        senderName: destination.senderName,
+        Reciever: destination.receiverName,
         deliveryDetails: {
           country: destination.country,
           city: destination.state,
@@ -223,8 +229,19 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
           { headers: { Authorization: `Bearer ${authToken}` } },
         )
       } catch (updateErr) {
-        console.error("==> [CheckoutModal] Failed to update order delivery details:", updateErr)
+        console.error("[CheckoutModal] Failed to update order delivery details:", {
+          endpoint: `${backendUrl}/api/v1/users/orders/${orderIdToUpdate}`,
+          status: updateErr?.response?.status,
+          data: updateErr?.response?.data,
+          message: updateErr?.message,
+        })
       }
+    } else {
+      console.error("[CheckoutModal] Could not update order delivery details; required request data is missing.", {
+        hasBackendUrl: Boolean(backendUrl),
+        hasAuthToken: Boolean(authToken),
+        hasOrderId: Boolean(orderIdToUpdate),
+      })
     }
 
     saveDeliveryLocation({
@@ -268,9 +285,12 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
 
     const savedDelivery = pendingCheckout?.deliveryDetails
     const hasValidSavedDelivery = Boolean(
+      savedDelivery?.senderName?.trim() &&
+      savedDelivery?.receiverName?.trim() &&
       savedDelivery?.addressLine1?.trim() &&
       savedDelivery?.country?.trim() &&
-      savedDelivery?.state?.trim(),
+      savedDelivery?.state?.trim() &&
+      savedDelivery?.phone?.trim(),
     )
 
     setCheckout({
@@ -281,6 +301,8 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
 
     if (savedDelivery) {
       setShipping({
+        senderName: savedDelivery.senderName || "",
+        receiverName: savedDelivery.receiverName || "",
         addressLine1: savedDelivery.addressLine1 || "",
         addressLine2: savedDelivery.addressLine2 || "",
         country: savedDelivery.country || "",
@@ -290,7 +312,17 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
         zipcode: savedDelivery.zipcode || "",
       })
     } else {
-      setShipping({ addressLine1: "", addressLine2: "", country: "", state: "", postcode: "", phone: "", zipcode: "" })
+      setShipping({
+        senderName: "",
+        receiverName: "",
+        addressLine1: "",
+        addressLine2: "",
+        country: "",
+        state: "",
+        postcode: "",
+        phone: "",
+        zipcode: "",
+      })
     }
 
     setStep(hasValidSavedDelivery ? "processing" : "shipping")
@@ -349,8 +381,15 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
     event.preventDefault()
     setError("")
 
-    if (!shipping.addressLine1.trim() || !shipping.country.trim() || !shipping.state.trim() || !shipping.phone.trim()) {
-      setError("Please fill in country, address, state/province, and phone number.")
+    if (
+      !shipping.senderName.trim() ||
+      !shipping.receiverName.trim() ||
+      !shipping.addressLine1.trim() ||
+      !shipping.country.trim() ||
+      !shipping.state.trim() ||
+      !shipping.phone.trim()
+    ) {
+      setError("Please fill in sender name, receiver name, country, address, state/province, and phone number.")
       return
     }
 
@@ -463,6 +502,28 @@ export default function CheckoutModal({ isOpen, onClose, paymentInfo, onOrderSet
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Where should we deliver your items?
                 </p>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label className="block space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold">Sender name <span className="text-red-500">*</span></span>
+                    <input
+                      className={fieldClass}
+                      value={shipping.senderName}
+                      onChange={(e) => setShipping((s) => ({ ...s, senderName: e.target.value }))}
+                      autoComplete="name"
+                      disabled={submitting}
+                    />
+                  </label>
+                  <label className="block space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                    <span className="font-semibold">Receiver name <span className="text-red-500">*</span></span>
+                    <input
+                      className={fieldClass}
+                      value={shipping.receiverName}
+                      onChange={(e) => setShipping((s) => ({ ...s, receiverName: e.target.value }))}
+                      disabled={submitting}
+                    />
+                  </label>
+                </div>
 
                 {/* Country */}
                 <label className="block space-y-2 text-sm text-gray-700 dark:text-gray-300">
