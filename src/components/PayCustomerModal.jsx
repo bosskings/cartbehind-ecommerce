@@ -57,6 +57,8 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
   const [copiedField, setCopiedField] = useState(null)
 
   const [shipping, setShipping] = useState({
+    senderName: "",
+    receiverName: "",
     addressLine1: "",
     addressLine2: "",
     country: "",
@@ -100,8 +102,15 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
     event.preventDefault()
     setError("")
 
-    if (!shipping.addressLine1.trim() || !shipping.country.trim() || !shipping.state.trim() || !shipping.phone.trim()) {
-      setError("Please fill in country, address, state/province, and phone number.")
+    if (
+      !shipping.senderName.trim() ||
+      !shipping.receiverName.trim() ||
+      !shipping.addressLine1.trim() ||
+      !shipping.country.trim() ||
+      !shipping.state.trim() ||
+      !shipping.phone.trim()
+    ) {
+      setError("Please fill in sender name, receiver name, country, address, state/province, and phone number.")
       return
     }
 
@@ -171,6 +180,8 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
           total: amount,
           itemCount,
           deliveryDetails: {
+            senderName: shipping.senderName.trim(),
+            receiverName: shipping.receiverName.trim(),
             addressLine1: shipping.addressLine1.trim(),
             addressLine2: shipping.addressLine2.trim(),
             country: shipping.country.trim(),
@@ -193,6 +204,8 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
           total: amount,
           itemCount,
           deliveryDetails: {
+            senderName: shipping.senderName.trim(),
+            receiverName: shipping.receiverName.trim(),
             addressLine1: shipping.addressLine1.trim(),
             addressLine2: shipping.addressLine2.trim(),
             country: shipping.country.trim(),
@@ -432,6 +445,28 @@ function PayCustomerModalContent({ onClose, amount, itemCount }) {
               <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Delivery address
               </p>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="block space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                  <span className="font-semibold">Sender name <span className="text-red-500">*</span></span>
+                  <input
+                    className={fieldClass}
+                    value={shipping.senderName}
+                    onChange={(e) => setShipping((s) => ({ ...s, senderName: e.target.value }))}
+                    autoComplete="name"
+                    disabled={submitting}
+                  />
+                </label>
+                <label className="block space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                  <span className="font-semibold">Receiver name <span className="text-red-500">*</span></span>
+                  <input
+                    className={fieldClass}
+                    value={shipping.receiverName}
+                    onChange={(e) => setShipping((s) => ({ ...s, receiverName: e.target.value }))}
+                    disabled={submitting}
+                  />
+                </label>
+              </div>
 
               {/* Country */}
               <label className="block space-y-2 text-sm text-gray-700 dark:text-gray-300">
